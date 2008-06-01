@@ -26,8 +26,10 @@
 !
 program paccel
 
-  use params  , only : read_params, idir, odir, ueta, aeta, jcrit, nsteps, xc, yc, zc, dt
-  use mod_hdf5, only : dxi, dyi, dzi, hdf5_init, hdf5_get_dims, hdf5_read_var
+  use params  , only : read_params, idir, odir                                &
+                     , ueta, aeta, jcrit, nsteps, xc, yc, zc, dt, qom, c
+  use mod_hdf5, only : hdf5_init, hdf5_get_dims, hdf5_read_var                &
+                     , xmn, ymn, zmn, xmx, ymx, zmx, dxi, dyi, dzi
   use mod_fits, only : fits_put_data_2d
 
   implicit none
@@ -38,7 +40,8 @@ program paccel
   integer              :: dm(3)
   integer              :: i, j, k, n
   real                 :: jx, jy, jz, ja, et, xx, fc
-  real                 :: xp, yp, zp, vx, vy, vz
+  real                 :: xp, yp, zp, vx, vy, vz, vp
+  real                 :: xi, yi, zi
 
 ! allocatable arrays
 !
@@ -91,27 +94,33 @@ program paccel
 ! computing current density
 !
   write( *, "('INFO      : ',a)" ) "computing current density"
-  do k = 2, dm(3)-1
-    do j = 2, dm(2)-1
-      do i = 2, dm(1)-1
-        jx = dyi*(bz(i,j+1,k) - bz(i,j-1,k)) - dzi*(by(i,j,k+1) - by(i,j,k-1))
-        jy = dzi*(bx(i,j,k+1) - bx(i,j,k-1)) - dxi*(bz(i+1,j,k) - bz(i-1,j,k))
-        jz = dxi*(by(i+1,j,k) - by(i-1,j,k)) - dyi*(bx(i,j+1,k) - bx(i,j-1,k))
+  ex(:,:,:) = 0.0
+  ey(:,:,:) = 0.0
+  ez(:,:,:) = 0.0
 
-        et = ueta
-        if (aeta .gt. 0.0) then
-          ja = sqrt(jx*jx + jy*jy + jz*jz)
-          xx = ja / jcrit
-          fc = 0.5 * (tanh(20.0*(xx - 1.0)) + 1.0)
-          et = ueta + aeta * fc * xx
-        endif
+  if (ueta .gt. 0.0) then
+    do k = 2, dm(3)-1
+      do j = 2, dm(2)-1
+        do i = 2, dm(1)-1
+          jx = dyi*(bz(i,j+1,k) - bz(i,j-1,k)) - dzi*(by(i,j,k+1) - by(i,j,k-1))
+          jy = dzi*(bx(i,j,k+1) - bx(i,j,k-1)) - dxi*(bz(i+1,j,k) - bz(i-1,j,k))
+          jz = dxi*(by(i+1,j,k) - by(i-1,j,k)) - dyi*(bx(i,j+1,k) - bx(i,j-1,k))
 
-        ex(i,j,k) = et * jx
-        ey(i,j,k) = et * jy
-        ez(i,j,k) = et * jz
+          et = ueta
+          if (aeta .gt. 0.0) then
+            ja = sqrt(jx*jx + jy*jy + jz*jz)
+            xx = ja / jcrit
+            fc = 0.5 * (tanh(20.0*(xx - 1.0)) + 1.0)
+            et = ueta + aeta * fc * xx
+          endif
+
+          ex(i,j,k) = et * jx
+          ey(i,j,k) = et * jy
+          ez(i,j,k) = et * jz
+        enddo
       enddo
     enddo
-  enddo
+  endif
 
 ! read velocity field components
 !
@@ -150,7 +159,7 @@ program paccel
   zp = zc
   vx = 0.0
   vy = 0.0
-  vz = 0.0
+  vz = 0.1
 
 ! integrate particles
 !
@@ -159,12 +168,32 @@ program paccel
 
 ! interpolate fields at the particle position
 !
+!     i = int(dxi * (xp - xmn))
+!     j = int(dyi * (yp - ymn))
+!     k = int(dzi * (zp - zmn))
+
+    xi = (xp - xmn) / (xmx - xmn)
+    yi = (yp - ymn) / (ymx - ymn)
+    zi = (zp - zmn) / (zmx - zmn)
+
+    i = (dm(1) - 1) * (xi - floor(xi)) + 1
+    j = (dm(2) - 1) * (yi - floor(yi)) + 1
+    k = (dm(3) - 1) * (zi - floor(zi)) + 1
+
+    if (i .lt. 1 .or. i .gt. dm(1)) goto 100
+    if (j .lt. 1 .or. j .gt. dm(2)) goto 100
+    if (k .lt. 1 .or. k .gt. dm(3)) goto 100
+
+! compute relativistic factor
+!
+    vp = vx**2 + vy**2 + vz**2
+    fc = dt * qom * sqrt(1.0 - min(1.0, vp / c**2))
 
 ! integrate velocity
 !
-!     v(1,n) = vx + qom * (wx + vy * bz - vz * by)
-!     v(2,n) = vy + qom * (wy + vz * bx - vx * bz)
-!     v(3,n) = vz + qom * (wz + vx * by - vy * bx)
+    v(1,n) = vx + fc * (ex(i,j,k) + vy * bz(i,j,k) - vz * by(i,j,k))
+    v(2,n) = vy + fc * (ey(i,j,k) + vz * bx(i,j,k) - vx * bz(i,j,k))
+    v(3,n) = vz + fc * (ez(i,j,k) + vx * by(i,j,k) - vy * bx(i,j,k))
     vx = v(1,n)
     vy = v(2,n)
     vz = v(3,n)
@@ -178,16 +207,17 @@ program paccel
     xp = x(1,n)
     yp = x(2,n)
     zp = x(3,n)
-
   enddo
+
+100 continue
 
 ! write positions and speeds to a file
 !
   write( *, "('INFO      : ',a)" ) 'writing positions and speeds'
   write(fl, '("!",a)') trim(odir) // 'ppos.fits.gz'
-  call fits_put_data_2d(fl, x(:,:))
+  call fits_put_data_2d(fl, x(:,1:n-1))
   write(fl, '("!",a)') trim(odir) // 'pvel.fits.gz'
-  call fits_put_data_2d(fl, v(:,:))
+  call fits_put_data_2d(fl, v(:,1:n-1))
 
 ! deallocate variables
 !

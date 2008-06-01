@@ -55,6 +55,8 @@ module params
   real                , save :: ueta    = 0.0          ! uniform resistivity coeff
   real                , save :: aeta    = 0.0          ! anomalous resistivity coeff
   real                , save :: jcrit   = 1.0e3        ! critical current density
+  real                , save :: qom     = 1.0          ! e / m
+  real                , save :: c       = 1.0          ! the speed of light in VA
 
 ! common variables
 !
@@ -129,6 +131,10 @@ module params
         read (value  , *) aeta
       case ('jcrit')
         read (value  , *) jcrit
+      case ('qom')
+        read (value  , *) qom
+      case ('c')
+        read (value  , *) c
       case default
     end select
 
