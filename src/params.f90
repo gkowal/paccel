@@ -57,6 +57,9 @@ module params
   real                , save :: zc      = 0.0
   real                , save :: rd      = 1.0          ! width of window
   real                , save :: kd      = 1.0          ! width of window in Fourier space
+  real                , save :: ueta    = 0.0          ! uniform resistivity coeff
+  real                , save :: aeta    = 0.0          ! anomalous resistivity coeff
+  real                , save :: jcrit   = 1.0e3        ! critical current density
 
 ! common variables
 !
@@ -135,6 +138,12 @@ module params
         read (value  , *) rd
       case ('kd')
         read (value  , *) kd
+      case ('ueta')
+        read (value  , *) ueta
+      case ('aeta')
+        read (value  , *) aeta
+      case ('jcrit')
+        read (value  , *) jcrit
       case default
     end select
 
