@@ -6,3 +6,4 @@ fnumber = 5
 ueta    = 5.0e-4
 aeta    = 0.0e-4
 jcrit   = 50.0
+nsteps  = 1000

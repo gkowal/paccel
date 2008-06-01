@@ -47,16 +47,11 @@ module params
                                                        ! 'R' - radial
                                                        ! 'X', 'Y', 'Z' - x, y, z direction
   integer             , save :: fnumber = 0            ! file number
-  integer             , save :: maxlen  = 1            ! maximum separation length
-  integer             , save :: maxexp  = 1            ! maximum exponent
-  integer             , save :: nvecs   = 1            ! number of vectors
-  integer             , save :: nshots  = 1            ! number of shots
-  integer             , save :: kmax    = 512          ! maximum wavelength
-  real                , save :: xc      = 0.0          ! position of P spectrum
+  integer             , save :: nsteps  = 1            ! number of steps
+  real                , save :: xc      = 0.0          ! initial position
   real                , save :: yc      = 0.0
   real                , save :: zc      = 0.0
-  real                , save :: rd      = 1.0          ! width of window
-  real                , save :: kd      = 1.0          ! width of window in Fourier space
+  real                , save :: dt      = 1.0          ! time steps of integration
   real                , save :: ueta    = 0.0          ! uniform resistivity coeff
   real                , save :: aeta    = 0.0          ! anomalous resistivity coeff
   real                , save :: jcrit   = 1.0e3        ! critical current density
@@ -118,26 +113,16 @@ module params
         write(sdir   , "(a)" ) value(2:l-1)
       case ('fnumber')
         read (value  , "(i6)") fnumber
-      case ('maxlen')
-        read (value  , "(i6)") maxlen
-      case ('maxexp')
-        read (value  , "(i6)") maxexp
-      case ('nvecs')
-        read (value  , "(i6)") nvecs
-      case ('nshots')
-        read (value  , "(i6)") nshots
-      case ('kmax')
-        read (value  , "(i6)") kmax
+      case ('nsteps')
+        read (value  , "(i9)") nsteps
       case ('xc')
         read (value  , *) xc
       case ('yc')
         read (value  , *) yc
       case ('zc')
         read (value  , *) zc
-      case ('rd')
-        read (value  , *) rd
-      case ('kd')
-        read (value  , *) kd
+      case ('dt')
+        read (value  , *) dt
       case ('ueta')
         read (value  , *) ueta
       case ('aeta')

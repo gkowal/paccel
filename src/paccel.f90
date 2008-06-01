@@ -26,20 +26,24 @@
 !
 program paccel
 
-  use params  , only : read_params, idir, odir, ueta, aeta, jcrit
+  use params  , only : read_params, idir, odir, ueta, aeta, jcrit, nsteps, xc, yc, zc, dt
   use mod_hdf5, only : dxi, dyi, dzi, hdf5_init, hdf5_get_dims, hdf5_read_var
+  use mod_fits, only : fits_put_data_2d
 
   implicit none
 
 ! local variables
 !
-  integer  :: dm(3)
-  integer  :: i, j, k
-  real     :: jx, jy, jz, ja, et, xc, fc
+  character(len = 255) :: fl
+  integer              :: dm(3)
+  integer              :: i, j, k, n
+  real                 :: jx, jy, jz, ja, et, xx, fc
+  real                 :: xp, yp, zp, vx, vy, vz
 
 ! allocatable arrays
 !
   real, dimension(:,:,:), allocatable :: vv, bx, by, bz, ex, ey, ez
+  real, dimension(:,:)  , allocatable :: x, v
 !
 !-------------------------------------------------------------------------------
 !
@@ -97,9 +101,9 @@ program paccel
         et = ueta
         if (aeta .gt. 0.0) then
           ja = sqrt(jx*jx + jy*jy + jz*jz)
-          xc = ja / jcrit
-          fc = 0.5 * (tanh(20.0*(xc - 1.0)) + 1.0)
-          et = ueta + aeta * fc * xc
+          xx = ja / jcrit
+          fc = 0.5 * (tanh(20.0*(xx - 1.0)) + 1.0)
+          et = ueta + aeta * fc * xx
         endif
 
         ex(i,j,k) = et * jx
@@ -129,19 +133,66 @@ program paccel
 
 ! allocate particle positions & velocities
 !
+  allocate(x(3,nsteps))
+  allocate(v(3,nsteps))
 
 ! set initial positions and speeds
 !
+  x(1,1) = xc
+  x(2,1) = yc
+  x(3,1) = zc
+  v(1,1) = 0.0
+  v(2,1) = 0.0
+  v(3,1) = 0.0
+
+  xp = xc
+  yp = yc
+  zp = zc
+  vx = 0.0
+  vy = 0.0
+  vz = 0.0
 
 ! integrate particles
 !
 ! F = q/m * (E + VpxB)
+  do n = 1, nsteps
+
+! interpolate fields at the particle position
+!
+
+! integrate velocity
+!
+!     v(1,n) = vx + qom * (wx + vy * bz - vz * by)
+!     v(2,n) = vy + qom * (wy + vz * bx - vx * bz)
+!     v(3,n) = vz + qom * (wz + vx * by - vy * bx)
+    vx = v(1,n)
+    vy = v(2,n)
+    vz = v(3,n)
+
+! integrate position
+!
+    x(1,n) = xp + dt * vx
+    x(2,n) = yp + dt * vy
+    x(3,n) = zp + dt * vz
+
+    xp = x(1,n)
+    yp = x(2,n)
+    zp = x(3,n)
+
+  enddo
 
 ! write positions and speeds to a file
 !
+  write( *, "('INFO      : ',a)" ) 'writing positions and speeds'
+  write(fl, '("!",a)') trim(odir) // 'ppos.fits.gz'
+  call fits_put_data_2d(fl, x(:,:))
+  write(fl, '("!",a)') trim(odir) // 'pvel.fits.gz'
+  call fits_put_data_2d(fl, v(:,:))
 
 ! deallocate variables
 !
+  if (allocated(x )) deallocate(x )
+  if (allocated(v )) deallocate(v )
   if (allocated(bx)) deallocate(bx)
   if (allocated(by)) deallocate(by)
   if (allocated(bz)) deallocate(bz)
