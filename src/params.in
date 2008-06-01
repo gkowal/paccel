@@ -1,0 +1,13 @@
+idir    = './hdf5/'
+odir    = './hdf5/'
+fformat = 'hdf5'
+ftype   = 'p'
+fnumber = 30
+stype   = 'L'
+field   = 'vely'
+sdir    = 'Z'
+kmax    = 128
+xc      = 0.0
+yc      = 0.2
+rd      = 0.1
+kd      = 1.0
