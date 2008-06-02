@@ -4,7 +4,7 @@ HOST    := $(shell hostname)
 OS      := $(shell uname)
 
 FC      = ifort
-FFLAGS  = -g -O3 -i4 -mtune=pentium4 -xN -fno-omit-frame-pointer -ipo -finline-limit=1000 -I$(HDF5DIR)/lib
+FFLAGS  = -g -O3 -i4 -fno-omit-frame-pointer -ipo -finline-limit=1000 -I$(HDF5DIR)/lib
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)
 LIBS    = -L$(HDF5DIR)/lib -lhdf5_fortran -lhdf5 -L$(SCILIB)/common/lib -lcfitsio -lz
