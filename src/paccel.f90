@@ -42,9 +42,9 @@ program paccel
   integer              :: i, j, k, n, nmax
   real                 :: jx, jy, jz, ja, et, xx, fc
   real                 :: xp, yp, zp, vx, vy, vz, vp
-  real                 :: ax, ay, az, aa, xi, yi, zi, dxmin
-  real                 :: bavg, qom, va, ulen, tm, dt, dtp
-  logical              :: per = .false.
+  real                 :: ax, ay, az, aa, bb, xi, yi, zi, dxmin
+  real                 :: bavg, qom, va, rg, tg, ulen, tm, dt, dtp
+  logical              :: per = .false., fin = .false.
 
 ! allocatable arrays
 !
@@ -74,28 +74,35 @@ program paccel
   va    = 299792.45799999998416751623153687  / c
   bavg  = 0.13694624848330305688648422801634 * sqrt(dens) / c
   qom   = 9578.8340668294185888953506946564  * bavg
+  tg    = 0.00065594468630975164436663904510283
   ulen  = va
   select case(tunit)
   case('m')
     qom  = 60.0 * qom
     ulen = 60.0 * ulen
+    tg   = tg / 60.0
   case('h')
     qom  = 3600.0 * qom
     ulen = 3600.0 * ulen
+    tg   = tg / 3600.0
   case('d')
     qom  = 86400.0 * qom
     ulen = 86400.0 * ulen
+    tg   = tg / 86400.0
   case('w')
     qom  = 604800.0 * qom
     ulen = 604800.0 * ulen
+    tg   = tg / 604800.0
   case('y')
     qom  = 31556925.974678400903940200805664 * qom
     ulen = 31556925.974678400903940200805664 * ulen
+    tg   = tg / 31556925.974678400903940200805664
   case default
   end select
   select case(ptype)
   case ('e')
     qom  = 1836.152667427881851835991255939 * qom
+    tg   = tg / 1836.152667427881851835991255939
     write( *, "('INFO      : trajectory for electron')" )
   case default
     write( *, "('INFO      : trajectory for proton')" )
@@ -104,6 +111,7 @@ program paccel
   write( *, "('INFO      : c   = ',1pe15.8,' Va')" ) c
   write( *, "('INFO      : <B> = ',1pe15.8,' G')" ) bavg
   write( *, "('INFO      : e/m = ',1pe15.8,' [1 / G ',a1,']')" ) qom, tunit
+  write( *, "('INFO      : Tg  = ',1pe15.8,' [',a1,']')" ) tg, tunit
   write( *, "('INFO      : L   = ',1pe15.8,' km')" ) ulen
   write( *, "('INFO      : L   = ',1pe15.8,' pc')" ) ulen * 3.2407793e-14
 
@@ -206,6 +214,7 @@ program paccel
   vx  = 0.0
   vy  = 0.0
   vz  = 0.1
+  vp  = 0.1
   dtp = 1.0e-16
   tm  = 0.0
   n   = 1
@@ -220,7 +229,7 @@ program paccel
 ! integrate particles
 !
 ! F = q/m * (E + VpxB)
-  do while (tm .le. tmax .and. n .le. nmax)
+  do while (tm .le. tmax .and. n .le. nmax .and. .not. fin)
 
 ! interpolate fields at the particle position
 !
@@ -254,10 +263,13 @@ program paccel
     ay = fc * (ey(i,j,k) + vz * bx(i,j,k) - vx * bz(i,j,k))
     az = fc * (ez(i,j,k) + vx * by(i,j,k) - vy * bx(i,j,k))
     aa = sqrt(ax*ax + ay*ay + az*az)
+    bb = sqrt(bx(i,j,k)**2 + by(i,j,k)**2 + bz(i,j,k)**2)
 
 ! compute new timestep
 !
-    dt  = cfl * min(sqrt(dxmin / max(aa, 1.0e-8)), dxmin / max(vp, 1.0e-8))
+    dt  = cfl * min(tg / bb, dxmin / max(vp, 1.0e-8))
+!     print *, dt, bb
+!     dt  = cfl * min(sqrt(dxmin / max(aa, 1.0e-8)), dxmin / max(vp, 1.0e-8))
     dt  = min(2.0 * dtp, dt)
     dtp = dt
 
@@ -293,6 +305,8 @@ program paccel
 
       n = n + 1
       print *, n, tm, dt, vp/c
+
+      if (vp .ge. c) fin = .true.
     endif
 
   enddo
