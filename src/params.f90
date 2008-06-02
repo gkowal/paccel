@@ -30,33 +30,36 @@ module params
 
 ! input parameters
 !
-  character(len = 128), save :: idir    = "./"         ! input directory
-  character(len = 128), save :: odir    = "./"         ! output directory
-  character(len =   4), save :: field   = "velo"       ! spectrum for which field
-  character(len =   3), save :: frame   = "glo"        ! reference frame 'glo' or 'loc'
-  character(len =   1), save :: stype   = "A"          ! kind of spectrum:
-                                                       ! 'F' - Fourier
-                                                       ! 'A' - Fourier (averaged over integer ks)
-                                                       ! 'W' - Wavelet
-  character(len =   4), save :: fformat = 'fits'       ! file format:
+  character(len = 128), save :: idir     = "./"        ! input directory
+  character(len = 128), save :: odir     = "./"        ! output directory
+  character(len =   4), save :: fformat  = 'fits'      ! file format:
                                                        ! 'fits' - FITS
                                                        ! 'hdf4' - HDF4
                                                        ! 'hdf5' - HDF5
-  character(len =   1), save :: ftype   = 'r'          ! file type: 'r', 'p', 'f'
-  character(len =   1), save :: sdir    = 'r'          ! direction along which spectrum is taken
-                                                       ! 'R' - radial
-                                                       ! 'X', 'Y', 'Z' - x, y, z direction
-  integer             , save :: fnumber = 0            ! file number
-  integer             , save :: nsteps  = 1            ! number of steps
-  real                , save :: xc      = 0.0          ! initial position
-  real                , save :: yc      = 0.0
-  real                , save :: zc      = 0.0
-  real                , save :: dt      = 1.0          ! time steps of integration
-  real                , save :: ueta    = 0.0          ! uniform resistivity coeff
-  real                , save :: aeta    = 0.0          ! anomalous resistivity coeff
-  real                , save :: jcrit   = 1.0e3        ! critical current density
-  real                , save :: qom     = 1.0          ! e / m
-  real                , save :: c       = 1.0          ! the speed of light in VA
+  character(len =   1), save :: ftype    = 'r'         ! file type: 'r', 'p', 'f'
+  integer             , save :: fnumber  = 0           ! file number
+  character(len =   1), save :: ptype    = 'p'         ! particle type:
+                                                       ! 'p' - proton
+                                                       ! 'e' - electron
+  character(len =   1), save :: tunit    = 's'         ! time units:
+                                                       ! 's' - second
+                                                       ! 'm' - minute
+                                                       ! 'h' - hour
+                                                       ! 'd' - day
+                                                       ! 'w' - week
+                                                       ! 'y' - year
+  real                , save :: c        = 1.0         ! the speed of light in Va
+  real                , save :: dens     = 1.0         ! density [1 u/cm^3]
+  real                , save :: ueta     = 0.0         ! uniform resistivity coeff
+  real                , save :: aeta     = 0.0         ! anomalous resistivity coeff
+  real                , save :: jcrit    = 1.0e3       ! critical current density
+  integer             , save :: nsteps   = 1           ! number of steps
+  real                , save :: dt       = 1.0         ! time steps of integration
+  real                , save :: xc       = 0.0         ! initial position
+  real                , save :: yc       = 0.0
+  real                , save :: zc       = 0.0
+  character(len =   1), save :: periodic = 'y'         ! periodic box or not
+  real                , save :: cfl      = 0.5         ! cfl condition
 
 ! common variables
 !
@@ -95,46 +98,45 @@ module params
       case ('odir')
         l = len_trim(value)
         write(odir   , "(a)" ) value(2:l-1)
-      case ('stype')
-        l = len_trim(value)
-        write(stype  , "(a)" ) value(2:l-1)
-      case ('frame')
-        l = len_trim(value)
-        write(frame  , "(a)" ) value(2:l-1)
-      case ('field')
-        l = len_trim(value)
-        write(field  , "(a)" ) value(2:l-1)
       case ('fformat')
         l = len_trim(value)
         write(fformat, "(a)" ) value(2:l-1)
       case ('ftype')
         l = len_trim(value)
         write(ftype  , "(a)" ) value(2:l-1)
-      case ('sdir')
-        l = len_trim(value)
-        write(sdir   , "(a)" ) value(2:l-1)
       case ('fnumber')
         read (value  , "(i6)") fnumber
-      case ('nsteps')
-        read (value  , "(i9)") nsteps
-      case ('xc')
-        read (value  , *) xc
-      case ('yc')
-        read (value  , *) yc
-      case ('zc')
-        read (value  , *) zc
-      case ('dt')
-        read (value  , *) dt
+      case ('ptype')
+        l = len_trim(value)
+        write(ptype  , "(a)" ) value(2:l-1)
+      case ('tunit')
+        l = len_trim(value)
+        write(tunit  , "(a)" ) value(2:l-1)
+      case ('c')
+        read (value  , *) c
+      case ('dens')
+        read (value  , *) dens
       case ('ueta')
         read (value  , *) ueta
       case ('aeta')
         read (value  , *) aeta
       case ('jcrit')
         read (value  , *) jcrit
-      case ('qom')
-        read (value  , *) qom
-      case ('c')
-        read (value  , *) c
+      case ('nsteps')
+        read (value  , "(i9)") nsteps
+      case ('dt')
+        read (value  , *) dt
+      case ('xc')
+        read (value  , *) xc
+      case ('yc')
+        read (value  , *) yc
+      case ('zc')
+        read (value  , *) zc
+      case ('periodic')
+        l = len_trim(value)
+        write(periodic, "(a)" ) value(2:l-1)
+      case ('cfl')
+        read (value  , *) cfl
       case default
     end select
 

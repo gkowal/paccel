@@ -27,9 +27,10 @@
 program paccel
 
   use params  , only : read_params, idir, odir                                &
-                     , ueta, aeta, jcrit, nsteps, xc, yc, zc, dt, qom, c
+                     , ueta, aeta, jcrit, nsteps, xc, yc, zc, dt              &
+                     , ptype, tunit, dens, c, periodic, cfl
   use mod_hdf5, only : hdf5_init, hdf5_get_dims, hdf5_read_var                &
-                     , xmn, ymn, zmn, xmx, ymx, zmx, dxi, dyi, dzi
+                     , xmn, ymn, zmn, xmx, ymx, zmx, dxi, dyi, dzi, dx, dy, dz
   use mod_fits, only : fits_put_data_2d
 
   implicit none
@@ -41,7 +42,9 @@ program paccel
   integer              :: i, j, k, n
   real                 :: jx, jy, jz, ja, et, xx, fc
   real                 :: xp, yp, zp, vx, vy, vz, vp
-  real                 :: xi, yi, zi
+  real                 :: fx, fy, fz, fa, xi, yi, zi, dxmin
+  real                 :: bavg, qom, va, ulen, dtp
+  logical              :: per = .false.
 
 ! allocatable arrays
 !
@@ -65,6 +68,47 @@ program paccel
   write( *, "('INDIR     : ',a)" ) trim(idir)
   write( *, "('OUDIR     : ',a)" ) trim(odir)
 
+! compute coefficients
+!
+  va    = 299792.45799999998416751623153687  / c
+  bavg  = 0.13694624848330305688648422801634 * sqrt(dens) / c
+  qom   = 9578.8340668294185888953506946564  * bavg
+  ulen  = va
+  select case(tunit)
+  case('m')
+    qom  = 60.0 * qom
+    ulen = 60.0 * ulen
+  case('h')
+    qom  = 3600.0 * qom
+    ulen = 3600.0 * ulen
+  case('d')
+    qom  = 86400.0 * qom
+    ulen = 86400.0 * ulen
+  case('w')
+    qom  = 604800.0 * qom
+    ulen = 604800.0 * ulen
+  case('y')
+    qom  = 31556925.974678400903940200805664 * qom
+    ulen = 31556925.974678400903940200805664 * ulen
+  case default
+  end select
+  select case(ptype)
+  case ('e')
+    qom  = 1836.152667427881851835991255939 * qom
+    write( *, "('INFO      : trajectory for electron')" )
+  case default
+    write( *, "('INFO      : trajectory for proton')" )
+  end select
+  write( *, "('INFO      : Va  = ',1pe15.8,' km/s')" ) va
+  write( *, "('INFO      : c   = ',1pe15.8,' Va')" ) c
+  write( *, "('INFO      : <B> = ',1pe15.8,' G')" ) bavg
+  write( *, "('INFO      : e/m = ',1pe15.8,' [1 / G ',a1,']')" ) qom, tunit
+  write( *, "('INFO      : L   = ',1pe15.8,' km')" ) ulen
+
+! check if periodic box
+!
+  if (periodic .eq. 'y') per = .true.
+
 ! initialize dimensions
 !
   dm(:) = 1
@@ -73,6 +117,10 @@ program paccel
 !
   call hdf5_init()
   call hdf5_get_dims(dm)
+
+! check minimum dx
+!
+  dxmin = min(dx, dy, dz)
 
 ! allocate variables
 !
@@ -160,6 +208,7 @@ program paccel
   vx = 0.0
   vy = 0.0
   vz = 0.1
+  dtp = 1.e-8
 
 ! integrate particles
 !
@@ -168,32 +217,46 @@ program paccel
 
 ! interpolate fields at the particle position
 !
-!     i = int(dxi * (xp - xmn))
-!     j = int(dyi * (yp - ymn))
-!     k = int(dzi * (zp - zmn))
-
     xi = (xp - xmn) / (xmx - xmn)
     yi = (yp - ymn) / (ymx - ymn)
     zi = (zp - zmn) / (zmx - zmn)
 
-    i = (dm(1) - 1) * (xi - floor(xi)) + 1
-    j = (dm(2) - 1) * (yi - floor(yi)) + 1
-    k = (dm(3) - 1) * (zi - floor(zi)) + 1
+    if (per) then
+      i = (dm(1) - 1) * (xi - floor(xi)) + 1
+      j = (dm(2) - 1) * (yi - floor(yi)) + 1
+      k = (dm(3) - 1) * (zi - floor(zi)) + 1
+    else
+      i = (dm(1) - 1) * xi + 1
+      j = (dm(2) - 1) * yi + 1
+      k = (dm(3) - 1) * zi + 1
 
-    if (i .lt. 1 .or. i .gt. dm(1)) goto 100
-    if (j .lt. 1 .or. j .gt. dm(2)) goto 100
-    if (k .lt. 1 .or. k .gt. dm(3)) goto 100
+      if (i .lt. 1 .or. i .gt. dm(1)) goto 100
+      if (j .lt. 1 .or. j .gt. dm(2)) goto 100
+      if (k .lt. 1 .or. k .gt. dm(3)) goto 100
+    endif
 
 ! compute relativistic factor
 !
     vp = vx**2 + vy**2 + vz**2
-    fc = dt * qom * sqrt(1.0 - min(1.0, vp / c**2))
+    fc = qom * sqrt(1.0 - min(1.0, vp / c**2))
+
+! compute force components
+!
+    fx = fc * (ex(i,j,k) + vy * bz(i,j,k) - vz * by(i,j,k))
+    fy = fc * (ey(i,j,k) + vz * bx(i,j,k) - vx * bz(i,j,k))
+    fz = fc * (ez(i,j,k) + vx * by(i,j,k) - vy * bx(i,j,k))
+    fa = sqrt(fx*fx + fy*fy + fz*fz)
+
+! compute new timestep
+!
+    dt  = cfl * min(2.0 * dtp, sqrt(dxmin / max(fa, 1.0e-8)), dxmin / max(vp, 1.0e-8))
+    dtp = dt
 
 ! integrate velocity
 !
-    v(1,n) = vx + fc * (ex(i,j,k) + vy * bz(i,j,k) - vz * by(i,j,k))
-    v(2,n) = vy + fc * (ey(i,j,k) + vz * bx(i,j,k) - vx * bz(i,j,k))
-    v(3,n) = vz + fc * (ez(i,j,k) + vx * by(i,j,k) - vy * bx(i,j,k))
+    v(1,n) = vx + dt * fx
+    v(2,n) = vy + dt * fy
+    v(3,n) = vz + dt * fz
     vx = v(1,n)
     vy = v(2,n)
     vz = v(3,n)
@@ -214,9 +277,9 @@ program paccel
 ! write positions and speeds to a file
 !
   write( *, "('INFO      : ',a)" ) 'writing positions and speeds'
-  write(fl, '("!",a)') trim(odir) // 'ppos.fits.gz'
+  write(fl, '("!",a)') trim(odir) // trim(ptype) // '_pos.fits.gz'
   call fits_put_data_2d(fl, x(:,1:n-1))
-  write(fl, '("!",a)') trim(odir) // 'pvel.fits.gz'
+  write(fl, '("!",a)') trim(odir) // trim(ptype) // '_vel.fits.gz'
   call fits_put_data_2d(fl, v(:,1:n-1))
 
 ! deallocate variables
