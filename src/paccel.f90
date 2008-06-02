@@ -27,11 +27,11 @@
 program paccel
 
   use params  , only : read_params, idir, odir                                &
-                     , ueta, aeta, jcrit, nsteps, xc, yc, zc, dt              &
-                     , ptype, tunit, dens, c, periodic, cfl
+                     , ueta, aeta, jcrit, nsteps, xc, yc, zc                  &
+                     , ptype, tunit, dens, c, periodic, cfl, dtout, tmax
   use mod_hdf5, only : hdf5_init, hdf5_get_dims, hdf5_read_var                &
                      , xmn, ymn, zmn, xmx, ymx, zmx, dxi, dyi, dzi, dx, dy, dz
-  use mod_fits, only : fits_put_data_2d
+  use mod_fits, only : fits_put_data_2d, fits_put_data_1d
 
   implicit none
 
@@ -39,17 +39,18 @@ program paccel
 !
   character(len = 255) :: fl
   integer              :: dm(3)
-  integer              :: i, j, k, n
+  integer              :: i, j, k, n, nmax
   real                 :: jx, jy, jz, ja, et, xx, fc
   real                 :: xp, yp, zp, vx, vy, vz, vp
-  real                 :: fx, fy, fz, fa, xi, yi, zi, dxmin
-  real                 :: bavg, qom, va, ulen, dtp
+  real                 :: ax, ay, az, aa, xi, yi, zi, dxmin
+  real                 :: bavg, qom, va, ulen, tm, dt, dtp
   logical              :: per = .false.
 
 ! allocatable arrays
 !
   real, dimension(:,:,:), allocatable :: vv, bx, by, bz, ex, ey, ez
   real, dimension(:,:)  , allocatable :: x, v
+  real, dimension(:)    , allocatable :: t
 !
 !-------------------------------------------------------------------------------
 !
@@ -104,6 +105,8 @@ program paccel
   write( *, "('INFO      : <B> = ',1pe15.8,' G')" ) bavg
   write( *, "('INFO      : e/m = ',1pe15.8,' [1 / G ',a1,']')" ) qom, tunit
   write( *, "('INFO      : L   = ',1pe15.8,' km')" ) ulen
+  write( *, "('INFO      : L   = ',1pe15.8,' pc')" ) ulen * 3.2407793e-14
+
 
 ! check if periodic box
 !
@@ -190,30 +193,34 @@ program paccel
 
 ! allocate particle positions & velocities
 !
-  allocate(x(3,nsteps))
-  allocate(v(3,nsteps))
+  nmax = int(tmax / dtout) + 1
+  allocate(t(nmax))
+  allocate(x(3,nmax))
+  allocate(v(3,nmax))
 
 ! set initial positions and speeds
 !
-  x(1,1) = xc
-  x(2,1) = yc
-  x(3,1) = zc
-  v(1,1) = 0.0
-  v(2,1) = 0.0
-  v(3,1) = 0.0
+  xp  = xc
+  yp  = yc
+  zp  = zc
+  vx  = 0.0
+  vy  = 0.0
+  vz  = 0.1
+  dtp = 1.0e-16
+  tm  = 0.0
+  n   = 1
 
-  xp = xc
-  yp = yc
-  zp = zc
-  vx = 0.0
-  vy = 0.0
-  vz = 0.1
-  dtp = 1.e-8
+  x(1,1) = xp
+  x(2,1) = yp
+  x(3,1) = zp
+  v(1,1) = vx
+  v(2,1) = vy
+  v(3,1) = vz
 
 ! integrate particles
 !
 ! F = q/m * (E + VpxB)
-  do n = 1, nsteps
+  do while (tm .le. tmax .and. n .le. nmax)
 
 ! interpolate fields at the particle position
 !
@@ -239,44 +246,64 @@ program paccel
 !
     vp = vx**2 + vy**2 + vz**2
     fc = qom * sqrt(1.0 - min(1.0, vp / c**2))
+    vp = sqrt(vp)
 
 ! compute force components
 !
-    fx = fc * (ex(i,j,k) + vy * bz(i,j,k) - vz * by(i,j,k))
-    fy = fc * (ey(i,j,k) + vz * bx(i,j,k) - vx * bz(i,j,k))
-    fz = fc * (ez(i,j,k) + vx * by(i,j,k) - vy * bx(i,j,k))
-    fa = sqrt(fx*fx + fy*fy + fz*fz)
+    ax = fc * (ex(i,j,k) + vy * bz(i,j,k) - vz * by(i,j,k))
+    ay = fc * (ey(i,j,k) + vz * bx(i,j,k) - vx * bz(i,j,k))
+    az = fc * (ez(i,j,k) + vx * by(i,j,k) - vy * bx(i,j,k))
+    aa = sqrt(ax*ax + ay*ay + az*az)
 
 ! compute new timestep
 !
-    dt  = cfl * min(2.0 * dtp, sqrt(dxmin / max(fa, 1.0e-8)), dxmin / max(vp, 1.0e-8))
+    dt  = cfl * min(sqrt(dxmin / max(aa, 1.0e-8)), dxmin / max(vp, 1.0e-8))
+    dt  = min(2.0 * dtp, dt)
     dtp = dt
+
+! update time
+!
+    tm = tm + dt
 
 ! integrate velocity
 !
-    v(1,n) = vx + dt * fx
-    v(2,n) = vy + dt * fy
-    v(3,n) = vz + dt * fz
-    vx = v(1,n)
-    vy = v(2,n)
-    vz = v(3,n)
+    vx = vx + dt * ax
+    vy = vy + dt * ay
+    vz = vz + dt * az
 
 ! integrate position
 !
-    x(1,n) = xp + dt * vx
-    x(2,n) = yp + dt * vy
-    x(3,n) = zp + dt * vz
+    xp = xp + dt * vx
+    yp = yp + dt * vy
+    zp = zp + dt * vz
 
-    xp = x(1,n)
-    yp = x(2,n)
-    zp = x(3,n)
+! copy data to array
+!
+    if (tm .ge. (n*dtout)) then
+
+      t(n)   = tm
+
+      x(1,n) = xp
+      x(2,n) = yp
+      x(3,n) = zp
+
+      v(1,n) = vx
+      v(2,n) = vy
+      v(3,n) = vz
+
+      n = n + 1
+      print *, n, tm, dt, vp
+    endif
+
   enddo
 
 100 continue
 
 ! write positions and speeds to a file
 !
-  write( *, "('INFO      : ',a)" ) 'writing positions and speeds'
+  write( *, "('INFO      : ',a)" ) 'writing time, positions and speeds'
+  write(fl, '("!",a)') trim(odir) // trim(ptype) // '_tim.fits.gz'
+  call fits_put_data_1d(fl, t(1:n-1))
   write(fl, '("!",a)') trim(odir) // trim(ptype) // '_pos.fits.gz'
   call fits_put_data_2d(fl, x(:,1:n-1))
   write(fl, '("!",a)') trim(odir) // trim(ptype) // '_vel.fits.gz'
@@ -284,6 +311,7 @@ program paccel
 
 ! deallocate variables
 !
+  if (allocated(t )) deallocate(t )
   if (allocated(x )) deallocate(x )
   if (allocated(v )) deallocate(v )
   if (allocated(bx)) deallocate(bx)

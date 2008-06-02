@@ -54,16 +54,13 @@ module params
   real                , save :: aeta     = 0.0         ! anomalous resistivity coeff
   real                , save :: jcrit    = 1.0e3       ! critical current density
   integer             , save :: nsteps   = 1           ! number of steps
-  real                , save :: dt       = 1.0         ! time steps of integration
   real                , save :: xc       = 0.0         ! initial position
   real                , save :: yc       = 0.0
   real                , save :: zc       = 0.0
   character(len =   1), save :: periodic = 'y'         ! periodic box or not
   real                , save :: cfl      = 0.5         ! cfl condition
-
-! common variables
-!
-  character(len =   4), save :: vars(3)
+  real                , save :: dtout    = 1.0         ! interval between data writing
+  real                , save :: tmax     = 1.0         ! maximum time for integration
 !
 !-------------------------------------------------------------------------------
 !
@@ -124,8 +121,6 @@ module params
         read (value  , *) jcrit
       case ('nsteps')
         read (value  , "(i9)") nsteps
-      case ('dt')
-        read (value  , *) dt
       case ('xc')
         read (value  , *) xc
       case ('yc')
@@ -137,6 +132,10 @@ module params
         write(periodic, "(a)" ) value(2:l-1)
       case ('cfl')
         read (value  , *) cfl
+      case ('dtout')
+        read (value  , *) dtout
+      case ('tmax')
+        read (value  , *) tmax
       case default
     end select
 
