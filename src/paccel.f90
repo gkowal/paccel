@@ -292,7 +292,7 @@ program paccel
       v(3,n) = vz
 
       n = n + 1
-      print *, n, tm, dt, vp
+      print *, n, tm, dt, vp/c
     endif
 
   enddo
