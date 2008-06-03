@@ -1,4 +1,4 @@
-part = 'e'
+part = 'p'
 
 tm = readfits(part + '_tim.fits.gz')
 xp = readfits(part + '_pos.fits.gz')

@@ -32,7 +32,7 @@ program paccel
   use mod_hdf5, only : hdf5_init, hdf5_get_dims, hdf5_read_var                &
                      , xmn, ymn, zmn, xmx, ymx, zmx, dxi, dyi, dzi, dx, dy, dz
   use mod_fits, only : fits_put_data_2d, fits_put_data_1d
-  use interpolation, only : interpolate => ptrilin
+  use interpolation, only : interpolate => ptricub
 
   implicit none
 
@@ -318,7 +318,7 @@ program paccel
       v(3,n) = vz
 
       n = n + 1
-      print *, n, tm, dt, vp/c
+!       print *, n, tm, dt, vp/c
 
       if (vp .ge. c) fin = .true.
     endif
