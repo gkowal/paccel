@@ -43,10 +43,12 @@ program paccel
   integer              :: i, j, k, n, nmax
   real                 :: jx, jy, jz, ja, et, xx, fc
   real                 :: xp, yp, zp, vx, vy, vz, vp, wx, wy, wz, ux, uy, uz
+  real                 :: xp1, yp1, zp1, vx1, vy1, vz1
   real                 :: ax, ay, az, aa, bb, dxmin
   real                 :: xli, yli, zli
   real                 :: xt, yt, zt, xi, yi, zi, xr, yr, zr
-  real                 :: bavg, qom, va, rg, tg, ulen, tm, dt, dtp
+  real                 :: bavg, qom, va, rg, tg, ulen
+  real(kind=8)         :: tm, dt, dtp, dt1, dt2
   logical              :: per = .false., fin = .false.
 
 ! allocatable arrays
@@ -211,12 +213,16 @@ program paccel
   yp  = yc
   zp  = zc
   vx  = 0.0
-  vy  = 0.0
-  vz  = 0.1
-  vp  = 0.1
+  vy  = 0.01
+  vz  = 0.0
+
   dtp = 1.0e-16
   tm  = 0.0
   n   = 1
+
+  vp = vx**2 + vy**2 + vz**2
+  fc = qom * sqrt(1.0 - min(1.0, vp / c**2))
+  vp = sqrt(vp)
 
   x(1,1) = xp
   x(2,1) = yp
@@ -238,7 +244,19 @@ program paccel
 !
   do while (tm .le. tmax .and. n .le. nmax .and. .not. fin)
 
-! interpolate fields at the particle position
+! update time
+!
+    tm = tm + dt
+
+!! 1st step of RK integration
+!!
+! compute relativistic factor
+!
+    vp = vx**2 + vy**2 + vz**2
+    fc = qom * sqrt(1.0 - min(1.0, vp / c**2))
+    vp = sqrt(vp)
+
+! convert particle position to arrays index
 !
     xt = xli * (xp - xmn)
     yt = yli * (yp - ymn)
@@ -258,50 +276,105 @@ program paccel
       if (zr .lt. 1 .or. zr .gt. dm(3)) goto 100
     endif
 
-! interpolate
+! interpolate field at particle position
 !
-    ux = interpolate(ex, xr, yr, zr)
-    uy = interpolate(ey, xr, yr, zr)
-    uz = interpolate(ez, xr, yr, zr)
-    wx = interpolate(bx, xr, yr, zr)
-    wy = interpolate(by, xr, yr, zr)
-    wz = interpolate(bz, xr, yr, zr)
-
-! compute relativistic factor
-!
-    vp = vx**2 + vy**2 + vz**2
-    fc = qom * sqrt(1.0 - min(1.0, vp / c**2))
-    vp = sqrt(vp)
+    ux = interpolate(dm, ex, xr, yr, zr)
+    uy = interpolate(dm, ey, xr, yr, zr)
+    uz = interpolate(dm, ez, xr, yr, zr)
+    wx = interpolate(dm, bx, xr, yr, zr)
+    wy = interpolate(dm, by, xr, yr, zr)
+    wz = interpolate(dm, bz, xr, yr, zr)
 
 ! compute force components
 !
     ax = fc * (ux + vy * wz - vz * wy)
     ay = fc * (uy + vz * wx - vx * wz)
     az = fc * (uz + vx * wy - vy * wx)
-    aa = sqrt(ax * ax + ay * ay + az * az)
-    bb = sqrt(wx * wx + wy * wy + wz * wz)
-
-! compute new timestep
-!
-    dt  = cfl * min(tg / bb, sqrt(dxmin / max(aa, 1.0e-8)), dxmin / max(vp, 1.0e-8))
-    dt  = min(2.0 * dtp, dt)
-    dtp = dt
-
-! update time
-!
-    tm = tm + dt
 
 ! integrate velocity
 !
-    vx = vx + dt * ax
-    vy = vy + dt * ay
-    vz = vz + dt * az
+    vx1 = vx + dt * ax
+    vy1 = vy + dt * ay
+    vz1 = vz + dt * az
 
 ! integrate position
 !
-    xp = xp + dt * vx
-    yp = yp + dt * vy
-    zp = zp + dt * vz
+    xp1 = xp + dt * vx
+    yp1 = yp + dt * vy
+    zp1 = zp + dt * vz
+
+! compute new timestep
+!
+    aa  = sqrt(ax * ax + ay * ay + az * az)
+    bb  = sqrt(wx * wx + wy * wy + wz * wz)
+    dt1 = min(tg / max(bb, 1.0e-8), sqrt(dxmin / max(aa, 1.0e-8)), dxmin / max(vp, 1.0e-8))
+
+
+!! 2nd step of RK integration
+!!
+! compute relativistic factor
+!
+    vp = vx1**2 + vy1**2 + vz1**2
+    fc = qom * sqrt(1.0 - min(1.0, vp / c**2))
+    vp = sqrt(vp)
+
+! convert particle position to arrays index
+!
+    xt = xli * (xp1 - xmn)
+    yt = yli * (yp1 - ymn)
+    zt = zli * (zp1 - zmn)
+
+    if (per) then
+      xr = pm(1) * (xt - floor(xt)) + 1
+      yr = pm(2) * (yt - floor(yt)) + 1
+      zr = pm(3) * (zt - floor(zt)) + 1
+    else
+      xr = pm(1) * xt + 1
+      yr = pm(2) * yt + 1
+      zr = pm(3) * zt + 1
+
+      if (xr .lt. 1 .or. xr .gt. dm(1)) goto 100
+      if (yr .lt. 1 .or. yr .gt. dm(2)) goto 100
+      if (zr .lt. 1 .or. zr .gt. dm(3)) goto 100
+    endif
+
+! interpolate field at particle position
+!
+    ux = interpolate(dm, ex, xr, yr, zr)
+    uy = interpolate(dm, ey, xr, yr, zr)
+    uz = interpolate(dm, ez, xr, yr, zr)
+    wx = interpolate(dm, bx, xr, yr, zr)
+    wy = interpolate(dm, by, xr, yr, zr)
+    wz = interpolate(dm, bz, xr, yr, zr)
+
+! compute force components
+!
+    ax = fc * (ux + vy * wz - vz * wy)
+    ay = fc * (uy + vz * wx - vx * wz)
+    az = fc * (uz + vx * wy - vy * wx)
+
+! integrate velocity
+!
+    vx = 0.5 * (vx + vx1 + dt * ax)
+    vy = 0.5 * (vy + vy1 + dt * ay)
+    vz = 0.5 * (vz + vz1 + dt * az)
+
+! integrate position
+!
+    xp = 0.5 * (xp + xp1 + dt * vx)
+    yp = 0.5 * (yp + yp1 + dt * vy)
+    zp = 0.5 * (zp + zp1 + dt * vz)
+
+! compute new timestep
+!
+    aa  = sqrt(ax * ax + ay * ay + az * az)
+    bb  = sqrt(wx * wx + wy * wy + wz * wz)
+    dt2 = min(tg / max(bb, 1.0e-8), sqrt(dxmin / max(aa, 1.0e-8)), dxmin / max(vp, 1.0e-8))
+
+! compute new timestep
+!
+    dt  = min(2.0 * dtp, cfl * min(dt1, dt2))
+    dtp = dt
 
 ! copy data to array
 !
@@ -318,7 +391,7 @@ program paccel
       v(3,n) = vz
 
       n = n + 1
-!       print *, n, tm, dt, vp/c
+      print *, n, tm, dt, vp/c
 
       if (vp .ge. c) fin = .true.
     endif
