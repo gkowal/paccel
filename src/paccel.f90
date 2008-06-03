@@ -32,17 +32,20 @@ program paccel
   use mod_hdf5, only : hdf5_init, hdf5_get_dims, hdf5_read_var                &
                      , xmn, ymn, zmn, xmx, ymx, zmx, dxi, dyi, dzi, dx, dy, dz
   use mod_fits, only : fits_put_data_2d, fits_put_data_1d
+  use interpolation, only : interpolate => ptrilin
 
   implicit none
 
 ! local variables
 !
   character(len = 255) :: fl
-  integer              :: dm(3)
+  integer              :: dm(3), pm(3)
   integer              :: i, j, k, n, nmax
   real                 :: jx, jy, jz, ja, et, xx, fc
-  real                 :: xp, yp, zp, vx, vy, vz, vp
-  real                 :: ax, ay, az, aa, bb, xi, yi, zi, dxmin
+  real                 :: xp, yp, zp, vx, vy, vz, vp, wx, wy, wz, ux, uy, uz
+  real                 :: ax, ay, az, aa, bb, dxmin
+  real                 :: xli, yli, zli
+  real                 :: xt, yt, zt, xi, yi, zi, xr, yr, zr
   real                 :: bavg, qom, va, rg, tg, ulen, tm, dt, dtp
   logical              :: per = .false., fin = .false.
 
@@ -128,10 +131,6 @@ program paccel
 !
   call hdf5_init()
   call hdf5_get_dims(dm)
-
-! check minimum dx
-!
-  dxmin = min(dx, dy, dz)
 
 ! allocate variables
 !
@@ -226,30 +225,47 @@ program paccel
   v(2,1) = vy
   v(3,1) = vz
 
+! check minimum dx
+!
+  dxmin = min(dx, dy, dz)
+  xli   = 1.0 / (xmx - xmn)
+  yli   = 1.0 / (ymx - ymn)
+  zli   = 1.0 / (zmx - zmn)
+
+  pm = dm - 1
+
 ! integrate particles
 !
-! F = q/m * (E + VpxB)
   do while (tm .le. tmax .and. n .le. nmax .and. .not. fin)
 
 ! interpolate fields at the particle position
 !
-    xi = (xp - xmn) / (xmx - xmn)
-    yi = (yp - ymn) / (ymx - ymn)
-    zi = (zp - zmn) / (zmx - zmn)
+    xt = xli * (xp - xmn)
+    yt = yli * (yp - ymn)
+    zt = zli * (zp - zmn)
 
     if (per) then
-      i = (dm(1) - 1) * (xi - floor(xi)) + 1
-      j = (dm(2) - 1) * (yi - floor(yi)) + 1
-      k = (dm(3) - 1) * (zi - floor(zi)) + 1
+      xr = pm(1) * (xt - floor(xt)) + 1
+      yr = pm(2) * (yt - floor(yt)) + 1
+      zr = pm(3) * (zt - floor(zt)) + 1
     else
-      i = (dm(1) - 1) * xi + 1
-      j = (dm(2) - 1) * yi + 1
-      k = (dm(3) - 1) * zi + 1
+      xr = pm(1) * xt + 1
+      yr = pm(2) * yt + 1
+      zr = pm(3) * zt + 1
 
-      if (i .lt. 1 .or. i .gt. dm(1)) goto 100
-      if (j .lt. 1 .or. j .gt. dm(2)) goto 100
-      if (k .lt. 1 .or. k .gt. dm(3)) goto 100
+      if (xr .lt. 1 .or. xr .gt. dm(1)) goto 100
+      if (yr .lt. 1 .or. yr .gt. dm(2)) goto 100
+      if (zr .lt. 1 .or. zr .gt. dm(3)) goto 100
     endif
+
+! interpolate
+!
+    ux = interpolate(ex, xr, yr, zr)
+    uy = interpolate(ey, xr, yr, zr)
+    uz = interpolate(ez, xr, yr, zr)
+    wx = interpolate(bx, xr, yr, zr)
+    wy = interpolate(by, xr, yr, zr)
+    wz = interpolate(bz, xr, yr, zr)
 
 ! compute relativistic factor
 !
@@ -259,17 +275,15 @@ program paccel
 
 ! compute force components
 !
-    ax = fc * (ex(i,j,k) + vy * bz(i,j,k) - vz * by(i,j,k))
-    ay = fc * (ey(i,j,k) + vz * bx(i,j,k) - vx * bz(i,j,k))
-    az = fc * (ez(i,j,k) + vx * by(i,j,k) - vy * bx(i,j,k))
-    aa = sqrt(ax*ax + ay*ay + az*az)
-    bb = sqrt(bx(i,j,k)**2 + by(i,j,k)**2 + bz(i,j,k)**2)
+    ax = fc * (ux + vy * wz - vz * wy)
+    ay = fc * (uy + vz * wx - vx * wz)
+    az = fc * (uz + vx * wy - vy * wx)
+    aa = sqrt(ax * ax + ay * ay + az * az)
+    bb = sqrt(wx * wx + wy * wy + wz * wz)
 
 ! compute new timestep
 !
-    dt  = cfl * min(tg / bb, dxmin / max(vp, 1.0e-8))
-!     print *, dt, bb
-!     dt  = cfl * min(sqrt(dxmin / max(aa, 1.0e-8)), dxmin / max(vp, 1.0e-8))
+    dt  = cfl * min(tg / bb, sqrt(dxmin / max(aa, 1.0e-8)), dxmin / max(vp, 1.0e-8))
     dt  = min(2.0 * dtp, dt)
     dtp = dt
 
