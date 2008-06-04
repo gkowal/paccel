@@ -48,6 +48,7 @@ module params
                                                        ! 'd' - day
                                                        ! 'w' - week
                                                        ! 'y' - year
+  real                , save :: tmulti   = 1.0         ! time unit count
   real                , save :: c        = 1.0         ! the speed of light in Va
   real                , save :: dens     = 1.0         ! density [1 u/cm^3]
   real                , save :: ueta     = 0.0         ! uniform resistivity coeff
@@ -61,6 +62,7 @@ module params
   real                , save :: cfl      = 0.5         ! cfl condition
   real                , save :: dtout    = 1.0         ! interval between data writing
   real                , save :: tmax     = 1.0         ! maximum time for integration
+  real                , save :: ethres   = 1.0         ! energy threshold
 !
 !-------------------------------------------------------------------------------
 !
@@ -109,6 +111,8 @@ module params
       case ('tunit')
         l = len_trim(value)
         write(tunit  , "(a)" ) value(2:l-1)
+      case ('tmulti')
+        read (value  , *) tmulti
       case ('c')
         read (value  , *) c
       case ('dens')
@@ -136,6 +140,8 @@ module params
         read (value  , *) dtout
       case ('tmax')
         read (value  , *) tmax
+      case ('ethres')
+        read (value  , *) ethres
       case default
     end select
 

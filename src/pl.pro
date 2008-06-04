@@ -1,6 +1,7 @@
 part = 'p'
 
 tm = readfits(part + '_tim.fits.gz')
+en = readfits(part + '_ene.fits.gz')
 xp = readfits(part + '_pos.fits.gz')
 vp = readfits(part + '_vel.fits.gz')
 
@@ -20,6 +21,39 @@ case strtrim(tunit) of
 else:
 endcase
 
-plot, tm, vv/c, xtit='Time [' + tunit + ']', ytit='v/c', charsize=1.4
+cs=2.5
+
+;goto, anim
+
+xr=[0,1.0]*1.e-0
+
+!p.multi = [4,1,4]
+erase
+plot, tm, vv/c, xr=xr, charsize=cs, ytit='Particle speed [c]', xs=1, yr=[0,1], ys=1
+plot, tm, deriv(tm,vv/c), xr=xr, charsize=cs, ytit='Particle acceleration', xs=1, yr=[-4,4], ys=1
+oplot, xr, [0.0,0.0], color=150
+;plot, tm, 2.*((xp[1,*]+1.)/2 - floor((xp[1,*]+1.)/2)) - 1.0, xr=xr, charsize=cs, ytit='Y position', xs=1, psym=3
+plot, tm, xp[1,*], xr=xr, charsize=cs, ytit='Y position', xs=1, psym=3, ys=1, yr=[-1,1]
+plot, tm, en, xtit='Time [' + tunit + ']', ytit='E [keV]', charsize=cs, /yl, xr=xr, xs=1, yr=[1,1e17], ys=1
+
+goto, fine
+anim:
+for i = 0, 790 do begin
+
+xr=[0,5]+0.1*i
+
+!p.multi = [4,1,4]
+erase
+plot, tm, vv/c, xr=xr, charsize=cs, ytit='Particle speed [c]', xs=1, yr=[0,1], ys=1
+plot, tm, deriv(tm,vv/c), xr=xr, charsize=cs, ytit='Particle acceleration', xs=1, yr=[-4,4], ys=1
+oplot, xr, [0.0,0.0], color=150
+;plot, tm, 2.*((xp[1,*]+1.)/2 - floor((xp[1,*]+1.)/2)) - 1.0, xr=xr, charsize=cs, ytit='Y position', xs=1, psym=3
+plot, tm, xp[1,*], xr=xr, charsize=cs, ytit='Y position', xs=1, psym=3, ys=1, yr=[-1,1]
+plot, tm, en, xtit='Time [' + tunit + ']', ytit='E [keV]', charsize=cs, /yl, xr=xr, xs=1, yr=[1,1e17], ys=1
+
+wait, 0.1
+endfor
+
+fine:
 
 end

@@ -28,7 +28,8 @@ program paccel
 
   use params  , only : read_params, idir, odir                                &
                      , ueta, aeta, jcrit, nsteps, xc, yc, zc                  &
-                     , ptype, tunit, dens, c, periodic, cfl, dtout, tmax
+                     , ptype, tunit, tmulti                                   &
+                     , dens, c, periodic, cfl, dtout, tmax, ethres
   use mod_hdf5, only : hdf5_init, hdf5_get_dims, hdf5_read_var                &
                      , xmn, ymn, zmn, xmx, ymx, zmx, dxi, dyi, dzi, dx, dy, dz
   use mod_fits, only : fits_put_data_2d, fits_put_data_1d
@@ -41,21 +42,21 @@ program paccel
   character(len = 255) :: fl
   integer              :: dm(3), pm(3)
   integer              :: i, j, k, n, nmax
-  real                 :: jx, jy, jz, ja, et, xx, fc
-  real                 :: xp, yp, zp, vx, vy, vz, vp, wx, wy, wz, ux, uy, uz
-  real                 :: xp1, yp1, zp1, vx1, vy1, vz1
-  real                 :: ax, ay, az, aa, bb, dxmin
+  real                 :: jx, jy, jz, ja, et, xx
+  real                 :: wx, wy, wz, ux, uy, uz
+  real                 :: ax, ay, az, dxmin
   real                 :: xli, yli, zli
   real                 :: xt, yt, zt, xi, yi, zi, xr, yr, zr
-  real                 :: bavg, qom, va, rg, tg, ulen
-  real(kind=8)         :: tm, dt, dtp, dt1, dt2
+  real(kind=16)        :: mev, ulen, plen, bavg, qom, va, rg, tg, en
+  real(kind=16)        :: xp, yp, zp, vx, vy, vz, xp1, yp1, zp1, vx1, vy1, vz1, vp
+  real(kind=16)        :: tm, dt, dtp, dt1, dt2, fc, aa, bb, vc
   logical              :: per = .false., fin = .false.
 
 ! allocatable arrays
 !
   real, dimension(:,:,:), allocatable :: vv, bx, by, bz, ex, ey, ez
   real, dimension(:,:)  , allocatable :: x, v
-  real, dimension(:)    , allocatable :: t
+  real, dimension(:)    , allocatable :: t, e
 !
 !-------------------------------------------------------------------------------
 !
@@ -76,11 +77,12 @@ program paccel
 
 ! compute coefficients
 !
+  mev   = 938.27199893682302445085952058434
   va    = 299792.45799999998416751623153687  / c
   bavg  = 0.13694624848330305688648422801634 * sqrt(dens) / c
-  qom   = 9578.8340668294185888953506946564  * bavg
-  tg    = 0.00065594468630975164436663904510283
-  ulen  = va
+  qom   = 9578.8340668294185888953506946564  * bavg * tmulti
+  tg    = 0.00065594468630975164436663904510283 / tmulti
+  ulen  = va * tmulti
   select case(tunit)
   case('m')
     qom  = 60.0 * qom
@@ -104,22 +106,26 @@ program paccel
     tg   = tg / 31556925.974678400903940200805664
   case default
   end select
+
+  plen = 3.2407792896656063447898874599466e-14 * ulen
+
   select case(ptype)
   case ('e')
+    mev  = 0.00054461702326790686814333986021097 * mev
     qom  = 1836.152667427881851835991255939 * qom
     tg   = tg / 1836.152667427881851835991255939
     write( *, "('INFO      : trajectory for electron')" )
   case default
     write( *, "('INFO      : trajectory for proton')" )
   end select
+
   write( *, "('INFO      : Va  = ',1pe15.8,' km/s')" ) va
   write( *, "('INFO      : c   = ',1pe15.8,' Va')" ) c
   write( *, "('INFO      : <B> = ',1pe15.8,' G')" ) bavg
   write( *, "('INFO      : e/m = ',1pe15.8,' [1 / G ',a1,']')" ) qom, tunit
   write( *, "('INFO      : Tg  = ',1pe15.8,' [',a1,']')" ) tg, tunit
   write( *, "('INFO      : L   = ',1pe15.8,' km')" ) ulen
-  write( *, "('INFO      : L   = ',1pe15.8,' pc')" ) ulen * 3.2407793e-14
-
+  write( *, "('INFO      : L   = ',1pe15.8,' pc')" ) plen
 
 ! check if periodic box
 !
@@ -182,6 +188,10 @@ program paccel
     enddo
   endif
 
+!   ex(:,:,:) = 0.0
+!   ey(:,:,:) = 0.0
+!   ez(:,:,:) = 0.0
+
 ! read velocity field components
 !
   allocate(vv(dm(1),dm(2),dm(3)))
@@ -202,8 +212,9 @@ program paccel
 
 ! allocate particle positions & velocities
 !
-  nmax = int(tmax / dtout) + 1
+  nmax = int(tmax / dtout) + 2
   allocate(t(nmax))
+  allocate(e(nmax))
   allocate(x(3,nmax))
   allocate(v(3,nmax))
 
@@ -212,9 +223,9 @@ program paccel
   xp  = xc
   yp  = yc
   zp  = zc
-  vx  = 0.0
+  vx  = 0.01
   vy  = 0.01
-  vz  = 0.0
+  vz  = 0.01
 
   dtp = 1.0e-16
   tm  = 0.0
@@ -271,9 +282,48 @@ program paccel
       yr = pm(2) * yt + 1
       zr = pm(3) * zt + 1
 
-      if (xr .lt. 1 .or. xr .gt. dm(1)) goto 100
-      if (yr .lt. 1 .or. yr .gt. dm(2)) goto 100
-      if (zr .lt. 1 .or. zr .gt. dm(3)) goto 100
+      if (xr .lt. 1) then
+        vx = - vx
+        xp = xmn
+        xt = xli * (xp - xmn)
+        xr = pm(1) * xt + 1
+      endif
+      if (xr .gt. dm(1)) then
+        vx = - vx
+        xp = xmx
+        xt = xli * (xp - xmn)
+        xr = pm(1) * xt + 1
+      endif
+
+      if (yr .lt. 1) then
+        vy = - vy
+        yp = ymn
+        yt = yli * (yp - ymn)
+        yr = pm(2) * yt + 1
+      endif
+      if (yr .gt. dm(2)) then
+        vy = - vy
+        yp = ymx
+        yt = yli * (yp - ymn)
+        yr = pm(2) * yt + 1
+      endif
+
+      if (zr .lt. 1) then
+        vz = - vz
+        zp = zmn
+        zt = zli * (zp - zmn)
+        zr = pm(3) * zt + 1
+      endif
+      if (zr .gt. dm(3)) then
+        vz = - vz
+        zp = zmx
+        zt = zli * (zp - zmn)
+        zr = pm(3) * zt + 1
+      endif
+
+!       if (xr .lt. 1 .or. xr .gt. dm(1)) goto 100
+!       if (yr .lt. 1 .or. yr .gt. dm(2)) goto 100
+!       if (zr .lt. 1 .or. zr .gt. dm(3)) goto 100
     endif
 
 ! interpolate field at particle position
@@ -307,7 +357,7 @@ program paccel
 !
     aa  = sqrt(ax * ax + ay * ay + az * az)
     bb  = sqrt(wx * wx + wy * wy + wz * wz)
-    dt1 = min(tg / max(bb, 1.0e-8), sqrt(dxmin / max(aa, 1.0e-8)), dxmin / max(vp, 1.0e-8))
+    dt1 = min(tg / max(bb, 1.0e-16), (c - vp) / max(aa, 1.0e-16), sqrt(dxmin / max(aa, 1.0e-16)), dxmin / max(vp, 1.0e-16))
 
 
 !! 2nd step of RK integration
@@ -333,9 +383,54 @@ program paccel
       yr = pm(2) * yt + 1
       zr = pm(3) * zt + 1
 
-      if (xr .lt. 1 .or. xr .gt. dm(1)) goto 100
-      if (yr .lt. 1 .or. yr .gt. dm(2)) goto 100
-      if (zr .lt. 1 .or. zr .gt. dm(3)) goto 100
+      if (xr .lt. 1) then
+!         vx = - vx
+!         xp1 = xmn
+!         xt = xli * (xp1 - xmn)
+!         xr = pm(1) * xt + 1
+        xr = 1.0
+      endif
+      if (xr .gt. dm(1)) then
+!         vx = - vx
+!         xp1 = xmx
+!         xt = xli * (xp1 - xmn)
+!         xr = pm(1) * xt + 1
+        xr = dm(1)
+      endif
+
+      if (yr .lt. 1) then
+!         vy = - vy
+!         yp1 = ymn
+!         yt = yli * (yp1 - ymn)
+!         yr = pm(2) * yt + 1
+        yr = 1.0
+      endif
+      if (yr .gt. dm(2)) then
+!         vy = - vy
+!         yp1 = ymx
+!         yt = yli * (yp1 - ymn)
+!         yr = pm(2) * yt + 1
+        yr = dm(2)
+      endif
+
+      if (zr .lt. 1) then
+!         vz = - vz
+!         zp1 = zmn
+!         zt = zli * (zp1 - zmn)
+!         zr = pm(3) * zt + 1
+        zr = 1.0
+      endif
+      if (zr .gt. dm(3)) then
+!         vz = - vz
+!         zp1 = zmx
+!         zt = zli * (zp1 - zmn)
+!         zr = pm(3) * zt + 1
+        zr = dm(3)
+      endif
+
+!       if (xr .lt. 1 .or. xr .gt. dm(1)) goto 100
+!       if (yr .lt. 1 .or. yr .gt. dm(2)) goto 100
+!       if (zr .lt. 1 .or. zr .gt. dm(3)) goto 100
     endif
 
 ! interpolate field at particle position
@@ -369,12 +464,17 @@ program paccel
 !
     aa  = sqrt(ax * ax + ay * ay + az * az)
     bb  = sqrt(wx * wx + wy * wy + wz * wz)
-    dt2 = min(tg / max(bb, 1.0e-8), sqrt(dxmin / max(aa, 1.0e-8)), dxmin / max(vp, 1.0e-8))
+    dt2 = min(tg / max(bb, 1.0e-16), (c - vp) / max(aa, 1.0e-16), sqrt(dxmin / max(aa, 1.0e-16)), dxmin / max(vp, 1.0e-16))
 
 ! compute new timestep
 !
     dt  = min(2.0 * dtp, cfl * min(dt1, dt2))
     dtp = dt
+
+! compute particle energy
+!
+    vc = (vp/c)**2
+    en = mev * vc / sqrt(1.0 - vc)
 
 ! copy data to array
 !
@@ -390,25 +490,43 @@ program paccel
       v(2,n) = vy
       v(3,n) = vz
 
-      n = n + 1
-      print *, n, tm, dt, vp/c
+      e(n)   = en !mev*(vp/c)**2/sqrt(1.0 - min(1.0, (vp/c)**2))
 
-      if (vp .ge. c) fin = .true.
+      write (*,"(i6,2x,4(1pe22.14))") n, tm, dt, vp/c, e(n)
+      n = n + 1
     endif
+
+    if (en .ge. ethres) fin = .true.
 
   enddo
 
 100 continue
 
+  t(n)   = tm
+
+  x(1,n) = xp
+  x(2,n) = yp
+  x(3,n) = zp
+
+  v(1,n) = vx
+  v(2,n) = vy
+  v(3,n) = vz
+
+  e(n)   = en
+
+  write (*,"(i6,2x,4(1pe22.14))") n, tm, dt, vp/c, e(n)
+
 ! write positions and speeds to a file
 !
   write( *, "('INFO      : ',a)" ) 'writing time, positions and speeds'
   write(fl, '("!",a)') trim(odir) // trim(ptype) // '_tim.fits.gz'
-  call fits_put_data_1d(fl, t(1:n-1))
+  call fits_put_data_1d(fl, t(1:n))
+  write(fl, '("!",a)') trim(odir) // trim(ptype) // '_ene.fits.gz'
+  call fits_put_data_1d(fl, e(1:n))
   write(fl, '("!",a)') trim(odir) // trim(ptype) // '_pos.fits.gz'
-  call fits_put_data_2d(fl, x(:,1:n-1))
+  call fits_put_data_2d(fl, x(:,1:n))
   write(fl, '("!",a)') trim(odir) // trim(ptype) // '_vel.fits.gz'
-  call fits_put_data_2d(fl, v(:,1:n-1))
+  call fits_put_data_2d(fl, v(:,1:n))
 
 ! deallocate variables
 !
