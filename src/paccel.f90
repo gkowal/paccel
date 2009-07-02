@@ -29,7 +29,8 @@ program paccel
   use params  , only : read_params, idir, odir                                &
                      , ueta, aeta, jcrit, nsteps, xc, yc, zc                  &
                      , ptype, tunit, tmulti                                   &
-                     , dens, c, periodic, cfl, dtout, tmax, ethres
+                     , dens, c, periodic, cfl, dtout, tmax, ethres, current   &
+                     , efield
   use mod_hdf5, only : hdf5_init, hdf5_get_dims, hdf5_read_var                &
                      , xmn, ymn, zmn, xmx, ymx, zmx, dxi, dyi, dzi, dx, dy, dz
   use mod_fits, only : fits_put_data_2d, fits_put_data_1d
@@ -146,9 +147,11 @@ program paccel
   allocate(bx(dm(1),dm(2),dm(3)))
   allocate(by(dm(1),dm(2),dm(3)))
   allocate(bz(dm(1),dm(2),dm(3)))
-  allocate(ex(dm(1),dm(2),dm(3)))
-  allocate(ey(dm(1),dm(2),dm(3)))
-  allocate(ez(dm(1),dm(2),dm(3)))
+  if (efield .eq. 'y') then
+    allocate(ex(dm(1),dm(2),dm(3)))
+    allocate(ey(dm(1),dm(2),dm(3)))
+    allocate(ez(dm(1),dm(2),dm(3)))
+  endif
 
 ! read magnetic field components
 !
@@ -157,58 +160,57 @@ program paccel
   call hdf5_read_var('magy', by)
   call hdf5_read_var('magz', bz)
 
+  if (efield .eq. 'y') then
+
 ! computing current density
 !
-  write( *, "('INFO      : ',a)" ) "computing current density"
-  ex(:,:,:) = 0.0
-  ey(:,:,:) = 0.0
-  ez(:,:,:) = 0.0
+    write( *, "('INFO      : ',a)" ) "computing current density"
+    ex(:,:,:) = 0.0
+    ey(:,:,:) = 0.0
+    ez(:,:,:) = 0.0
 
-  if (ueta .gt. 0.0) then
-    do k = 2, dm(3)-1
-      do j = 2, dm(2)-1
-        do i = 2, dm(1)-1
-          jx = dyi*(bz(i,j+1,k) - bz(i,j-1,k)) - dzi*(by(i,j,k+1) - by(i,j,k-1))
-          jy = dzi*(bx(i,j,k+1) - bx(i,j,k-1)) - dxi*(bz(i+1,j,k) - bz(i-1,j,k))
-          jz = dxi*(by(i+1,j,k) - by(i-1,j,k)) - dyi*(bx(i,j+1,k) - bx(i,j-1,k))
+    if (ueta .gt. 0.0 .and. current .eq. 'y') then
+      do k = 2, dm(3)-1
+        do j = 2, dm(2)-1
+          do i = 2, dm(1)-1
+            jx = dyi*(bz(i,j+1,k) - bz(i,j-1,k)) - dzi*(by(i,j,k+1) - by(i,j,k-1))
+            jy = dzi*(bx(i,j,k+1) - bx(i,j,k-1)) - dxi*(bz(i+1,j,k) - bz(i-1,j,k))
+            jz = dxi*(by(i+1,j,k) - by(i-1,j,k)) - dyi*(bx(i,j+1,k) - bx(i,j-1,k))
 
-          et = ueta
-          if (aeta .gt. 0.0) then
-            ja = sqrt(jx*jx + jy*jy + jz*jz)
-            xx = ja / jcrit
-            fc = 0.5 * (tanh(20.0*(xx - 1.0)) + 1.0)
-            et = ueta + aeta * fc * xx
-          endif
+            et = ueta
+            if (aeta .gt. 0.0) then
+              ja = sqrt(jx*jx + jy*jy + jz*jz)
+              xx = ja / jcrit
+              fc = 0.5 * (tanh(20.0*(xx - 1.0)) + 1.0)
+              et = ueta + aeta * fc * xx
+            endif
 
-          ex(i,j,k) = et * jx
-          ey(i,j,k) = et * jy
-          ez(i,j,k) = et * jz
+            ex(i,j,k) = et * jx
+            ey(i,j,k) = et * jy
+            ez(i,j,k) = et * jz
+          enddo
         enddo
       enddo
-    enddo
-  endif
-
-!   ex(:,:,:) = 0.0
-!   ey(:,:,:) = 0.0
-!   ez(:,:,:) = 0.0
+    endif
 
 ! read velocity field components
 !
-  allocate(vv(dm(1),dm(2),dm(3)))
+    allocate(vv(dm(1),dm(2),dm(3)))
 
-  call hdf5_read_var('velx', vv)
-  ey = ey + vv * bz
-  ez = ez - vv * by
+    call hdf5_read_var('velx', vv)
+    ey = ey + vv * bz
+    ez = ez - vv * by
 
-  call hdf5_read_var('vely', vv)
-  ex = ex - vv * bz
-  ez = ez + vv * bx
+    call hdf5_read_var('vely', vv)
+    ex = ex - vv * bz
+    ez = ez + vv * bx
 
-  call hdf5_read_var('velz', vv)
-  ex = ex + vv * by
-  ey = ey - vv * bx
+    call hdf5_read_var('velz', vv)
+    ex = ex + vv * by
+    ey = ey - vv * bx
 
-  if (allocated(vv)) deallocate(vv)
+    if (allocated(vv)) deallocate(vv)
+  endif
 
 ! allocate particle positions & velocities
 !
@@ -223,9 +225,9 @@ program paccel
   xp  = xc
   yp  = yc
   zp  = zc
-  vx  = 0.01
-  vy  = 0.01
-  vz  = 0.01
+  vx  = 0.0 !-6.30180!0.01
+  vy  = 1.0 !-2.71802!0.01
+  vz  = 1.0 !-16.3036!0.01
 
   dtp = 1.0e-16
   tm  = 0.0
@@ -250,6 +252,10 @@ program paccel
   zli   = 1.0 / (zmx - zmn)
 
   pm = dm - 1
+
+! print headers
+!
+  write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP', 'SPEED (c)', 'ENERGY (MeV)'
 
 ! integrate particles
 !
@@ -320,26 +326,30 @@ program paccel
         zt = zli * (zp - zmn)
         zr = pm(3) * zt + 1
       endif
-
-!       if (xr .lt. 1 .or. xr .gt. dm(1)) goto 100
-!       if (yr .lt. 1 .or. yr .gt. dm(2)) goto 100
-!       if (zr .lt. 1 .or. zr .gt. dm(3)) goto 100
     endif
 
 ! interpolate field at particle position
 !
-    ux = interpolate(dm, ex, xr, yr, zr)
-    uy = interpolate(dm, ey, xr, yr, zr)
-    uz = interpolate(dm, ez, xr, yr, zr)
+    if (efield .eq. 'y') then
+      ux = interpolate(dm, ex, xr, yr, zr)
+      uy = interpolate(dm, ey, xr, yr, zr)
+      uz = interpolate(dm, ez, xr, yr, zr)
+    endif
     wx = interpolate(dm, bx, xr, yr, zr)
     wy = interpolate(dm, by, xr, yr, zr)
     wz = interpolate(dm, bz, xr, yr, zr)
 
 ! compute force components
 !
+  if (efield .eq. 'y') then
     ax = fc * (ux + vy * wz - vz * wy)
     ay = fc * (uy + vz * wx - vx * wz)
     az = fc * (uz + vx * wy - vy * wx)
+  else
+    ax = fc * (vy * wz - vz * wy)
+    ay = fc * (vz * wx - vx * wz)
+    az = fc * (vx * wy - vy * wx)
+  endif
 
 ! integrate velocity
 !
@@ -379,74 +389,33 @@ program paccel
       yr = pm(2) * (yt - floor(yt)) + 1
       zr = pm(3) * (zt - floor(zt)) + 1
     else
-      xr = pm(1) * xt + 1
-      yr = pm(2) * yt + 1
-      zr = pm(3) * zt + 1
-
-      if (xr .lt. 1) then
-!         vx = - vx
-!         xp1 = xmn
-!         xt = xli * (xp1 - xmn)
-!         xr = pm(1) * xt + 1
-        xr = 1.0
-      endif
-      if (xr .gt. dm(1)) then
-!         vx = - vx
-!         xp1 = xmx
-!         xt = xli * (xp1 - xmn)
-!         xr = pm(1) * xt + 1
-        xr = dm(1)
-      endif
-
-      if (yr .lt. 1) then
-!         vy = - vy
-!         yp1 = ymn
-!         yt = yli * (yp1 - ymn)
-!         yr = pm(2) * yt + 1
-        yr = 1.0
-      endif
-      if (yr .gt. dm(2)) then
-!         vy = - vy
-!         yp1 = ymx
-!         yt = yli * (yp1 - ymn)
-!         yr = pm(2) * yt + 1
-        yr = dm(2)
-      endif
-
-      if (zr .lt. 1) then
-!         vz = - vz
-!         zp1 = zmn
-!         zt = zli * (zp1 - zmn)
-!         zr = pm(3) * zt + 1
-        zr = 1.0
-      endif
-      if (zr .gt. dm(3)) then
-!         vz = - vz
-!         zp1 = zmx
-!         zt = zli * (zp1 - zmn)
-!         zr = pm(3) * zt + 1
-        zr = dm(3)
-      endif
-
-!       if (xr .lt. 1 .or. xr .gt. dm(1)) goto 100
-!       if (yr .lt. 1 .or. yr .gt. dm(2)) goto 100
-!       if (zr .lt. 1 .or. zr .gt. dm(3)) goto 100
+      xr = max(1.0, min(real(dm(1)), pm(1) * xt + 1.0))
+      yr = max(1.0, min(real(dm(2)), pm(2) * yt + 1.0))
+      zr = max(1.0, min(real(dm(3)), pm(3) * zt + 1.0))
     endif
 
 ! interpolate field at particle position
 !
-    ux = interpolate(dm, ex, xr, yr, zr)
-    uy = interpolate(dm, ey, xr, yr, zr)
-    uz = interpolate(dm, ez, xr, yr, zr)
+    if (efield .eq. 'y') then
+      ux = interpolate(dm, ex, xr, yr, zr)
+      uy = interpolate(dm, ey, xr, yr, zr)
+      uz = interpolate(dm, ez, xr, yr, zr)
+    endif
     wx = interpolate(dm, bx, xr, yr, zr)
     wy = interpolate(dm, by, xr, yr, zr)
     wz = interpolate(dm, bz, xr, yr, zr)
 
 ! compute force components
 !
-    ax = fc * (ux + vy * wz - vz * wy)
-    ay = fc * (uy + vz * wx - vx * wz)
-    az = fc * (uz + vx * wy - vy * wx)
+    if (efield .eq. 'y') then
+      ax = fc * (ux + vy * wz - vz * wy)
+      ay = fc * (uy + vz * wx - vx * wz)
+      az = fc * (uz + vx * wy - vy * wx)
+    else
+      ax = fc * (vy * wz - vz * wy)
+      ay = fc * (vz * wx - vx * wz)
+      az = fc * (vx * wy - vy * wx)
+    endif
 
 ! integrate velocity
 !
@@ -490,9 +459,9 @@ program paccel
       v(2,n) = vy
       v(3,n) = vz
 
-      e(n)   = en !mev*(vp/c)**2/sqrt(1.0 - min(1.0, (vp/c)**2))
+      e(n)   = en
 
-      write (*,"(i6,2x,4(1pe22.14))") n, tm, dt, vp/c, e(n)
+      write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, tm, dt, vp/c, e(n), char(13)
       n = n + 1
     endif
 
@@ -514,7 +483,7 @@ program paccel
 
   e(n)   = en
 
-  write (*,"(i6,2x,4(1pe22.14))") n, tm, dt, vp/c, e(n)
+  write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, tm, dt, vp/c, e(n)
 
 ! write positions and speeds to a file
 !

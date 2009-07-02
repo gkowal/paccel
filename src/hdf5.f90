@@ -90,7 +90,7 @@ module mod_hdf5
 
 ! generate filename
 !
-    write(fl,"(a,a1,i6.6,'_',i3.3,'.h5')") trim(idir), ftype, fnumber, 0
+    write(fl,"(a,a1,i6.6,'_',i5.5,'.h5')") trim(idir), ftype, fnumber, 0
 
 ! check if the file exists
 !
@@ -284,7 +284,7 @@ module mod_hdf5
 
 ! generate filename
 !
-    write(fl,"(a,a1,i6.6,'_',i3.3,'.h5')") trim(idir), ftype, fnumber, n
+    write(fl,"(a,a1,i6.6,'_',i5.5,'.h5')") trim(idir), ftype, fnumber, n
 
 ! check if the file exists
 !
@@ -383,7 +383,7 @@ module mod_hdf5
 
 ! print info
 !
-    write( *,"(a,a4,a,a1,i6.6,'_',i3.3,'.h5',a1,$)") 'INFO      : reading ', trim(var), ' from ', ftype, fnumber, n, char(13)
+    write( *,"(a,a4,a,a1,i6.6,'_',i5.5,'.h5',a1,$)") 'INFO      : reading ', trim(var), ' from ', ftype, fnumber, n, char(13)
 
 ! get coordinate of subarray
 !
@@ -639,7 +639,7 @@ module mod_hdf5
 !
 ! generate filename
 !
-    write(fl,"(a,a1,i6.6,'_',i3.3,'.h5')") trim(idir), ftype, fnumber, n
+    write(fl,"(a,a1,i6.6,'_',i5.5,'.h5')") trim(idir), ftype, fnumber, n
 
 ! check if the file exists
 !

@@ -4,10 +4,11 @@ HOST    := $(shell hostname)
 OS      := $(shell uname)
 
 FC      = ifort
-FFLAGS  = -g -O3 -i4 -fno-omit-frame-pointer -ipo -finline-limit=1000 -I$(HDF5DIR)/lib
+#FFLAGS  = -g -O3 -i4 -mtune=core2 -xS -fno-omit-frame-pointer -ipo -finline-limit=1000 -I$(HDF5DIR)/include
+FFLAGS  = -g -O3 -i4 -I$(HDF5DIR)/include
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)
-LIBS    = -L$(HDF5DIR)/lib -lhdf5_fortran -lhdf5 -L$(SCILIB)/common/lib -lcfitsio -lz
+LIBS    = -L$(HDF5DIR)/lib -lhdf5_fortran -lhdf5 -L$(FITSDIR)/lib -lcfitsio -lz
 
 #-------------------------------------------------------------------------------
 

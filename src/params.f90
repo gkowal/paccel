@@ -59,6 +59,8 @@ module params
   real                , save :: yc       = 0.0
   real                , save :: zc       = 0.0
   character(len =   1), save :: periodic = 'y'         ! periodic box or not
+  character(len =   1), save :: efield   = 'y'         ! take electric field into account
+  character(len =   1), save :: current  = 'y'         ! take current density into account
   real                , save :: cfl      = 0.5         ! cfl condition
   real                , save :: dtout    = 1.0         ! interval between data writing
   real                , save :: tmax     = 1.0         ! maximum time for integration
@@ -134,6 +136,12 @@ module params
       case ('periodic')
         l = len_trim(value)
         write(periodic, "(a)" ) value(2:l-1)
+      case ('efield')
+        l = len_trim(value)
+        write(efield  , "(a)" ) value(2:l-1)
+      case ('current')
+        l = len_trim(value)
+        write(current , "(a)" ) value(2:l-1)
       case ('cfl')
         read (value  , *) cfl
       case ('dtout')
