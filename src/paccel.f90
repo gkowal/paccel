@@ -30,7 +30,7 @@ program paccel
                      , ueta, aeta, jcrit, nsteps, xc, yc, zc                  &
                      , ptype, tunit, tmulti                                   &
                      , dens, c, periodic, cfl, dtout, tmax, ethres, current   &
-                     , efield
+                     , efield, vp
   use mod_hdf5, only : hdf5_init, hdf5_get_dims, hdf5_read_var                &
                      , xmn, ymn, zmn, xmx, ymx, zmx, dxi, dyi, dzi, dx, dy, dz
   use mod_fits, only : fits_put_data_2d, fits_put_data_1d
@@ -43,19 +43,19 @@ program paccel
   character(len = 255) :: fl
   integer              :: dm(3), pm(3)
   integer              :: i, j, k, n, nmax
-  real                 :: jx, jy, jz, ja, et, xx
-  real                 :: wx, wy, wz, ux, uy, uz
-  real                 :: ax, ay, az, dxmin
+  real                 :: jx, jy, jz, ja, et, xx, dxmin
+  real(kind=8)         :: ww, wx, wy, wz, uu, ux, uy, uz, vv
+  real(kind=16)        :: ax, ay, az, mu
   real                 :: xli, yli, zli
   real                 :: xt, yt, zt, xi, yi, zi, xr, yr, zr
   real(kind=16)        :: mev, ulen, plen, bavg, qom, va, rg, tg, en
-  real(kind=16)        :: xp, yp, zp, vx, vy, vz, xp1, yp1, zp1, vx1, vy1, vz1, vp
+  real(kind=16)        :: xp, yp, zp, vx, vy, vz, xp1, yp1, zp1, vx1, vy1, vz1, vu
   real(kind=16)        :: tm, dt, dtp, dt1, dt2, fc, aa, bb, vc
   logical              :: per = .false., fin = .false.
 
 ! allocatable arrays
 !
-  real, dimension(:,:,:), allocatable :: vv, bx, by, bz, ex, ey, ez
+  real, dimension(:,:,:), allocatable :: qt, bx, by, bz, ex, ey, ez
   real, dimension(:,:)  , allocatable :: x, v
   real, dimension(:)    , allocatable :: t, e
 !
@@ -109,6 +109,7 @@ program paccel
   end select
 
   plen = 3.2407792896656063447898874599466e-14 * ulen
+  mu   = 0.5d0 * (vp * c)**2 / bavg
 
   select case(ptype)
   case ('e')
@@ -120,13 +121,16 @@ program paccel
     write( *, "('INFO      : trajectory for proton')" )
   end select
 
-  write( *, "('INFO      : Va  = ',1pe15.8,' km/s')" ) va
-  write( *, "('INFO      : c   = ',1pe15.8,' Va')" ) c
-  write( *, "('INFO      : <B> = ',1pe15.8,' G')" ) bavg
-  write( *, "('INFO      : e/m = ',1pe15.8,' [1 / G ',a1,']')" ) qom, tunit
-  write( *, "('INFO      : Tg  = ',1pe15.8,' [',a1,']')" ) tg, tunit
-  write( *, "('INFO      : L   = ',1pe15.8,' km')" ) ulen
-  write( *, "('INFO      : L   = ',1pe15.8,' pc')" ) plen
+  write( *, "('INFO      : Va    = ',1pe15.8,' km/s')" ) va
+  write( *, "('INFO      : c     = ',1pe15.8,' Va')" ) c
+  write( *, "('INFO      : <B>   = ',1pe15.8,' G')" ) bavg
+  write( *, "('INFO      : e/m   = ',1pe15.8,' [1 / G ',a1,']')" ) qom, tunit
+  write( *, "('INFO      : Om    = ',1pe15.8,' [1 / ',a1,']')" ) qom*bavg, tunit
+  write( *, "('INFO      : Tg    = ',1pe15.8,' [',a1,']')" ) tg, tunit
+  write( *, "('INFO      : mu    = ',1pe15.8,' [',a1,']')" ) mu, tunit
+  write( *, "('INFO      : mu/Om = ',1pe15.8,' [',a1,']')" ) mu/(qom*bavg), tunit
+  write( *, "('INFO      : L     = ',1pe15.8,' km')" ) ulen
+  write( *, "('INFO      : L     = ',1pe15.8,' pc')" ) plen
 
 ! check if periodic box
 !
@@ -164,12 +168,14 @@ program paccel
 
 ! computing current density
 !
-    write( *, "('INFO      : ',a)" ) "computing current density"
+    write( *, "('INFO      : ',a)" ) "computing electric field"
     ex(:,:,:) = 0.0
     ey(:,:,:) = 0.0
     ez(:,:,:) = 0.0
 
     if (ueta .gt. 0.0 .and. current .eq. 'y') then
+      write( *, "('INFO      : ',a)" ) "computing current density"
+
       do k = 2, dm(3)-1
         do j = 2, dm(2)-1
           do i = 2, dm(1)-1
@@ -195,21 +201,21 @@ program paccel
 
 ! read velocity field components
 !
-    allocate(vv(dm(1),dm(2),dm(3)))
+    allocate(qt(dm(1),dm(2),dm(3)))
 
-    call hdf5_read_var('velx', vv)
-    ey = ey + vv * bz
-    ez = ez - vv * by
+    call hdf5_read_var('velx', qt)
+    ey = ey + qt * bz
+    ez = ez - qt * by
 
-    call hdf5_read_var('vely', vv)
-    ex = ex - vv * bz
-    ez = ez + vv * bx
+    call hdf5_read_var('vely', qt)
+    ex = ex - qt * bz
+    ez = ez + qt * bx
 
-    call hdf5_read_var('velz', vv)
-    ex = ex + vv * by
-    ey = ey - vv * bx
+    call hdf5_read_var('velz', qt)
+    ex = ex + qt * by
+    ey = ey - qt * bx
 
-    if (allocated(vv)) deallocate(vv)
+    if (allocated(qt)) deallocate(qt)
   endif
 
 ! allocate particle positions & velocities
@@ -225,17 +231,107 @@ program paccel
   xp  = xc
   yp  = yc
   zp  = zc
-  vx  = 0.0 !-6.30180!0.01
-  vy  = 1.0 !-2.71802!0.01
-  vz  = 1.0 !-16.3036!0.01
+
+! convert position to index
+!
+  xt = xli * (xp - xmn)
+  yt = yli * (yp - ymn)
+  zt = zli * (zp - zmn)
+    if (per) then
+      xr = pm(1) * (xt - floor(xt)) + 1
+      yr = pm(2) * (yt - floor(yt)) + 1
+      zr = pm(3) * (zt - floor(zt)) + 1
+    else
+      xr = pm(1) * xt + 1
+      yr = pm(2) * yt + 1
+      zr = pm(3) * zt + 1
+
+      if (xr .lt. 1) then
+        vx = - vx
+        xp = xmn
+        xt = xli * (xp - xmn)
+        xr = pm(1) * xt + 1
+      endif
+      if (xr .gt. dm(1)) then
+        vx = - vx
+        xp = xmx
+        xt = xli * (xp - xmn)
+        xr = pm(1) * xt + 1
+      endif
+
+      if (yr .lt. 1) then
+        vy = - vy
+        yp = ymn
+        yt = yli * (yp - ymn)
+        yr = pm(2) * yt + 1
+      endif
+      if (yr .gt. dm(2)) then
+        vy = - vy
+        yp = ymx
+        yt = yli * (yp - ymn)
+        yr = pm(2) * yt + 1
+      endif
+
+      if (zr .lt. 1) then
+        vz = - vz
+        zp = zmn
+        zt = zli * (zp - zmn)
+        zr = pm(3) * zt + 1
+      endif
+      if (zr .gt. dm(3)) then
+        vz = - vz
+        zp = zmx
+        zt = zli * (zp - zmn)
+        zr = pm(3) * zt + 1
+      endif
+    endif
+
+! calculate magnetic field components in the initial position
+!
+  wx = interpolate(dm, bx, xr, yr, zr)
+  wy = interpolate(dm, by, xr, yr, zr)
+  wz = interpolate(dm, bz, xr, yr, zr)
+
+! calculate the direction of local field
+!
+  ww = sqrt(wx*wx + wy*wy + wz*wz)
+  if (ww .gt. 0.0d0) then
+    wx = wx / ww
+    wy = wy / ww
+    wz = wz / ww
+  else
+    write( *, "('ERROR     : ',a)" ) "B=0 at the initial position! Choose another one."
+    stop
+  endif
+
+  ux = 0.0d0
+  uy = 0.0d0
+  uz = 1.0d0
+
+  vx = uy * wz - uz * wy
+  vy = uz * wx - ux * wz
+  vz = ux * wy - uy * wx
+  vv = sqrt(vx*vx + vy*vy + vz*vz)
+  if (vv .gt. 0.0d0) then
+    vx = vx / vv
+    vy = vy / vv
+    vz = vz / vv
+  else
+    write( *, "('ERROR     : ',a)" ) "V=0 at the initial position! Choose another one."
+    stop
+  endif
+
+  vx  = vp * c * vx
+  vy  = vp * c * vy
+  vz  = vp * c * vz
 
   dtp = 1.0e-16
   tm  = 0.0
   n   = 1
 
-  vp = vx**2 + vy**2 + vz**2
-  fc = qom * sqrt(1.0 - min(1.0, vp / c**2))
-  vp = sqrt(vp)
+  vu = vx**2 + vy**2 + vz**2
+  fc = qom * sqrt(1.0 - min(1.0, vu / c**2))
+  vu = sqrt(vu)
 
   x(1,1) = xp
   x(2,1) = yp
@@ -269,9 +365,9 @@ program paccel
 !!
 ! compute relativistic factor
 !
-    vp = vx**2 + vy**2 + vz**2
-    fc = qom * sqrt(1.0 - min(1.0, vp / c**2))
-    vp = sqrt(vp)
+    vu = vx**2 + vy**2 + vz**2
+    fc = qom * sqrt(1.0 - min(1.0, vu / c**2))
+    vu = sqrt(vu)
 
 ! convert particle position to arrays index
 !
@@ -367,16 +463,16 @@ program paccel
 !
     aa  = sqrt(ax * ax + ay * ay + az * az)
     bb  = sqrt(wx * wx + wy * wy + wz * wz)
-    dt1 = min(tg / max(bb, 1.0e-16), (c - vp) / max(aa, 1.0e-16), sqrt(dxmin / max(aa, 1.0e-16)), dxmin / max(vp, 1.0e-16))
+    dt1 = min(tg / max(bb, 1.0e-16), (c - vu) / max(aa, 1.0e-16), sqrt(dxmin / max(aa, 1.0e-16)), dxmin / max(vu, 1.0e-16))
 
 
 !! 2nd step of RK integration
 !!
 ! compute relativistic factor
 !
-    vp = vx1**2 + vy1**2 + vz1**2
-    fc = qom * sqrt(1.0 - min(1.0, vp / c**2))
-    vp = sqrt(vp)
+    vu = vx1**2 + vy1**2 + vz1**2
+    fc = qom * sqrt(1.0 - min(1.0, vu / c**2))
+    vu = sqrt(vu)
 
 ! convert particle position to arrays index
 !
@@ -433,7 +529,7 @@ program paccel
 !
     aa  = sqrt(ax * ax + ay * ay + az * az)
     bb  = sqrt(wx * wx + wy * wy + wz * wz)
-    dt2 = min(tg / max(bb, 1.0e-16), (c - vp) / max(aa, 1.0e-16), sqrt(dxmin / max(aa, 1.0e-16)), dxmin / max(vp, 1.0e-16))
+    dt2 = min(tg / max(bb, 1.0e-16), (c - vu) / max(aa, 1.0e-16), sqrt(dxmin / max(aa, 1.0e-16)), dxmin / max(vu, 1.0e-16))
 
 ! compute new timestep
 !
@@ -442,7 +538,7 @@ program paccel
 
 ! compute particle energy
 !
-    vc = (vp/c)**2
+    vc = (vu/c)**2
     en = mev * vc / sqrt(1.0 - vc)
 
 ! copy data to array
@@ -461,7 +557,7 @@ program paccel
 
       e(n)   = en
 
-      write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, tm, dt, vp/c, e(n), char(13)
+      write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, tm, dt, vu/c, e(n), char(13)
       n = n + 1
     endif
 
@@ -483,7 +579,7 @@ program paccel
 
   e(n)   = en
 
-  write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, tm, dt, vp/c, e(n)
+  write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, tm, dt, vu/c, e(n)
 
 ! write positions and speeds to a file
 !

@@ -29,7 +29,7 @@ cs=2.5
 xr=[0,1.0]*1.e1+0.0
 xr=[69.0,69.5]
 xr=[30,40]
-xr=[0.0,100.0]
+xr=[0.0,0.025]
 
 !p.multi = [4,1,4]
 erase
@@ -38,9 +38,9 @@ plot, tm, deriv(tm,vv/c)/sqrt(1.0-(vv/c)^2), xr=xr, charsize=cs, ytit='Particle 
 oplot, xr, [0.0,0.0], color=150
 ;plot, tm, 2.*((xp[1,*]+1.)/2 - floor((xp[1,*]+1.)/2)) - 1.0, xr=xr, charsize=cs, ytit='Y position', xs=1, psym=3
 ;plot, tm, ((xp[2,*]+0.5) - floor((xp[2,*]+0.5))) - 0.5, xr=xr, charsize=cs, ytit='Y position', xs=1, psym=3
-plot, tm, xp[1,*], xr=xr, charsize=cs, ytit='Y position', xs=1, psym=3, ys=1, yr=[-1,1]*5
-oplot, tm, xp[2,*]
-oplot, tm, xp[0,*]
+plot, tm, xp[0,*], xr=xr, charsize=cs, ytit='X position', xs=1, psym=3, ys=1, yr=[-1,1]*0.5
+; oplot, tm, xp[2,*]
+; oplot, tm, xp[0,*]
 plot, tm, en, xtit='Time [' + tunit + ']', ytit='E [MeV]', charsize=cs, /yl, xr=xr, xs=1, yr=[1,1e14], ys=1, psym=1, symsize=0.5
 
 goto, fine
