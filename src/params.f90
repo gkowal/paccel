@@ -58,7 +58,8 @@ module params
   real                , save :: xc       = 0.0         ! initial position
   real                , save :: yc       = 0.0
   real                , save :: zc       = 0.0
-  real                , save :: vper     = 1.0         ! initial perpendicular speed
+  real                , save :: vpar     = 0.0         ! initial parallel speed [in c]
+  real                , save :: vper     = 0.1         ! initial perpendicular speed [in c]
   character(len =   1), save :: approx   = 'n'         ! guiding centre approximation
   character(len =   1), save :: periodic = 'y'         ! periodic box or not
   character(len =   1), save :: efield   = 'y'         ! take electric field into account
@@ -135,6 +136,8 @@ module params
         read (value  , *) yc
       case ('zc')
         read (value  , *) zc
+      case ('vpar')
+        read (value  , *) vpar
       case ('vper')
         read (value  , *) vper
       case ('approximation')

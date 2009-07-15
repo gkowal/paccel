@@ -30,7 +30,7 @@ program paccel
                      , ueta, aeta, jcrit, nsteps, xc, yc, zc                  &
                      , ptype, tunit, tmulti                                   &
                      , dens, c, periodic, cfl, dtout, tmax, ethres, current   &
-                     , efield, vper, approx
+                     , efield, vpar, vper, approx
   use mod_hdf5, only : hdf5_init, hdf5_get_dims, hdf5_read_var                &
                      , xmn, ymn, zmn, xmx, ymx, zmx, dxi, dyi, dzi, dx, dy, dz, dtc
   use mod_fits, only : fits_put_data_2d, fits_put_data_1d
@@ -134,8 +134,9 @@ program paccel
     mp   = 1.6726215850718025086476640481627e-27        ! proton mass [kg]
     mev  = 938.27199893682302445085952058434            ! rest energy of proton [MeV]
   end select
-  vp = cc * vper                                        ! perpendicular particle speed
-  gm = 1.0d0 / sqrt(1.0d0 - vper**2)                    ! Lorentz factor
+  vp = cc * vpar                                        ! parallel particle speed
+  vr = cc * vper                                        ! perpendicular particle speed
+  gm = 1.0d0 / sqrt(1.0d0 - vpar**2 - vper**2)          ! Lorentz factor
   om0 = qom * bavg                                      ! classical gyrofrequency
   om = om0 / gm                                         ! relativistic gyrofrequency
   tg = 1.0d0 / om                                       ! gyroperiod
@@ -156,7 +157,8 @@ program paccel
     write( *, "('INFO      : trajectory for proton')" )
   end select
   write( *, "('INFO      : e/m   =',1pe15.8,' [1 / G s]')" ) qom
-  write( *, "('INFO      : Vp    =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vper, vp
+  write( *, "('INFO      : Vpar  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vpar, vp
+  write( *, "('INFO      : Vper  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vper, vr
   write( *, "('INFO      : gamma =',1pe15.8)"              ) gm
   write( *, "('INFO      : Om    =',1pe15.8,' [1 / s]')"   ) om
   write( *, "('INFO      : Tg    =',1pe15.8,' [s]')"       ) tg
@@ -238,7 +240,8 @@ program paccel
   write (10, "('INFO      : e/m   =',1pe15.8,' [1 / G s]')" ) qom
   write (10, "('INFO      : Om    =',1pe15.8,' [1 / s]')"   ) om
   write (10, "('INFO      : Tg    =',1pe15.8,' [s]')"       ) tg
-  write (10, "('INFO      : Vp    =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vper, vp
+  write (10, "('INFO      : Vpar  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vpar, vp
+  write (10, "('INFO      : Vper  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vper, vr
   write (10, "('INFO      : Rg    =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) rg, pc * rg
   write (10, "('INFO      : gamma =',1pe15.8)"              ) gm
   write (10, "('INFO      : mu    =',1pe15.8,' [N m / Gs]')") mu
@@ -386,7 +389,7 @@ program paccel
   wy = interpolate(dm, by, xr, yr, zr)
   wz = interpolate(dm, bz, xr, yr, zr)
 
-! calculate the direction of local field
+! calculate the direction of the local magnetic field
 !
   ww = sqrt(wx*wx + wy*wy + wz*wz)
   if (ww .gt. 0.0d0) then
@@ -398,6 +401,8 @@ program paccel
     stop
   endif
 
+! calculate the perpendicular velocity component
+!
   ux = 0.0d0
   uy = 0.0d0
   uz = 1.0d0
@@ -415,11 +420,11 @@ program paccel
     stop
   endif
 
-! calculate the initial perpendicular particle velocity in the resting reference frame
+! calculate the initial particle velocity in the resting reference frame
 !
-  vx  = vper * c * vx
-  vy  = vper * c * vy
-  vz  = vper * c * vz
+  vx  = ( vper * vx + vpar * wx ) * c
+  vy  = ( vper * vy + vpar * wy ) * c
+  vz  = ( vper * vz + vpar * wz ) * c
 
 ! calculate the Lorentz factor
 !
@@ -439,8 +444,8 @@ program paccel
 
 ! set the perpendicular speed
 !
-  vp = vu
-  vr = 0.0d0
+  vp = vpar * c
+  vr = vper * c
 
 ! calculate gyroperiod and gyroradius
 !
@@ -456,10 +461,10 @@ program paccel
 ! print headers and the initial values
 !
   open  (10, file = 'output.dat', form = 'formatted', status = 'replace')
-  write (10, "('#',1a16,22a18)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz', 'Vx' &
-             , 'Vy', 'Vz', '|V|', '|Vpar|', '|Vper|', '|V|/c', '|Vpar|/c'      &
-             , '|Vper|/c', 'gamma', 'En [MeV]', '<B> [Gs]', 'Omega [1/s]'      &
-             , 'Tg [s]', 'Rg [m]', 'Rg/L'
+  write (10, "('#',1a16,22a18)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz'       &
+             , 'Vx', 'Vy', 'Vz', '|V|', '|Vpar|', '|Vper|', '|V|/c'            &
+             , '|Vpar|/c', '|Vper|/c', 'gamma', 'En [MeV]', '<B> [Gs]'         &
+             , 'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Rg/L'
   write (10, "(23(1pe18.10))") tm, rx, ry, rz, mp*px, mp*py, mp*pz, vx, vy, vz &
              , vu, vr, vp, vu/c, vr/c, vp/c, gm, en, bavg*ww, om, tg, rg, rg/ln
   close (10)
