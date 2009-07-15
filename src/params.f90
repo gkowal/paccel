@@ -58,7 +58,7 @@ module params
   real                , save :: xc       = 0.0         ! initial position
   real                , save :: yc       = 0.0
   real                , save :: zc       = 0.0
-  real                , save :: vp       = 0.0         ! initial parallel speed
+  real                , save :: vper     = 1.0         ! initial perpendicular speed
   character(len =   1), save :: approx   = 'n'         ! guiding centre approximation
   character(len =   1), save :: periodic = 'y'         ! periodic box or not
   character(len =   1), save :: efield   = 'y'         ! take electric field into account
@@ -135,8 +135,8 @@ module params
         read (value  , *) yc
       case ('zc')
         read (value  , *) zc
-      case ('vp')
-        read (value  , *) vp
+      case ('vper')
+        read (value  , *) vper
       case ('approximation')
         l = len_trim(value)
         write(approx  , "(a)" ) value(2:l-1)

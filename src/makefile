@@ -46,6 +46,6 @@ paccel.o        : makefile paccel.f90 params.o hdf5.o fits.o interpolation.o
 params.o        : makefile params.f90
 hdf5.o          : makefile hdf5.f90 params.o
 fits.o          : makefile fits.f90 params.o
-interpolation.o : makefile interpolation.f90
+interpolation.o : makefile interpolation.f90 hdf5.o params.o
 
 #-------------------------------------------------------------------------------

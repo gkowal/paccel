@@ -128,7 +128,7 @@ module interpolation
 !
     integer, dimension(3)               :: d
     real   , dimension(d(1),d(2),d(3))  :: u
-    real                                :: x, y, z
+    real(kind=16)                       :: x, y, z
 
 ! local variables
 !
@@ -144,6 +144,8 @@ module interpolation
     y   = max(1.0, min(y, real(d(2))))
     z   = max(1.0, min(z, real(d(3))))
 
+! TODO: implement proper periodic conditions
+!
     i   = int(x)
     j   = int(y)
     k   = int(z)
@@ -219,5 +221,90 @@ module interpolation
 
     return
   end function cint
+!
+!===============================================================================
+!
+! pos2index: subroutine converts a give position to the array index
+!
+!===============================================================================
+!
+  subroutine pos2index(xp, yp, zp, px, py, pz, out)
+
+    use params  , only : periodic
+    use mod_hdf5, only : fdm, xmn, ymn, zmn, xmx, ymx, zmx
+
+    implicit none
+
+! input and output arguments
+!
+    real(kind=16), intent(in)  :: xp, yp, zp
+    real(kind=16), intent(out) :: px, py, pz
+    logical     , intent(out) :: out
+
+! local flags
+!
+    logical, save :: first = .true.
+    logical, save :: per   = .false.
+
+! local saved variables
+!
+    integer(kind=4), dimension(3), save :: pm
+    real(kind=16)                , save :: xli, yli, zli
+
+! local temporary variables
+!
+    real(kind=16)                       :: xt, yt, zt
+!
+!------------------------------------------------------------------------------
+!
+    if (first) then
+      if (periodic .eq. 'y') per = .true.
+
+! calculate dimensions needed for convertion
+!
+      pm(:) = fdm(:) - 1
+
+! calculate factors
+!
+      xli   = 1.0 / (xmx - xmn)
+      yli   = 1.0 / (ymx - ymn)
+      zli   = 1.0 / (zmx - zmn)
+
+      first = .false.
+    endif
+
+! set the out of box flag
+!
+    out = .false.
+
+! convert position to index
+!
+    xt = xli * (xp - xmn)
+    yt = yli * (yp - ymn)
+    zt = zli * (zp - zmn)
+
+! calculate indices
+!
+    if (per) then
+      px = pm(1) * (xt - floor(xt)) + 1
+      py = pm(2) * (yt - floor(yt)) + 1
+      pz = pm(3) * (zt - floor(zt)) + 1
+    else
+      px = pm(1) * xt + 1
+      py = pm(2) * yt + 1
+      pz = pm(3) * zt + 1
+
+! check if the particle left the box
+!
+      if (px .lt. 1) out = .true.
+      if (py .lt. 1) out = .true.
+      if (pz .lt. 1) out = .true.
+
+      if (px .gt. fdm(1)) out = .true.
+      if (py .gt. fdm(2)) out = .true.
+      if (pz .gt. fdm(3)) out = .true.
+    endif
+
+  end subroutine pos2index
 
 end module

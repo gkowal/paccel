@@ -30,34 +30,44 @@ program paccel
                      , ueta, aeta, jcrit, nsteps, xc, yc, zc                  &
                      , ptype, tunit, tmulti                                   &
                      , dens, c, periodic, cfl, dtout, tmax, ethres, current   &
-                     , efield, vp
+                     , efield, vper, approx
   use mod_hdf5, only : hdf5_init, hdf5_get_dims, hdf5_read_var                &
-                     , xmn, ymn, zmn, xmx, ymx, zmx, dxi, dyi, dzi, dx, dy, dz
+                     , xmn, ymn, zmn, xmx, ymx, zmx, dxi, dyi, dzi, dx, dy, dz, dtc
   use mod_fits, only : fits_put_data_2d, fits_put_data_1d
-  use interpolation, only : interpolate => ptricub
+  use interpolation, only : interpolate => ptricub, pos2index
 
   implicit none
 
 ! local variables
 !
   character(len = 255) :: fl
-  integer              :: dm(3), pm(3)
+  integer              :: dm(3)
   integer              :: i, j, k, n, nmax
+  real(kind=16)        :: va, dn, mu0, bavg, qom, om, tg, vp, pc, rg, gm, mp   &
+                        , mu, ln, dr, ts, yy, bt, pu, del, vr, om0
+  real(kind=16)        :: rx, ry, rz, xr, yr, zr
   real                 :: jx, jy, jz, ja, et, xx, dxmin
   real(kind=8)         :: ww, wx, wy, wz, uu, ux, uy, uz, vv
-  real(kind=16)        :: ax, ay, az, mu
-  real                 :: xli, yli, zli
-  real                 :: xt, yt, zt, xi, yi, zi, xr, yr, zr
-  real(kind=16)        :: mev, ulen, plen, bavg, qom, va, rg, tg, en
-  real(kind=16)        :: xp, yp, zp, vx, vy, vz, xp1, yp1, zp1, vx1, vy1, vz1, vu
+  real(kind=16)        :: ax, ay, az
+  real(kind=16)        :: r1x, r1y, r1z, r2x, r2y, r2z, r3x, r3y, r3z, r4x, r4y, r4z
+  real(kind=16)        :: v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y, v3z, v4x, v4y, v4z
+  real(kind=16)        :: p1x, p1y, p1z, p2x, p2y, p2z, p3x, p3y, p3z, p4x, p4y, p4z
+  real(kind=16)        :: k1x, k1y, k1z, k2x, k2y, k2z, k3x, k3y, k3z, k4x, k4y, k4z
+  real                 :: xt, yt, zt, xi, yi, zi
+  real(kind=16)        :: mev, ulen, plen, en
+  real(kind=16)        :: vx, vy, vz, px, py, pz, xp1, yp1, zp1, vx1, vy1, vz1, vu
   real(kind=16)        :: tm, dt, dtp, dt1, dt2, fc, aa, bb, vc
-  logical              :: per = .false., fin = .false.
+  logical              :: per = .false., fin = .false., out
+
+! parameters
+!
+  real(kind=16)        :: cc  = 299792457.99999998416751623153687d0
+  real(kind=16)        :: pi  = 3.1415926535897931159979634685442d0
+  real(kind=16)        :: pi2 = 6.2831853071795862319959269370884d0
 
 ! allocatable arrays
 !
   real, dimension(:,:,:), allocatable :: qt, bx, by, bz, ex, ey, ez
-  real, dimension(:,:)  , allocatable :: x, v
-  real, dimension(:)    , allocatable :: t, e
 !
 !-------------------------------------------------------------------------------
 !
@@ -65,76 +75,18 @@ program paccel
 !
   write (*,'(a)') '------------------------------------------------------------------------------'
   write (*,'(a)') '===        PAccel algorithm started         =================================='
-  write (*,'(a)') '===    Copyright (C) 2008 Grzegorz Kowal    =================================='
+  write (*,'(a)') '===    Copyright (C) 2008-2009 Grzegorz Kowal    ============================='
   write (*,*)
   write( *, "('TASK      : ',a)" ) "integrating trajectories of charged particle"
   write( *, "('INFO      : ',a)" ) "reading parameters"
   call read_params
 
-! print some info
+! check if parameters are correct
 !
-  write( *, "('INDIR     : ',a)" ) trim(idir)
-  write( *, "('OUDIR     : ',a)" ) trim(odir)
-
-! compute coefficients
-!
-  mev   = 938.27199893682302445085952058434
-  va    = 299792.45799999998416751623153687  / c
-  bavg  = 0.13694624848330305688648422801634 * sqrt(dens) / c
-  qom   = 9578.8340668294185888953506946564  * bavg * tmulti
-  tg    = 0.00065594468630975164436663904510283 / tmulti
-  ulen  = va * tmulti
-  select case(tunit)
-  case('m')
-    qom  = 60.0 * qom
-    ulen = 60.0 * ulen
-    tg   = tg / 60.0
-  case('h')
-    qom  = 3600.0 * qom
-    ulen = 3600.0 * ulen
-    tg   = tg / 3600.0
-  case('d')
-    qom  = 86400.0 * qom
-    ulen = 86400.0 * ulen
-    tg   = tg / 86400.0
-  case('w')
-    qom  = 604800.0 * qom
-    ulen = 604800.0 * ulen
-    tg   = tg / 604800.0
-  case('y')
-    qom  = 31556925.974678400903940200805664 * qom
-    ulen = 31556925.974678400903940200805664 * ulen
-    tg   = tg / 31556925.974678400903940200805664
-  case default
-  end select
-
-  plen = 3.2407792896656063447898874599466e-14 * ulen
-  mu   = 0.5d0 * (vp * c)**2 / bavg
-
-  select case(ptype)
-  case ('e')
-    mev  = 0.00054461702326790686814333986021097 * mev
-    qom  = 1836.152667427881851835991255939 * qom
-    tg   = tg / 1836.152667427881851835991255939
-    write( *, "('INFO      : trajectory for electron')" )
-  case default
-    write( *, "('INFO      : trajectory for proton')" )
-  end select
-
-  write( *, "('INFO      : Va    = ',1pe15.8,' km/s')" ) va
-  write( *, "('INFO      : c     = ',1pe15.8,' Va')" ) c
-  write( *, "('INFO      : <B>   = ',1pe15.8,' G')" ) bavg
-  write( *, "('INFO      : e/m   = ',1pe15.8,' [1 / G ',a1,']')" ) qom, tunit
-  write( *, "('INFO      : Om    = ',1pe15.8,' [1 / ',a1,']')" ) qom*bavg, tunit
-  write( *, "('INFO      : Tg    = ',1pe15.8,' [',a1,']')" ) tg, tunit
-  write( *, "('INFO      : mu    = ',1pe15.8,' [',a1,']')" ) mu, tunit
-  write( *, "('INFO      : mu/Om = ',1pe15.8,' [',a1,']')" ) mu/(qom*bavg), tunit
-  write( *, "('INFO      : L     = ',1pe15.8,' km')" ) ulen
-  write( *, "('INFO      : L     = ',1pe15.8,' pc')" ) plen
-
-! check if periodic box
-!
-  if (periodic .eq. 'y') per = .true.
+  if (c .lt. 1.0d0) then
+    write( *, "('ERROR     : ',a)" ) "parameter c must be larger than zero!"
+    stop
+  endif
 
 ! initialize dimensions
 !
@@ -144,6 +96,178 @@ program paccel
 !
   call hdf5_init()
   call hdf5_get_dims(dm)
+
+! print some info
+!
+  write( *, "('INDIR     : ',a)" ) trim(idir)
+  write( *, "('OUDIR     : ',a)" ) trim(odir)
+
+! compute plasma parameters
+!                                                       ! c is expressed in Va
+  gm    = 1.0d0 / sqrt(1.0d0 - (1.0 / c)**2)            ! Lorentz factor
+  va    = gm * cc  / c                                  ! Alfven speed [m/s]
+  dn    = 1.6726215850718025379202284485224e-21 * dens  ! density conversion from
+                                                        ! protonmass/cm^3 to kg/m^3
+  mu0   = 125.66370614359171042906382353976             ! magnetic permeability [Gs^2 m s^2 / kg]
+  bavg  = va * sqrt(mu0 * dn)                           ! magnetic field strength [Gs]
+
+! print plasma parametes
+!
+  write( *, "('INFO      : plasma parameters:')" )
+  write( *, "('INFO      : c     =',1pe15.8,' [Va]')"       ) c
+  write( *, "('INFO      : Va    =',1pe15.8,' [m / s]')"    ) va
+  write( *, "('INFO      : dens  =',1pe15.8,' [u / cm^3] =',1pe15.8,' [kg / m^3]')" ) dens, dn
+  write( *, "('INFO      : <B>   =',1pe15.8,' [G]')"        ) bavg
+
+! compute particle parameters
+!
+  qom   = 9578.8340668294185888953506946564d0           ! e/m [1 / Gs s]
+  select case(ptype)
+  case ('e')
+    qom  = 1836.152667427881851835991255939 * qom
+    mp   = 9.1093818871545313708798643833606e-31        ! electron mass [kg]
+    mev  = 0.51099890307660134070033564057667           ! rest energy of electron [MeV]
+  case ('p')
+    mp   = 1.6726215850718025086476640481627e-27        ! proton mass [kg]
+    mev  = 938.27199893682302445085952058434            ! rest energy of proton [MeV]
+  case default
+    mp   = 1.6726215850718025086476640481627e-27        ! proton mass [kg]
+    mev  = 938.27199893682302445085952058434            ! rest energy of proton [MeV]
+  end select
+  vp = cc * vper                                        ! perpendicular particle speed
+  gm = 1.0d0 / sqrt(1.0d0 - vper**2)                    ! Lorentz factor
+  om0 = qom * bavg                                      ! classical gyrofrequency
+  om = om0 / gm                                         ! relativistic gyrofrequency
+  tg = 1.0d0 / om                                       ! gyroperiod
+  tg = 2.0 * pi * tg
+  rg = vp / om                                          ! gyroradius (Larmor radius)
+  pc = 3.2407792896656065765177783686188e-17            ! 1 meter [pc]
+  mu = 0.5d0 * mp * vp**2 / bavg                        ! magnetic moment [kg m^2 / s^2 Gs]
+  yy = 3.168876464084018437308447107767e-08             ! 1 second [yr]
+  en = gm * mev
+
+! print particle parameters
+!
+  write( *, "('INFO      : particle parameters:')" )
+  select case(ptype)
+  case ('e')
+    write( *, "('INFO      : trajectory for electron')" )
+  case default
+    write( *, "('INFO      : trajectory for proton')" )
+  end select
+  write( *, "('INFO      : e/m   =',1pe15.8,' [1 / G s]')" ) qom
+  write( *, "('INFO      : Vp    =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vper, vp
+  write( *, "('INFO      : gamma =',1pe15.8)"              ) gm
+  write( *, "('INFO      : Om    =',1pe15.8,' [1 / s]')"   ) om
+  write( *, "('INFO      : Tg    =',1pe15.8,' [s]')"       ) tg
+  write( *, "('INFO      : Rg    =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) rg, pc * rg
+  write( *, "('INFO      : mu    =',1pe15.8,' [N m / Gs]')") mu
+  write( *, "('INFO      : E0    =',1pe15.8,' [MeV]')"     ) en
+
+! calculate geometry parameters
+!
+  ln = va                                               ! the size of the box
+  dr = ln * min(dx, dy, dz)
+  ts = dtc
+
+! change time unit
+!
+  select case(tunit)
+  case('u')
+    fc = 1.0d-6
+  case('s')
+    fc = 1.0
+  case('m')
+    fc = 60.0
+  case('h')
+    fc = 3600.0
+  case('d')
+    fc = 86400.0
+  case('w')
+    fc = 604800.0
+  case('y')
+    fc = 31556925.974678400903940200805664
+  case default
+    fc = 1.0
+  end select
+
+  fc  = tmulti * fc
+  qom = qom    * fc
+  ln  = va     * fc
+  dr  = dr     * fc
+  ts  = ts     * fc
+
+! print geometry parameters
+!
+  write( *, "('INFO      : geometry parameters:')" )
+  write( *, "('INFO      : T     =',1pe15.8,' [s] =',1pe15.8,' [yr]')" ) fc, yy * fc
+  write( *, "('INFO      : dt    =',1pe15.8,' [s] =',1pe15.8,' [yr]')" ) ts, yy * ts
+  write( *, "('INFO      : L     =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) ln, pc * ln
+  write( *, "('INFO      : dx    =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) dr, pc * dr
+
+
+! calculate conditions
+!
+
+! print conditions
+!
+  write( *, "('INFO      : conditions:')" )
+  write( *, "('INFO      : Rg/L  =',1pe15.8)" ) rg / ln
+  write( *, "('INFO      : Rg/dx =',1pe15.8)" ) rg / dr
+  write( *, "('INFO      : Tg/dt =',1pe15.8)" ) tg / ts
+
+! write parameters to info.txt
+!
+  open  (10, file = 'info.txt', form = 'formatted', status = 'replace')
+
+! print plasma parametes
+!
+  write (10, "('INFO      : plasma parameters:')" )
+  write (10, "('INFO      : c     =',1pe15.8,' [Va]')"       ) c
+  write (10, "('INFO      : Va    =',1pe15.8,' [m / s]')"    ) va
+  write (10, "('INFO      : dens  =',1pe15.8,' [u / cm^3] =',1pe15.8,' [kg / m^3]')" ) dens, dn
+  write (10, "('INFO      : <B>   =',1pe15.8,' [G]')"        ) bavg
+
+  write (10, "('INFO      : particle parameters:')" )
+  select case(ptype)
+  case ('e')
+    write (10, "('INFO      : trajectory for electron')" )
+  case default
+    write (10, "('INFO      : trajectory for proton')" )
+  end select
+  write (10, "('INFO      : e/m   =',1pe15.8,' [1 / G s]')" ) qom
+  write (10, "('INFO      : Om    =',1pe15.8,' [1 / s]')"   ) om
+  write (10, "('INFO      : Tg    =',1pe15.8,' [s]')"       ) tg
+  write (10, "('INFO      : Vp    =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vper, vp
+  write (10, "('INFO      : Rg    =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) rg, pc * rg
+  write (10, "('INFO      : gamma =',1pe15.8)"              ) gm
+  write (10, "('INFO      : mu    =',1pe15.8,' [N m / Gs]')") mu
+  write (10, "('INFO      : E0    =',1pe15.8,' [MeV]')"     ) en
+
+! print geometry parameters
+!
+  write (10, "('INFO      : geometry parameters:')" )
+  write (10, "('INFO      : T     =',1pe15.8,' [s] =',1pe15.8,' [yr]')" ) fc, yy * fc
+  write (10, "('INFO      : dt    =',1pe15.8,' [s] =',1pe15.8,' [yr]')" ) ts, yy * ts
+  write (10, "('INFO      : L     =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) ln, pc * ln
+  write (10, "('INFO      : dx    =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) dr, pc * dr
+
+! print conditions
+!
+  write (10, "('INFO      : conditions:')" )
+  write (10, "('INFO      : Rg/L  =',1pe15.8)" ) rg / ln
+  write (10, "('INFO      : Rg/dx =',1pe15.8)" ) rg / dr
+  write (10, "('INFO      : Tg/dt =',1pe15.8)" ) tg / ts
+
+  close (10)
+
+! convert e/m to the units of magnetic field
+!
+  qom = qom * bavg
+
+! check if periodic box
+!
+  if (periodic .eq. 'y') per = .true.
 
 ! allocate variables
 !
@@ -218,73 +342,43 @@ program paccel
     if (allocated(qt)) deallocate(qt)
   endif
 
+! relativistic Lorentz force
+!
+!  dp/dt = q ( E + (u/c x B) )
+!
+!  p = g m u -> u = p / g m
+!
+!  g = ( 1 - ( u / c )^2 )^(-1/2)
+!
+!  dp / dt = q ( E + ( p / (g m c) x B ) )
+!
+!  1 / c dp / dt = q ( E + ( p / (g m c^2) x B ) )
+
 ! allocate particle positions & velocities
 !
   nmax = int(tmax / dtout) + 2
-  allocate(t(nmax))
-  allocate(e(nmax))
-  allocate(x(3,nmax))
-  allocate(v(3,nmax))
 
-! set initial positions and speeds
+! set the initial integration parameters
 !
-  xp  = xc
-  yp  = yc
-  zp  = zc
+  tm  = 0.0
+  dtp = 1.0e-16
+  dt  = dtp
+  n   = 1
+
+! set the initial particle position
+!
+  rx  = xc
+  ry  = yc
+  rz  = zc
 
 ! convert position to index
 !
-  xt = xli * (xp - xmn)
-  yt = yli * (yp - ymn)
-  zt = zli * (zp - zmn)
-    if (per) then
-      xr = pm(1) * (xt - floor(xt)) + 1
-      yr = pm(2) * (yt - floor(yt)) + 1
-      zr = pm(3) * (zt - floor(zt)) + 1
-    else
-      xr = pm(1) * xt + 1
-      yr = pm(2) * yt + 1
-      zr = pm(3) * zt + 1
+  call pos2index(rx, ry, rz, xr, yr, zr, out)
 
-      if (xr .lt. 1) then
-        vx = - vx
-        xp = xmn
-        xt = xli * (xp - xmn)
-        xr = pm(1) * xt + 1
-      endif
-      if (xr .gt. dm(1)) then
-        vx = - vx
-        xp = xmx
-        xt = xli * (xp - xmn)
-        xr = pm(1) * xt + 1
-      endif
-
-      if (yr .lt. 1) then
-        vy = - vy
-        yp = ymn
-        yt = yli * (yp - ymn)
-        yr = pm(2) * yt + 1
-      endif
-      if (yr .gt. dm(2)) then
-        vy = - vy
-        yp = ymx
-        yt = yli * (yp - ymn)
-        yr = pm(2) * yt + 1
-      endif
-
-      if (zr .lt. 1) then
-        vz = - vz
-        zp = zmn
-        zt = zli * (zp - zmn)
-        zr = pm(3) * zt + 1
-      endif
-      if (zr .gt. dm(3)) then
-        vz = - vz
-        zp = zmx
-        zt = zli * (zp - zmn)
-        zr = pm(3) * zt + 1
-      endif
-    endif
+  if (out) then
+    write( *, "('ERROR     : ',a)" ) "The initial position is out of the box! Choose another one."
+    stop
+  endif
 
 ! calculate magnetic field components in the initial position
 !
@@ -321,37 +415,66 @@ program paccel
     stop
   endif
 
-  vx  = vp * c * vx
-  vy  = vp * c * vy
-  vz  = vp * c * vz
+! calculate the initial perpendicular particle velocity in the resting reference frame
+!
+  vx  = vper * c * vx
+  vy  = vper * c * vy
+  vz  = vper * c * vz
 
-  dtp = 1.0e-16
-  tm  = 0.0
-  n   = 1
+! calculate the Lorentz factor
+!
+  vu = sqrt(vx**2 + vy**2 + vz**2)
+  bt = vu / c
+  gm = 1.0 / sqrt(1.0d0 - min(1.0d0, bt * bt))
 
-  vu = vx**2 + vy**2 + vz**2
-  fc = qom * sqrt(1.0 - min(1.0, vu / c**2))
-  vu = sqrt(vu)
+! calculate the initial particle momentuum
+!
+  px = gm * vx
+  py = gm * vy
+  pz = gm * vz
 
-  x(1,1) = xp
-  x(2,1) = yp
-  x(3,1) = zp
-  v(1,1) = vx
-  v(2,1) = vy
-  v(3,1) = vz
+! calculate the initial particle energy
+!
+  en = gm * mev
+
+! set the perpendicular speed
+!
+  vp = vu
+  vr = 0.0d0
+
+! calculate gyroperiod and gyroradius
+!
+  om = om0 * ww / gm
+  tg = pi2 / om
+  rg = vp * va / om
+
+! print the progress information
+!
+  write ( *,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP', 'SPEED (c)', 'ENERGY (MeV)'
+  write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, tm, dt, vu/c, en, char(13)
+
+! print headers and the initial values
+!
+  open  (10, file = 'output.dat', form = 'formatted', status = 'replace')
+  write (10, "('#',1a16,22a18)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz', 'Vx' &
+             , 'Vy', 'Vz', '|V|', '|Vpar|', '|Vper|', '|V|/c', '|Vpar|/c'      &
+             , '|Vper|/c', 'gamma', 'En [MeV]', '<B> [Gs]', 'Omega [1/s]'      &
+             , 'Tg [s]', 'Rg [m]', 'Rg/L'
+  write (10, "(23(1pe18.10))") tm, rx, ry, rz, mp*px, mp*py, mp*pz, vx, vy, vz &
+             , vu, vr, vp, vu/c, vr/c, vp/c, gm, en, bavg*ww, om, tg, rg, rg/ln
+  close (10)
+
+! iterpolate electric field at the initial position
+!
+  if (efield .eq. 'y') then
+    ux = interpolate(dm, ex, xr, yr, zr)
+    uy = interpolate(dm, ey, xr, yr, zr)
+    uz = interpolate(dm, ez, xr, yr, zr)
+  endif
 
 ! check minimum dx
 !
   dxmin = min(dx, dy, dz)
-  xli   = 1.0 / (xmx - xmn)
-  yli   = 1.0 / (ymx - ymn)
-  zli   = 1.0 / (zmx - zmn)
-
-  pm = dm - 1
-
-! print headers
-!
-  write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP', 'SPEED (c)', 'ENERGY (MeV)'
 
 ! integrate particles
 !
@@ -361,70 +484,48 @@ program paccel
 !
     tm = tm + dt
 
-!! 1st step of RK integration
+!! 1st step of the RK integration
 !!
-! compute relativistic factor
+! integrate the momentum
 !
-    vu = vx**2 + vy**2 + vz**2
-    fc = qom * sqrt(1.0 - min(1.0, vu / c**2))
-    vu = sqrt(vu)
+    p1x = px
+    p1y = py
+    p1z = pz
 
-! convert particle position to arrays index
+! calculate the Lorentz factor
 !
-    xt = xli * (xp - xmn)
-    yt = yli * (yp - ymn)
-    zt = zli * (zp - zmn)
+! p2 = gm2 * u2 = u2 / (1 - (u2/c2))
+! p2 - p2 u2 / c2 = u2
+! p2 = u2 (1 + p2/c2)
+! u2 = p2 / (1 + p2/c2)
+! u  = p / sqrt(1 + p2/c2)
+!
+! p = gm u = sqrt(1 + p2/c2) u
+! gm = sqrt(1 + p2/c2)
+!
+    pu = sqrt(p1x**2 + p1y**2 + p1z**2)
+    bt = pu / c
+    gm = sqrt( 1.0d0 + bt * bt )
 
-    if (per) then
-      xr = pm(1) * (xt - floor(xt)) + 1
-      yr = pm(2) * (yt - floor(yt)) + 1
-      zr = pm(3) * (zt - floor(zt)) + 1
-    else
-      xr = pm(1) * xt + 1
-      yr = pm(2) * yt + 1
-      zr = pm(3) * zt + 1
+! calculate the velocity
+!
+    v1x = p1x / gm
+    v1y = p1y / gm
+    v1z = p1z / gm
 
-      if (xr .lt. 1) then
-        vx = - vx
-        xp = xmn
-        xt = xli * (xp - xmn)
-        xr = pm(1) * xt + 1
-      endif
-      if (xr .gt. dm(1)) then
-        vx = - vx
-        xp = xmx
-        xt = xli * (xp - xmn)
-        xr = pm(1) * xt + 1
-      endif
+! integrate the position
+!
+    r1x = rx
+    r1y = ry
+    r1z = rz
 
-      if (yr .lt. 1) then
-        vy = - vy
-        yp = ymn
-        yt = yli * (yp - ymn)
-        yr = pm(2) * yt + 1
-      endif
-      if (yr .gt. dm(2)) then
-        vy = - vy
-        yp = ymx
-        yt = yli * (yp - ymn)
-        yr = pm(2) * yt + 1
-      endif
+! convert position to index
+!
+    call pos2index(r1x, r1y, r1z, xr, yr, zr, out)
 
-      if (zr .lt. 1) then
-        vz = - vz
-        zp = zmn
-        zt = zli * (zp - zmn)
-        zr = pm(3) * zt + 1
-      endif
-      if (zr .gt. dm(3)) then
-        vz = - vz
-        zp = zmx
-        zt = zli * (zp - zmn)
-        zr = pm(3) * zt + 1
-      endif
-    endif
+    if (out) goto 100
 
-! interpolate field at particle position
+! interpolate field components at the particle position
 !
     if (efield .eq. 'y') then
       ux = interpolate(dm, ex, xr, yr, zr)
@@ -435,62 +536,57 @@ program paccel
     wy = interpolate(dm, by, xr, yr, zr)
     wz = interpolate(dm, bz, xr, yr, zr)
 
-! compute force components
+! compute the force components
 !
-  if (efield .eq. 'y') then
-    ax = fc * (ux + vy * wz - vz * wy)
-    ay = fc * (uy + vz * wx - vx * wz)
-    az = fc * (uz + vx * wy - vy * wx)
-  else
-    ax = fc * (vy * wz - vz * wy)
-    ay = fc * (vz * wx - vx * wz)
-    az = fc * (vx * wy - vy * wx)
-  endif
-
-! integrate velocity
-!
-    vx1 = vx + dt * ax
-    vy1 = vy + dt * ay
-    vz1 = vz + dt * az
-
-! integrate position
-!
-    xp1 = xp + dt * vx
-    yp1 = yp + dt * vy
-    zp1 = zp + dt * vz
-
-! compute new timestep
-!
-    aa  = sqrt(ax * ax + ay * ay + az * az)
-    bb  = sqrt(wx * wx + wy * wy + wz * wz)
-    dt1 = min(tg / max(bb, 1.0e-16), (c - vu) / max(aa, 1.0e-16), sqrt(dxmin / max(aa, 1.0e-16)), dxmin / max(vu, 1.0e-16))
-
-
-!! 2nd step of RK integration
-!!
-! compute relativistic factor
-!
-    vu = vx1**2 + vy1**2 + vz1**2
-    fc = qom * sqrt(1.0 - min(1.0, vu / c**2))
-    vu = sqrt(vu)
-
-! convert particle position to arrays index
-!
-    xt = xli * (xp1 - xmn)
-    yt = yli * (yp1 - ymn)
-    zt = zli * (zp1 - zmn)
-
-    if (per) then
-      xr = pm(1) * (xt - floor(xt)) + 1
-      yr = pm(2) * (yt - floor(yt)) + 1
-      zr = pm(3) * (zt - floor(zt)) + 1
+    if (efield .eq. 'y') then
+      ax = (ux + v1y * wz - v1z * wy)
+      ay = (uy + v1z * wx - v1x * wz)
+      az = (uz + v1x * wy - v1y * wx)
     else
-      xr = max(1.0, min(real(dm(1)), pm(1) * xt + 1.0))
-      yr = max(1.0, min(real(dm(2)), pm(2) * yt + 1.0))
-      zr = max(1.0, min(real(dm(3)), pm(3) * zt + 1.0))
+      ax = (v1y * wz - v1z * wy)
+      ay = (v1z * wx - v1x * wz)
+      az = (v1x * wy - v1y * wx)
     endif
 
-! interpolate field at particle position
+! set the first term
+!
+    k1x = qom * ax
+    k1y = qom * ay
+    k1z = qom * az
+
+!! 2nd step of the RK integration
+!!
+! integrate the momentum
+!
+    p2x = px + 0.5 * dt * k1x
+    p2y = py + 0.5 * dt * k1y
+    p2z = pz + 0.5 * dt * k1z
+
+! calculate the Lorentz factor
+!
+    pu = sqrt(p2x**2 + p2y**2 + p2z**2)
+    bt = pu / c
+    gm = sqrt( 1.0d0 + bt * bt )
+
+! calculate the velocity
+!
+    v2x = p2x / gm
+    v2y = p2y / gm
+    v2z = p2z / gm
+
+! integrate the position
+!
+    r2x = rx + 0.25 * dt * ( vx + v2x )
+    r2y = ry + 0.25 * dt * ( vy + v2y )
+    r2z = rz + 0.25 * dt * ( vz + v2z )
+
+! convert position to index
+!
+    call pos2index(r2x, r2y, r2z, xr, yr, zr, out)
+
+    if (out) goto 100
+
+! interpolate field components at the particle position
 !
     if (efield .eq. 'y') then
       ux = interpolate(dm, ex, xr, yr, zr)
@@ -501,63 +597,252 @@ program paccel
     wy = interpolate(dm, by, xr, yr, zr)
     wz = interpolate(dm, bz, xr, yr, zr)
 
-! compute force components
+! compute the force components
 !
     if (efield .eq. 'y') then
-      ax = fc * (ux + vy * wz - vz * wy)
-      ay = fc * (uy + vz * wx - vx * wz)
-      az = fc * (uz + vx * wy - vy * wx)
+      ax = (ux + v2y * wz - v2z * wy)
+      ay = (uy + v2z * wx - v2x * wz)
+      az = (uz + v2x * wy - v2y * wx)
     else
-      ax = fc * (vy * wz - vz * wy)
-      ay = fc * (vz * wx - vx * wz)
-      az = fc * (vx * wy - vy * wx)
+      ax = (v2y * wz - v2z * wy)
+      ay = (v2z * wx - v2x * wz)
+      az = (v2x * wy - v2y * wx)
     endif
 
-! integrate velocity
+! the second term
 !
-    vx = 0.5 * (vx + vx1 + dt * ax)
-    vy = 0.5 * (vy + vy1 + dt * ay)
-    vz = 0.5 * (vz + vz1 + dt * az)
+    k2x = qom * ax
+    k2y = qom * ay
+    k2z = qom * az
 
-! integrate position
+!! 3rd step of the RK integration
+!!
+! integrate the momentum
 !
-    xp = 0.5 * (xp + xp1 + dt * vx)
-    yp = 0.5 * (yp + yp1 + dt * vy)
-    zp = 0.5 * (zp + zp1 + dt * vz)
+    p3x = px + 0.5 * dt * k2x
+    p3y = py + 0.5 * dt * k2y
+    p3z = pz + 0.5 * dt * k2z
 
-! compute new timestep
+! calculate the Lorentz factor
 !
-    aa  = sqrt(ax * ax + ay * ay + az * az)
-    bb  = sqrt(wx * wx + wy * wy + wz * wz)
-    dt2 = min(tg / max(bb, 1.0e-16), (c - vu) / max(aa, 1.0e-16), sqrt(dxmin / max(aa, 1.0e-16)), dxmin / max(vu, 1.0e-16))
+    pu = sqrt(p3x**2 + p3y**2 + p3z**2)
+    bt = pu / c
+    gm = sqrt( 1.0d0 + bt * bt )
 
-! compute new timestep
+! calculate the velocity
 !
-    dt  = min(2.0 * dtp, cfl * min(dt1, dt2))
-    dtp = dt
+    v3x = p3x / gm
+    v3y = p3y / gm
+    v3z = p3z / gm
 
-! compute particle energy
+! integrate the position
 !
-    vc = (vu/c)**2
-    en = mev * vc / sqrt(1.0 - vc)
+    r3x = rx + 0.25 * dt * ( vx + v2x )
+    r3y = ry + 0.25 * dt * ( vy + v2y )
+    r3z = rz + 0.25 * dt * ( vz + v2z )
+
+! convert position to index
+!
+    call pos2index(r3x, r3y, r3z, xr, yr, zr, out)
+
+    if (out) goto 100
+
+! interpolate field components at the particle position
+!
+    if (efield .eq. 'y') then
+      ux = interpolate(dm, ex, xr, yr, zr)
+      uy = interpolate(dm, ey, xr, yr, zr)
+      uz = interpolate(dm, ez, xr, yr, zr)
+    endif
+    wx = interpolate(dm, bx, xr, yr, zr)
+    wy = interpolate(dm, by, xr, yr, zr)
+    wz = interpolate(dm, bz, xr, yr, zr)
+
+!! 3rd step of the RK integration
+!!
+! compute the force components
+!
+    if (efield .eq. 'y') then
+      ax = (ux + v3y * wz - v3z * wy)
+      ay = (uy + v3z * wx - v3x * wz)
+      az = (uz + v3x * wy - v3y * wx)
+    else
+      ax = (v3y * wz - v3z * wy)
+      ay = (v3z * wx - v3x * wz)
+      az = (v3x * wy - v3y * wx)
+    endif
+
+! the third term
+!
+    k3x = qom * ax
+    k3y = qom * ay
+    k3z = qom * az
+
+!! 4th step of the RK integration
+!!
+! integrate the momentum
+!
+    p4x = px + dt * k3x
+    p4y = py + dt * k3y
+    p4z = pz + dt * k3z
+
+! calculate the Lorentz factor
+!
+    pu = sqrt(p4x**2 + p4y**2 + p4z**2)
+    bt = pu / c
+    gm = sqrt( 1.0d0 + bt * bt )
+
+! calculate the velocity
+!
+    v4x = p4x / gm
+    v4y = p4y / gm
+    v4z = p4z / gm
+
+! integrate the position
+!
+    r4x = rx + dt * v4x
+    r4y = ry + dt * v4y
+    r4z = rz + dt * v4z
+
+! convert position to index
+!
+    call pos2index(r4x, r4y, r4z, xr, yr, zr, out)
+
+    if (out) goto 100
+
+! interpolate field components at the particle position
+!
+    if (efield .eq. 'y') then
+      ux = interpolate(dm, ex, xr, yr, zr)
+      uy = interpolate(dm, ey, xr, yr, zr)
+      uz = interpolate(dm, ez, xr, yr, zr)
+    endif
+    wx = interpolate(dm, bx, xr, yr, zr)
+    wy = interpolate(dm, by, xr, yr, zr)
+    wz = interpolate(dm, bz, xr, yr, zr)
+
+! compute the force components
+!
+    if (efield .eq. 'y') then
+      ax = (ux + v4y * wz - v4z * wy)
+      ay = (uy + v4z * wx - v4x * wz)
+      az = (uz + v4x * wy - v4y * wx)
+    else
+      ax = (v4y * wz - v4z * wy)
+      ay = (v4z * wx - v4x * wz)
+      az = (v4x * wy - v4y * wx)
+    endif
+
+! the fourth term
+!
+    k4x = qom * ax
+    k4y = qom * ay
+    k4z = qom * az
+
+!! the final integration of the particle velocity and position
+!!
+    px = px + dt * ( k1x + 2.0 * ( k2x + k3x ) + k4x ) / 6.0
+    py = py + dt * ( k1y + 2.0 * ( k2y + k3y ) + k4y ) / 6.0
+    pz = pz + dt * ( k1z + 2.0 * ( k2z + k3z ) + k4z ) / 6.0
+
+! calculate the Lorentz factor
+!
+    pu = sqrt(px**2 + py**2 + pz**2)
+    bt = pu / c
+    gm = sqrt( 1.0d0 + bt * bt )
+    vu = pu / gm
+
+! calculate the velocity
+!
+    vx = px / gm
+    vy = py / gm
+    vz = pz / gm
+
+! calcuate the particle position
+!
+    rx = rx + dt * ( vx + 2.0 * ( v1x + v2x ) + v3x ) / 6.0
+    ry = ry + dt * ( vy + 2.0 * ( v1y + v2y ) + v3y ) / 6.0
+    rz = rz + dt * ( vz + 2.0 * ( v1z + v2z ) + v3z ) / 6.0
+
+! convert position to index
+!
+    call pos2index(r4x, r4y, r4z, xr, yr, zr, out)
+
+    if (out) goto 100
+
+! interpolate field components at the particle position
+!
+    if (efield .eq. 'y') then
+      ux = interpolate(dm, ex, xr, yr, zr)
+      uy = interpolate(dm, ey, xr, yr, zr)
+      uz = interpolate(dm, ez, xr, yr, zr)
+    endif
+    wx = interpolate(dm, bx, xr, yr, zr)
+    wy = interpolate(dm, by, xr, yr, zr)
+    wz = interpolate(dm, bz, xr, yr, zr)
+
+! compute the force components
+!
+    if (efield .eq. 'y') then
+      ax = (ux + vy * wz - vz * wy)
+      ay = (uy + vz * wx - vx * wz)
+      az = (uz + vx * wy - vy * wx)
+    else
+      ax = (vy * wz - vz * wy)
+      ay = (vz * wx - vx * wz)
+      az = (vx * wy - vy * wx)
+    endif
+
+! calculate the particle energy
+!
+    en = gm * mev
+
+! new time step
+!
+    k4x = k4x - qom * ax
+    k4y = k4y - qom * ay
+    k4z = k4z - qom * az
+
+    del = sqrt(k4x*k4x + k4y*k4y + k4z*k4z) / 6.0
+    dt1 = dt * sqrt(cfl * 1.0e-4 / del)
+
+    dt  = min(2.0 * dt, dt1)
 
 ! copy data to array
 !
     if (tm .ge. (n*dtout)) then
 
-      t(n)   = tm
+! calculate the perpendicular particle speed
+!
+      ww = sqrt(wx*wx + wy*wy + wz*wz)
+      wx = wx / ww
+      wy = wy / ww
+      wz = wz / ww
 
-      x(1,n) = xp
-      x(2,n) = yp
-      x(3,n) = zp
+      ux = vy * wz - vz * wy
+      uy = vz * wx - vx * wz
+      uz = vx * wy - vy * wx
 
-      v(1,n) = vx
-      v(2,n) = vy
-      v(3,n) = vz
+      vp = sqrt(ux*ux + uy*uy + uz*uz)
+      vr = sqrt(vu*vu - vp*vp)
 
-      e(n)   = en
+! calculate gyroperiod and gyroradius
+!
+      om = om0 * ww / gm
+      tg = pi2 / om
+      rg = vp * va / om
 
-      write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, tm, dt, vu/c, e(n), char(13)
+! write the progress
+!
+      write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, tm, dt, vu/c, en, char(13)
+
+! write results to the output file
+!
+      open  (10, file = 'output.dat', form = 'formatted', position = 'append')
+      write (10, "(23(1pe18.10))") tm, rx, ry, rz, mp*px, mp*py, mp*pz, vx, vy &
+          , vz, vu, vr, vp, vu/c, vr/c, vp/c, gm, en, bavg*ww, om, tg, rg, rg/ln
+      close (10)
+
       n = n + 1
     endif
 
@@ -567,37 +852,39 @@ program paccel
 
 100 continue
 
-  t(n)   = tm
-
-  x(1,n) = xp
-  x(2,n) = yp
-  x(3,n) = zp
-
-  v(1,n) = vx
-  v(2,n) = vy
-  v(3,n) = vz
-
-  e(n)   = en
-
-  write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, tm, dt, vu/c, e(n)
-
-! write positions and speeds to a file
+! calculate the perpendicular particle speed
 !
-  write( *, "('INFO      : ',a)" ) 'writing time, positions and speeds'
-  write(fl, '("!",a)') trim(odir) // trim(ptype) // '_tim.fits.gz'
-  call fits_put_data_1d(fl, t(1:n))
-  write(fl, '("!",a)') trim(odir) // trim(ptype) // '_ene.fits.gz'
-  call fits_put_data_1d(fl, e(1:n))
-  write(fl, '("!",a)') trim(odir) // trim(ptype) // '_pos.fits.gz'
-  call fits_put_data_2d(fl, x(:,1:n))
-  write(fl, '("!",a)') trim(odir) // trim(ptype) // '_vel.fits.gz'
-  call fits_put_data_2d(fl, v(:,1:n))
+  ww = sqrt(wx*wx + wy*wy + wz*wz)
+  wx = wx / ww
+  wy = wy / ww
+  wz = wz / ww
+
+  ux = vy * wz - vz * wy
+  uy = vz * wx - vx * wz
+  uz = vx * wy - vy * wx
+
+  vp = sqrt(ux*ux + uy*uy + uz*uz)
+  vr = sqrt(vu*vu - vp*vp)
+
+! calculate gyroperiod and gyroradius
+!
+  om = om0 * ww / gm
+  tg = pi2 / om
+  rg = vp * va / om
+
+! write the progress
+!
+  write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, tm, dt, vu/c, en
+
+! write results to the output file
+!
+  open  (10, file = 'output.dat', form = 'formatted', position = 'append')
+  write (10, "(23(1pe18.10))") tm, rx, ry, rz, mp*px, mp*py, mp*pz, vx, vy, vz &
+             , vu, vr, vp, vu/c, vr/c, vp/c, gm, en, bavg*ww, om, tg, rg, rg/ln
+  close (10)
 
 ! deallocate variables
 !
-  if (allocated(t )) deallocate(t )
-  if (allocated(x )) deallocate(x )
-  if (allocated(v )) deallocate(v )
   if (allocated(bx)) deallocate(bx)
   if (allocated(by)) deallocate(by)
   if (allocated(bz)) deallocate(bz)

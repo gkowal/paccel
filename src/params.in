@@ -8,25 +8,29 @@ fformat  = 'hdf5'
 ftype    = 'p'
 fnumber  = 5
 ptype    = 'p'
-tunit    = 'h'
-tmulti   = 1.0
-c        = 10.0
-ueta     = 1.0e-3
-aeta     = 0.0e-4
-jcrit    = 25.0
-# dtout    = 1.0e-7
-# tmax     = 1.0e-2
-dtout    = 1.0e-6
-tmax     = 1.0e-1
-cfl      = 1.0e-2
+#
+# ISM
+#
+c        = 1.0e+2
+dens     = 1.0
+tunit    = 'm'
+tmulti   = 1.0e+0
+dtout    = 1.0e-4
+tmax     = 1.0e+1
+cfl      = 0.5
+#
+# c        = 1.001
+#dens     = 1.0e15
+#c        = 10.0
+# dens     = 1.0e8
 periodic = 'y'
 current  = 'n'
 efield   = 'y'
 # xc       =  0.139329
 # yc       = -0.0940546
 # zc       = -0.142898
-xc       = 0.0
-yc       = 0.0
-zc       = 0.0
-vp       = 0.1
+xc       = 0.5
+yc       = 0.5
+zc       = 0.5
+vper     = 0.1
 ethres   = 1.0e14

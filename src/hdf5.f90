@@ -33,7 +33,7 @@ module mod_hdf5
   integer, dimension(3), save :: dm, pdm, cdm, fdm, qb, qe
   integer              , save :: nf, ng
   logical              , save :: mhd, mag
-  real                 , save :: xmn, xmx, ymn, ymx, zmn, zmx, dx, dy, dz, dxi, dyi, dzi
+  real                 , save :: xmn, xmx, ymn, ymx, zmn, zmx, dx, dy, dz, dxi, dyi, dzi, dtc
 
 !-------------------------------------------------------------------------------
 !
@@ -87,6 +87,7 @@ module mod_hdf5
     dxi    = 1.0
     dyi    = 1.0
     dzi    = 1.0
+    dtc    = 1.0
 
 ! generate filename
 !
@@ -166,6 +167,8 @@ module mod_hdf5
           call h5aread_f(aid, H5T_NATIVE_REAL, dyi, am, err)
         case('dzi')
           call h5aread_f(aid, H5T_NATIVE_REAL, dzi, am, err)
+        case('dt')
+          call h5aread_f(aid, H5T_NATIVE_REAL, dtc, am, err)
         end select
         call h5aclose_f(aid, err)
       end do
