@@ -141,9 +141,9 @@ program paccel
   om = om0 / gm                                         ! relativistic gyrofrequency
   tg = 1.0d0 / om                                       ! gyroperiod
   tg = 2.0 * pi * tg
-  rg = vp / om                                          ! gyroradius (Larmor radius)
+  rg = vr / om                                          ! gyroradius (Larmor radius)
   pc = 3.2407792896656065765177783686188e-17            ! 1 meter [pc]
-  mu = 0.5d0 * mp * vp**2 / bavg                        ! magnetic moment [kg m^2 / s^2 Gs]
+  mu = 0.5d0 * mp * vr**2 / bavg                        ! magnetic moment [kg m^2 / s^2 Gs]
   yy = 3.168876464084018437308447107767e-08             ! 1 second [yr]
   en = gm * mev
 
@@ -422,9 +422,9 @@ program paccel
 
 ! calculate the initial particle velocity in the resting reference frame
 !
-  vx  = ( vper * vx + vpar * wx ) * c
-  vy  = ( vper * vy + vpar * wy ) * c
-  vz  = ( vper * vz + vpar * wz ) * c
+  vx  = ( vpar * wx + vper * vx ) * c
+  vy  = ( vpar * wy + vper * vy ) * c
+  vz  = ( vpar * wz + vper * vz ) * c
 
 ! calculate the Lorentz factor
 !
@@ -451,7 +451,7 @@ program paccel
 !
   om = om0 * ww / gm
   tg = pi2 / om
-  rg = vp * va / om
+  rg = vr * va / om
 
 ! print the progress information
 !
@@ -466,7 +466,7 @@ program paccel
              , '|Vpar|/c', '|Vper|/c', 'gamma', 'En [MeV]', '<B> [Gs]'         &
              , 'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Rg/L'
   write (10, "(23(1pe18.10))") tm, rx, ry, rz, mp*px, mp*py, mp*pz, vx, vy, vz &
-             , vu, vr, vp, vu/c, vr/c, vp/c, gm, en, bavg*ww, om, tg, rg, rg/ln
+             , vu, vp, vr, vu/c, vp/c, vr/c, gm, en, bavg*ww, om, tg, rg, rg/ln
   close (10)
 
 ! iterpolate electric field at the initial position
@@ -828,14 +828,14 @@ program paccel
       uy = vz * wx - vx * wz
       uz = vx * wy - vy * wx
 
-      vp = sqrt(ux*ux + uy*uy + uz*uz)
-      vr = sqrt(vu*vu - vp*vp)
+      vr = sqrt(ux*ux + uy*uy + uz*uz)
+      vp = sqrt(vu*vu - vr*vr)
 
 ! calculate gyroperiod and gyroradius
 !
       om = om0 * ww / gm
       tg = pi2 / om
-      rg = vp * va / om
+      rg = vr * va / om
 
 ! write the progress
 !
@@ -845,7 +845,7 @@ program paccel
 !
       open  (10, file = 'output.dat', form = 'formatted', position = 'append')
       write (10, "(23(1pe18.10))") tm, rx, ry, rz, mp*px, mp*py, mp*pz, vx, vy &
-          , vz, vu, vr, vp, vu/c, vr/c, vp/c, gm, en, bavg*ww, om, tg, rg, rg/ln
+          , vz, vu, vp, vr, vu/c, vp/c, vr/c, gm, en, bavg*ww, om, tg, rg, rg/ln
       close (10)
 
       n = n + 1
@@ -868,14 +868,14 @@ program paccel
   uy = vz * wx - vx * wz
   uz = vx * wy - vy * wx
 
-  vp = sqrt(ux*ux + uy*uy + uz*uz)
-  vr = sqrt(vu*vu - vp*vp)
+  vr = sqrt(ux*ux + uy*uy + uz*uz)
+  vp = sqrt(vu*vu - vr*vr)
 
 ! calculate gyroperiod and gyroradius
 !
   om = om0 * ww / gm
   tg = pi2 / om
-  rg = vp * va / om
+  rg = vr * va / om
 
 ! write the progress
 !
@@ -885,7 +885,7 @@ program paccel
 !
   open  (10, file = 'output.dat', form = 'formatted', position = 'append')
   write (10, "(23(1pe18.10))") tm, rx, ry, rz, mp*px, mp*py, mp*pz, vx, vy, vz &
-             , vu, vr, vp, vu/c, vr/c, vp/c, gm, en, bavg*ww, om, tg, rg, rg/ln
+             , vu, vp, vr, vu/c, vp/c, vr/c, gm, en, bavg*ww, om, tg, rg, rg/ln
   close (10)
 
 ! deallocate variables
