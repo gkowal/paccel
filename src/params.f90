@@ -54,7 +54,6 @@ module params
   real                , save :: ueta     = 0.0         ! uniform resistivity coeff
   real                , save :: aeta     = 0.0         ! anomalous resistivity coeff
   real                , save :: jcrit    = 1.0e3       ! critical current density
-  integer             , save :: nsteps   = 1           ! number of steps
   real                , save :: xc       = 0.0         ! initial position
   real                , save :: yc       = 0.0
   real                , save :: zc       = 0.0
@@ -68,6 +67,7 @@ module params
   real                , save :: dtout    = 1.0         ! interval between data writing
   real                , save :: tmax     = 1.0         ! maximum time for integration
   real                , save :: ethres   = 1.0         ! energy threshold
+  integer             , save :: nstep    = 1000        ! number of steps between subsequent dumps
 !
 !-------------------------------------------------------------------------------
 !
@@ -128,8 +128,6 @@ module params
         read (value  , *) aeta
       case ('jcrit')
         read (value  , *) jcrit
-      case ('nsteps')
-        read (value  , "(i9)") nsteps
       case ('xc')
         read (value  , *) xc
       case ('yc')
@@ -160,6 +158,8 @@ module params
         read (value  , *) tmax
       case ('ethres')
         read (value  , *) ethres
+      case ('nstep')
+        read (value  , "(i9)") nstep
       case default
     end select
 

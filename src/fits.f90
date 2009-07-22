@@ -41,11 +41,15 @@ module mod_fits
 !
 !===============================================================================
 !
-  subroutine fits_init
+  subroutine fits_init(nm)
 
     use params, only : idir
 
     implicit none
+
+! input parameters
+!
+    character(len=4), intent(in) :: nm
 
 ! local variables
 !
@@ -64,7 +68,7 @@ module mod_fits
 
 ! generate filename
 !
-    write(fl,"(a,a4,'.fits.gz')") trim(idir), 'dens'
+    write(fl,"(a,a4,'.fits.gz')") trim(idir), trim(nm)
 
 ! check if the file exists
 !
@@ -110,6 +114,73 @@ module mod_fits
     dims(:) = dm(:)
 
   end subroutine fits_get_dims
+!
+!===============================================================================
+!
+! fits_get_bounds: subroutine returns the limits of the box
+!
+!===============================================================================
+!
+  subroutine fits_get_bounds(xmin, xmax, ymin, ymax, zmin, zmax)
+
+    implicit none
+
+! arguments
+!
+    real, intent(out) :: xmin, xmax, ymin, ymax, zmin, zmax
+!
+!-------------------------------------------------------------------------------
+!
+    xmin = 0.0
+    xmax = 1.0
+    ymin = 0.0
+    ymax = 1.0
+    zmin = 0.0
+    zmax = 1.0
+
+  end subroutine fits_get_bounds
+!
+!===============================================================================
+!
+! fits_get_gridsize: subroutine returns the size of the cell
+!
+!===============================================================================
+!
+  subroutine fits_get_gridsize(dx, dy, dz)
+
+    implicit none
+
+! arguments
+!
+    real, intent(out) :: dx, dy, dz
+!
+!-------------------------------------------------------------------------------
+!
+    dx = 1.0 / dm(1)
+    dy = 1.0 / dm(2)
+    dz = 1.0 / dm(3)
+
+  end subroutine fits_get_gridsize
+!
+!===============================================================================
+!
+! fits_get_timestep: subroutine returns the timestep
+!
+!===============================================================================
+!
+  subroutine fits_get_timestep(dt)
+
+    implicit none
+
+! arguments
+!
+    real, intent(out) :: dt
+!
+!-------------------------------------------------------------------------------
+!
+    dt = 1.0
+
+  end subroutine fits_get_timestep
 !
 !===============================================================================
 !

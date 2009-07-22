@@ -252,6 +252,73 @@ module mod_hdf5
 !
 !===============================================================================
 !
+! hdf5_get_bounds: subroutine returns the limits of the box
+!
+!===============================================================================
+!
+  subroutine hdf5_get_bounds(xmin, xmax, ymin, ymax, zmin, zmax)
+
+    implicit none
+
+! arguments
+!
+    real, intent(out) :: xmin, xmax, ymin, ymax, zmin, zmax
+!
+!-------------------------------------------------------------------------------
+!
+    xmin = xmn
+    xmax = xmx
+    ymin = ymn
+    ymax = ymx
+    zmin = zmn
+    zmax = zmx
+
+  end subroutine hdf5_get_bounds
+!
+!===============================================================================
+!
+! hdf5_get_gridsize: subroutine returns the size of the cell
+!
+!===============================================================================
+!
+  subroutine hdf5_get_gridsize(gdx, gdy, gdz)
+
+    implicit none
+
+! arguments
+!
+    real, intent(out) :: gdx, gdy, gdz
+!
+!-------------------------------------------------------------------------------
+!
+    gdx = dx
+    gdy = dy
+    gdz = dz
+
+  end subroutine hdf5_get_gridsize
+!
+!===============================================================================
+!
+! hdf5_get_timestep: subroutine returns the timestep
+!
+!===============================================================================
+!
+  subroutine hdf5_get_timestep(dt)
+
+    implicit none
+
+! arguments
+!
+    real, intent(out) :: dt
+!
+!-------------------------------------------------------------------------------
+!
+    dt = dtc
+
+  end subroutine hdf5_get_timestep
+!
+!===============================================================================
+!
 ! hdf5_get_coord: subroutine reads the coordinate of subarray
 !
 !===============================================================================

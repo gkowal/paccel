@@ -27,13 +27,14 @@
 program paccel
 
   use params  , only : read_params, idir, odir                                &
-                     , ueta, aeta, jcrit, nsteps, xc, yc, zc                  &
+                     , ueta, aeta, jcrit, nstep, xc, yc, zc                   &
                      , ptype, tunit, tmulti                                   &
                      , dens, c, periodic, cfl, dtout, tmax, ethres, current   &
-                     , efield, vpar, vper, approx
-  use mod_hdf5, only : hdf5_init, hdf5_get_dims, hdf5_read_var                &
-                     , xmn, ymn, zmn, xmx, ymx, zmx, dxi, dyi, dzi, dx, dy, dz, dtc
-  use mod_fits, only : fits_put_data_2d, fits_put_data_1d
+                     , efield, vpar, vper, approx, fformat
+  use mod_fits, only : fits_init, fits_get_dims, fits_get_bounds               &
+                     , fits_get_gridsize, fits_get_timestep, fits_read_var
+  use mod_hdf5, only : hdf5_init, hdf5_get_dims, hdf5_get_bounds               &
+                     , hdf5_get_gridsize, hdf5_get_timestep, hdf5_read_var
   use interpolation, only : interpolate => ptricub, pos2index
 
   implicit none
@@ -42,11 +43,12 @@ program paccel
 !
   character(len = 255) :: fl
   integer              :: dm(3)
-  integer              :: i, j, k, n, nmax
+  integer              :: i, j, k
+  integer(kind=8)      :: p, n, nmax
   real(kind=16)        :: va, dn, mu0, bavg, qom, om, tg, vp, pc, rg, gm, mp   &
                         , mu, ln, dr, ts, yy, bt, pu, del, vr, om0
   real(kind=16)        :: rx, ry, rz, xr, yr, zr
-  real                 :: jx, jy, jz, ja, et, xx, dxmin
+  real                 :: jx, jy, jz, ja, et, xx
   real(kind=8)         :: ww, wx, wy, wz, uu, ux, uy, uz, vv
   real(kind=16)        :: ax, ay, az
   real(kind=16)        :: r1x, r1y, r1z, r2x, r2y, r2z, r3x, r3y, r3z, r4x, r4y, r4z
@@ -56,7 +58,9 @@ program paccel
   real                 :: xt, yt, zt, xi, yi, zi
   real(kind=16)        :: mev, ulen, plen, en
   real(kind=16)        :: vx, vy, vz, px, py, pz, xp1, yp1, zp1, vx1, vy1, vz1, vu
-  real(kind=16)        :: tm, dt, dtp, dt1, dt2, fc, aa, bb, vc
+  real(kind=16)        :: tm, dt, dtp, dt1, dt2, fc, aa, bb, vc, tmr, dtr, dto
+  real(kind=4)         :: xmn, xmx, ymn, ymx, zmn, zmx, dx, dy, dz, dtc        &
+                        , dxi, dyi, dzi
   logical              :: per = .false., fin = .false., out
 
 ! parameters
@@ -92,10 +96,30 @@ program paccel
 !
   dm(:) = 1
 
-! init HDF5 interface and get data dimensions
+! init the FITS or HDF5 interface and get data dimensions
 !
-  call hdf5_init()
-  call hdf5_get_dims(dm)
+  select case(fformat)
+  case('fits')
+    call fits_init('magx')
+    call fits_get_dims(dm)
+    call fits_get_bounds(xmn, xmx, ymn, ymx, zmn, zmx)
+    call fits_get_gridsize(dx, dy, dz)
+    call fits_get_timestep(dtc)
+  case('hdf5')
+    call hdf5_init()
+    call hdf5_get_dims(dm)
+    call hdf5_get_bounds(xmn, xmx, ymn, ymx, zmn, zmx)
+    call hdf5_get_gridsize(dx, dy, dz)
+    call hdf5_get_timestep(dtc)
+  case default
+    stop
+  end select
+
+! calculate usefull parameters
+!
+  dxi = 1.0 / dx
+  dyi = 1.0 / dy
+  dzi = 1.0 / dz
 
 ! print some info
 !
@@ -207,7 +231,6 @@ program paccel
   write( *, "('INFO      : L     =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) ln, pc * ln
   write( *, "('INFO      : dx    =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) dr, pc * dr
 
-
 ! calculate conditions
 !
 
@@ -287,9 +310,16 @@ program paccel
 ! read magnetic field components
 !
   write( *, "('INFO      : ',a)" ) "reading magnetic field"
-  call hdf5_read_var('magx', bx)
-  call hdf5_read_var('magy', by)
-  call hdf5_read_var('magz', bz)
+  select case(fformat)
+  case('fits')
+    call fits_read_var('magx', bx)
+    call fits_read_var('magy', by)
+    call fits_read_var('magz', bz)
+  case('hdf5')
+    call hdf5_read_var('magx', bx)
+    call hdf5_read_var('magy', by)
+    call hdf5_read_var('magz', bz)
+  end select
 
   if (efield .eq. 'y') then
 
@@ -359,7 +389,7 @@ program paccel
 
 ! allocate particle positions & velocities
 !
-  nmax = int(tmax / dtout) + 2
+  nmax = int(tmax / dtout, kind=8) + 1
 
 ! set the initial integration parameters
 !
@@ -367,6 +397,7 @@ program paccel
   dtp = 1.0e-16
   dt  = dtp
   n   = 1
+  p   = 1
 
 ! set the initial particle position
 !
@@ -453,10 +484,14 @@ program paccel
   tg = pi2 / om
   rg = vr * va / om
 
+  tmr = tmulti * tm
+  dtr = tmulti * dt
+  dto = dtout / tmulti
+
 ! print the progress information
 !
   write ( *,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP', 'SPEED (c)', 'ENERGY (MeV)'
-  write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, tm, dt, vu/c, en, char(13)
+  write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, tmr, dtr, vu/c, en, char(13)
 
 ! print headers and the initial values
 !
@@ -465,7 +500,7 @@ program paccel
              , 'Vx', 'Vy', 'Vz', '|V|', '|Vpar|', '|Vper|', '|V|/c'            &
              , '|Vpar|/c', '|Vper|/c', 'gamma', 'En [MeV]', '<B> [Gs]'         &
              , 'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Rg/L'
-  write (10, "(23(1pe18.10))") tm, rx, ry, rz, mp*px, mp*py, mp*pz, vx, vy, vz &
+  write (10, "(23(1pe18.10))") tmr, rx, ry, rz, mp*px, mp*py, mp*pz, vx, vy, vz &
              , vu, vp, vr, vu/c, vp/c, vr/c, gm, en, bavg*ww, om, tg, rg, rg/ln
   close (10)
 
@@ -477,13 +512,9 @@ program paccel
     uz = interpolate(dm, ez, xr, yr, zr)
   endif
 
-! check minimum dx
-!
-  dxmin = min(dx, dy, dz)
-
 ! integrate particles
 !
-  do while (tm .le. tmax .and. n .le. nmax .and. .not. fin)
+  do while (tmr .le. tmax .and. .not. fin)
 
 ! update time
 !
@@ -798,10 +829,6 @@ program paccel
       az = (vx * wy - vy * wx)
     endif
 
-! calculate the particle energy
-!
-    en = gm * mev
-
 ! new time step
 !
     k4x = k4x - qom * ax
@@ -813,9 +840,17 @@ program paccel
 
     dt  = min(2.0 * dt, dt1)
 
+! convert time to the used units
+!
+    tmr = tmulti * tm
+
+! calculate the energy of particle
+!
+    en = gm * mev
+
 ! copy data to array
 !
-    if (tm .ge. (n*dtout)) then
+    if (p .eq. nstep) then
 
 ! calculate the perpendicular particle speed
 !
@@ -833,23 +868,28 @@ program paccel
 
 ! calculate gyroperiod and gyroradius
 !
-      om = om0 * ww / gm
-      tg = pi2 / om
-      rg = vr * va / om
+      dtr = tmulti * dt
+      om  = om0 * ww / gm
+      tg  = pi2 / om
+      rg  = vr * va / om
 
 ! write the progress
 !
-      write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, tm, dt, vu/c, en, char(13)
+      write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, tmr, dtr, vu/c, en, char(13)
 
 ! write results to the output file
 !
       open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-      write (10, "(23(1pe18.10))") tm, rx, ry, rz, mp*px, mp*py, mp*pz, vx, vy &
+      write (10, "(23(1pe18.10))") tmr, rx, ry, rz, mp*px, mp*py, mp*pz, vx, vy &
           , vz, vu, vp, vr, vu/c, vp/c, vr/c, gm, en, bavg*ww, om, tg, rg, rg/ln
       close (10)
 
       n = n + 1
+      p = 1
+
     endif
+
+    p = p + 1
 
     if (en .ge. ethres) fin = .true.
 
@@ -877,14 +917,17 @@ program paccel
   tg = pi2 / om
   rg = vr * va / om
 
+  tmr = tmulti * tm
+  dtr = tmulti * dt
+
 ! write the progress
 !
-  write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, tm, dt, vu/c, en
+  write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, tmr, dtr, vu/c, en
 
 ! write results to the output file
 !
   open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-  write (10, "(23(1pe18.10))") tm, rx, ry, rz, mp*px, mp*py, mp*pz, vx, vy, vz &
+  write (10, "(23(1pe18.10))") tmr, rx, ry, rz, mp*px, mp*py, mp*pz, vx, vy, vz &
              , vu, vp, vr, vu/c, vp/c, vr/c, gm, en, bavg*ww, om, tg, rg, rg/ln
   close (10)
 

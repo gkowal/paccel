@@ -78,15 +78,29 @@ module interpolation
 !
     integer, dimension(3)               :: d
     real   , dimension(d(1),d(2),d(3))  :: u
-    real                                :: x, y, z
+    real(kind=16)                       :: x, y, z
 
 ! local variables
 !
     integer :: i, j, k, ip1, jp1, kp1
     real    :: dx, dy, dz, u1, u2, v1, v2, w1, w2
+    logical :: out = .false.
 !
 !------------------------------------------------------------------------------
 !
+      if (x .lt. 1) out = .true.
+      if (y .lt. 1) out = .true.
+      if (z .lt. 1) out = .true.
+
+      if (x .gt. d(1)) out = .true.
+      if (y .gt. d(2)) out = .true.
+      if (z .gt. d(3)) out = .true.
+
+    if (out) then
+      print *, x, y, z
+      stop
+    endif
+
     x   = max(1.0, min(x, real(d(1))))
     y   = max(1.0, min(y, real(d(2))))
     z   = max(1.0, min(z, real(d(3))))
@@ -120,15 +134,26 @@ module interpolation
 !
 !===============================================================================
 !
-  real function ptricub(d, u, x, y, z) result (v)
+  real function ptricub(dm, u, x, y, z) result (v)
+
+    use params  , only : periodic
 
     implicit none
 
 ! input/output arguments
 !
-    integer, dimension(3)               :: d
-    real   , dimension(d(1),d(2),d(3))  :: u
-    real(kind=16)                       :: x, y, z
+    integer, dimension(3)    , intent(in) :: dm
+    real   , dimension(:,:,:), intent(in) :: u
+    real(kind=16)            , intent(in) :: x, y, z
+
+! local flags
+!
+    logical, save :: first = .true.
+    logical, save :: per   = .false.
+
+! local saved variables
+!
+    integer(kind=4), dimension(3), save :: pm
 
 ! local variables
 !
@@ -140,31 +165,72 @@ module interpolation
 !
 !------------------------------------------------------------------------------
 !
-    x   = max(1.0, min(x, real(d(1))))
-    y   = max(1.0, min(y, real(d(2))))
-    z   = max(1.0, min(z, real(d(3))))
+    if (first) then
+      if (periodic .eq. 'y') per = .true.
 
-! TODO: implement proper periodic conditions
+      pm = dm - 1
+
+      first = .false.
+    endif
+
+! calculate indices
 !
-    i   = int(x)
-    j   = int(y)
-    k   = int(z)
-    im1 = max(i - 1, 1)
-    jm1 = max(j - 1, 1)
-    km1 = max(k - 1, 1)
-    ip1 = min(i + 1, d(1))
-    jp1 = min(j + 1, d(2))
-    kp1 = min(k + 1, d(3))
-    ip2 = min(i + 2, d(1))
-    jp2 = min(j + 2, d(2))
-    kp2 = min(k + 2, d(3))
+    i   = floor(x)
+    j   = floor(y)
+    k   = floor(z)
+
+    im1 = i - 1
+    jm1 = j - 1
+    km1 = k - 1
+
+    ip1 = i + 1
+    jp1 = j + 1
+    kp1 = k + 1
+
+    ip2 = i + 2
+    jp2 = j + 2
+    kp2 = k + 2
+
+! adjust according to the periodicity of the box
+!
+    if (per) then
+      if (i .eq.     1) im1 = im1 + dm(1)
+      if (j .eq.     1) jm1 = jm1 + dm(2)
+      if (k .eq.     1) km1 = km1 + dm(3)
+
+      if (i .eq. pm(1)) ip2 = ip2 - dm(1)
+      if (j .eq. pm(2)) jp2 = jp2 - dm(2)
+      if (k .eq. pm(3)) kp2 = kp2 - dm(3)
+
+      if (i .eq. dm(1)) then
+        ip1 = ip1 - dm(1)
+        ip2 = ip2 - dm(1)
+      endif
+      if (j .eq. dm(2)) then
+        jp1 = jp1 - dm(2)
+        jp2 = jp2 - dm(2)
+      endif
+      if (k .eq. dm(3)) then
+        kp1 = kp1 - dm(3)
+        kp2 = kp2 - dm(3)
+      endif
+    else
+      im1 = max(im1,     1)
+      jm1 = max(jm1,     1)
+      km1 = max(km1,     1)
+
+      ip1 = min(ip1, dm(1))
+      jp1 = min(jp1, dm(2))
+      kp1 = min(kp1, dm(3))
+
+      ip2 = min(ip2, dm(1))
+      jp2 = min(jp2, dm(2))
+      kp2 = min(kp2, dm(3))
+    endif
+
     dx  = x - i
     dy  = y - j
     dz  = z - k
-
-!     if (im1 .le. 0 .or. ip1 .ge. d(1)) print *, 'i = ', i, x, d(1)
-!     if (jm1 .le. 0 .or. jp1 .ge. d(2)) print *, 'j = ', j, y, d(2)
-!     if (km1 .le. 0 .or. kp1 .ge. d(3)) print *, 'k = ', k, z, d(3)
 
     tm1m1 = cint(dz, u(im1,jm1,km1), u(im1,jm1,k), u(im1,jm1,kp1), u(im1,jm1,kp2))
     tm1c  = cint(dz, u(im1,j  ,km1), u(im1,j  ,k), u(im1,j  ,kp1), u(im1,j  ,kp2))
@@ -230,8 +296,9 @@ module interpolation
 !
   subroutine pos2index(xp, yp, zp, px, py, pz, out)
 
-    use params  , only : periodic
-    use mod_hdf5, only : fdm, xmn, ymn, zmn, xmx, ymx, zmx
+    use params  , only : fformat, periodic
+    use mod_fits, only : fits_get_dims, fits_get_bounds
+    use mod_hdf5, only : hdf5_get_dims, hdf5_get_bounds
 
     implicit none
 
@@ -239,7 +306,7 @@ module interpolation
 !
     real(kind=16), intent(in)  :: xp, yp, zp
     real(kind=16), intent(out) :: px, py, pz
-    logical     , intent(out) :: out
+    logical      , intent(out) :: out
 
 ! local flags
 !
@@ -248,7 +315,8 @@ module interpolation
 
 ! local saved variables
 !
-    integer(kind=4), dimension(3), save :: pm
+    integer(kind=4), dimension(3), save :: dm, pm
+    real(kind=4)                 , save :: xmn, xmx, ymn, ymx, zmn, zmx
     real(kind=16)                , save :: xli, yli, zli
 
 ! local temporary variables
@@ -260,9 +328,22 @@ module interpolation
     if (first) then
       if (periodic .eq. 'y') per = .true.
 
+! obtain the box dimensions and bounds
+!
+      select case(fformat)
+      case('fits')
+        call fits_get_dims(dm)
+        call fits_get_bounds(xmn, xmx, ymn, ymx, zmn, zmx)
+      case('hdf5')
+        call hdf5_get_dims(dm)
+        call hdf5_get_bounds(xmn, xmx, ymn, ymx, zmn, zmx)
+      case default
+        stop
+      end select
+
 ! calculate dimensions needed for convertion
 !
-      pm(:) = fdm(:) - 1
+      pm(:) = dm(:) - 1
 
 ! calculate factors
 !
@@ -296,13 +377,13 @@ module interpolation
 
 ! check if the particle left the box
 !
-      if (px .lt. 1) out = .true.
-      if (py .lt. 1) out = .true.
-      if (pz .lt. 1) out = .true.
+      if (px .lt. 1    ) out = .true.
+      if (py .lt. 1    ) out = .true.
+      if (pz .lt. 1    ) out = .true.
 
-      if (px .gt. fdm(1)) out = .true.
-      if (py .gt. fdm(2)) out = .true.
-      if (pz .gt. fdm(3)) out = .true.
+      if (px .gt. dm(1)) out = .true.
+      if (py .gt. dm(2)) out = .true.
+      if (pz .gt. dm(3)) out = .true.
     endif
 
   end subroutine pos2index

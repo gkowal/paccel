@@ -24,13 +24,13 @@ c        = 1.001
 dens     = 1.0e15
 tunit    = 's'
 tmulti   = 1.5e-5
-dtout    = 1.0e-7
+dtout    = 1.0e-6
 tmax     = 1.0e-0
 #
 cfl      = 0.5
 periodic = 'y'
 current  = 'n'
-efield   = 'y'
+efield   = 'n'
 #
 xc       = 0.5
 yc       = 0.5
