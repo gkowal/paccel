@@ -26,10 +26,10 @@
 !
 program paccel
 
-  use params  , only : read_params, idir, odir                                &
-                     , ueta, aeta, jcrit, nstep, xc, yc, zc                   &
-                     , ptype, tunit, tmulti                                   &
-                     , dens, c, periodic, cfl, dtout, tmax, ethres, current   &
+  use params  , only : read_params, idir, odir                                 &
+                     , ueta, aeta, jcrit, nstep, xc, yc, zc                    &
+                     , ptype, tunit, tmulti, resize                            &
+                     , dens, c, periodic, cfl, dtout, tmax, ethres, current    &
                      , efield, vpar, vper, approx, fformat
   use mod_fits, only : fits_init, fits_get_dims, fits_get_bounds               &
                      , fits_get_gridsize, fits_get_timestep, fits_read_var
@@ -61,7 +61,7 @@ program paccel
   real(kind=16)        :: tm, dt, dtp, dt1, dt2, fc, aa, bb, vc, tmr, dtr, dto
   real(kind=4)         :: xmn, xmx, ymn, ymx, zmn, zmx, dx, dy, dz, dtc        &
                         , dxi, dyi, dzi
-  logical              :: per = .false., fin = .false., out
+  logical              :: per = .false., fin = .false., res = .false., out
 
 ! parameters
 !
@@ -89,6 +89,13 @@ program paccel
 !
   if (c .lt. 1.0d0) then
     write( *, "('ERROR     : ',a)" ) "parameter c must be larger than zero!"
+    stop
+  endif
+
+  vv = sqrt(vpar**2 + vper**2)
+  if (vv .ge. 1.0d0) then
+    write( *, "('ERROR     : ',a)" ) "absolute speed of the particle is larger than c!"
+    write( *, "('ERROR     : ',a,1pe15.8)" ) "|v| = ", vv
     stop
   endif
 
@@ -148,7 +155,7 @@ program paccel
   qom   = 9578.8340668294185888953506946564d0           ! e/m [1 / Gs s]
   select case(ptype)
   case ('e')
-    qom  = 1836.152667427881851835991255939 * qom
+    qom  = - 1836.152667427881851835991255939 * qom
     mp   = 9.1093818871545313708798643833606e-31        ! electron mass [kg]
     mev  = 0.51099890307660134070033564057667           ! rest energy of electron [MeV]
   case ('p')
@@ -161,7 +168,7 @@ program paccel
   vp = cc * vpar                                        ! parallel particle speed
   vr = cc * vper                                        ! perpendicular particle speed
   gm = 1.0d0 / sqrt(1.0d0 - vpar**2 - vper**2)          ! Lorentz factor
-  om0 = qom * bavg                                      ! classical gyrofrequency
+  om0 = abs(qom * bavg)                                 ! classical gyrofrequency
   om = om0 / gm                                         ! relativistic gyrofrequency
   tg = 1.0d0 / om                                       ! gyroperiod
   tg = 2.0 * pi * tg
@@ -183,6 +190,7 @@ program paccel
   write( *, "('INFO      : e/m   =',1pe15.8,' [1 / G s]')" ) qom
   write( *, "('INFO      : Vpar  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vpar, vp
   write( *, "('INFO      : Vper  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vper, vr
+  write( *, "('INFO      : |V|   =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vv  , vv * cc
   write( *, "('INFO      : gamma =',1pe15.8)"              ) gm
   write( *, "('INFO      : Om    =',1pe15.8,' [1 / s]')"   ) om
   write( *, "('INFO      : Tg    =',1pe15.8,' [s]')"       ) tg
@@ -265,6 +273,7 @@ program paccel
   write (10, "('INFO      : Tg    =',1pe15.8,' [s]')"       ) tg
   write (10, "('INFO      : Vpar  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vpar, vp
   write (10, "('INFO      : Vper  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vper, vr
+  write (10, "('INFO      : |V|   =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vv  , vv * cc
   write (10, "('INFO      : Rg    =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) rg, pc * rg
   write (10, "('INFO      : gamma =',1pe15.8)"              ) gm
   write (10, "('INFO      : mu    =',1pe15.8,' [N m / Gs]')") mu
@@ -294,6 +303,7 @@ program paccel
 ! check if periodic box
 !
   if (periodic .eq. 'y') per = .true.
+  if (resize   .eq. 'y') res = .true.
 
 ! allocate variables
 !
@@ -394,8 +404,10 @@ program paccel
 ! set the initial integration parameters
 !
   tm  = 0.0
+  tmr = 0.0
   dtp = 1.0e-16
   dt  = dtp
+  dtr = tmulti * dtp
   n   = 1
   p   = 1
 
@@ -484,8 +496,6 @@ program paccel
   tg = pi2 / om
   rg = vr * va / om
 
-  tmr = tmulti * tm
-  dtr = tmulti * dt
   dto = dtout / tmulti
 
 ! print the progress information
@@ -518,7 +528,8 @@ program paccel
 
 ! update time
 !
-    tm = tm + dt
+    tm  = tm  + dt
+    tmr = tmr + dtr
 
 !! 1st step of the RK integration
 !!
@@ -839,10 +850,7 @@ program paccel
     dt1 = dt * sqrt(cfl * 1.0e-4 / del)
 
     dt  = min(2.0 * dt, dt1)
-
-! convert time to the used units
-!
-    tmr = tmulti * tm
+    dtr = tmulti * dt
 
 ! calculate the energy of particle
 !
@@ -868,7 +876,6 @@ program paccel
 
 ! calculate gyroperiod and gyroradius
 !
-      dtr = tmulti * dt
       om  = om0 * ww / gm
       tg  = pi2 / om
       rg  = vr * va / om
@@ -888,6 +895,19 @@ program paccel
       p = 1
 
     endif
+
+! increase the size of the box if necessary
+!
+    if (res) then
+      if (rg .ge. ln) then
+        fc     = 2.0
+        tmulti = tmulti * fc
+        qom    = qom * fc
+        ln     = ln  * fc
+        dr     = dr  * fc
+        ts     = ts  * fc
+      end if
+    end if
 
     p = p + 1
 
