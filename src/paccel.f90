@@ -31,8 +31,8 @@ program paccel
                      , ptype, tunit, tmulti, resize                            &
                      , dens, c, periodic, cfl, dtout, tmax, ethres, current    &
                      , efield, vpar, vper, approx, fformat
-  use mod_fits, only : fits_init, fits_get_dims, fits_get_bounds               &
-                     , fits_get_gridsize, fits_get_timestep, fits_read_var
+  use fitsio       , only : fits_init, fits_get_dims, fits_get_bounds          &
+                          , fits_get_gridsize, fits_get_timestep, fits_read_var
   use hdf5io       , only : hdf5_init, hdf5_get_dims, hdf5_get_bounds          &
                           , hdf5_get_gridsize, hdf5_get_timestep, hdf5_read_var
   use interpolation, only : interpolate => ptricub, pos2index

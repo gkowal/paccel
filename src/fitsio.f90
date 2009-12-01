@@ -24,7 +24,7 @@
 !!******************************************************************************
 !!
 !
-module mod_fits
+module fitsio
 
   implicit none
 
@@ -592,4 +592,4 @@ module mod_fits
 
   end subroutine fits_put_data_1d
 
-end module mod_fits
+end module fitsio

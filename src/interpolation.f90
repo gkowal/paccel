@@ -297,7 +297,7 @@ module interpolation
   subroutine pos2index(xp, yp, zp, px, py, pz, out)
 
     use params  , only : fformat, periodic
-    use mod_fits, only : fits_get_dims, fits_get_bounds
+    use fitsio  , only : fits_get_dims, fits_get_bounds
     use hdf5io  , only : hdf5_get_dims, hdf5_get_bounds
 
     implicit none
