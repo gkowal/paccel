@@ -29,13 +29,13 @@ program paccel
   use params  , only : read_params, idir, odir                                 &
                      , ueta, aeta, jcrit, nstep, xc, yc, zc                    &
                      , ptype, tunit, tmulti, resize                            &
-                     , dens, c, periodic, cfl, dtout, tmax, ethres, current    &
-                     , efield, vpar, vper, approx, fformat
+                     , dens, c, periodic, rho, dtout, tmax, ethres, current    &
+                     , efield, vpar, vper, approx, fformat, tol
   use fitsio       , only : fits_init, fits_get_dims, fits_get_bounds          &
                           , fits_get_gridsize, fits_get_timestep, fits_read_var
   use hdf5io       , only : hdf5_init, hdf5_get_dims, hdf5_get_bounds          &
                           , hdf5_get_gridsize, hdf5_get_timestep, hdf5_read_var
-  use interpolation, only : interpolate => ptricub, pos2index
+  use interpolation, only : interpolate => ptrilin, pos2index
 
   implicit none
 
@@ -51,14 +51,20 @@ program paccel
   real                 :: jx, jy, jz, ja, et, xx
   real(kind=8)         :: ww, wx, wy, wz, uu, ux, uy, uz, vv
   real(kind=16)        :: ax, ay, az
-  real(kind=16)        :: r1x, r1y, r1z, r2x, r2y, r2z, r3x, r3y, r3z, r4x, r4y, r4z
-  real(kind=16)        :: v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y, v3z, v4x, v4y, v4z
-  real(kind=16)        :: p1x, p1y, p1z, p2x, p2y, p2z, p3x, p3y, p3z, p4x, p4y, p4z
-  real(kind=16)        :: k1x, k1y, k1z, k2x, k2y, k2z, k3x, k3y, k3z, k4x, k4y, k4z
+  real(kind=16)        :: r1x, r1y, r1z, v1x, v1y, v1z, p1x, p1y, p1z          &
+                        , l1x, l1y, l1z, k1x, k1y, k1z
+  real(kind=16)        :: r2x, r2y, r2z, v2x, v2y, v2z, p2x, p2y, p2z          &
+                        , l2x, l2y, l2z, k2x, k2y, k2z
+  real(kind=16)        :: r3x, r3y, r3z, v3x, v3y, v3z, p3x, p3y, p3z          &
+                        , l3x, l3y, l3z, k3x, k3y, k3z
+  real(kind=16)        :: r4x, r4y, r4z, v4x, v4y, v4z, p4x, p4y, p4z          &
+                        , l4x, l4y, l4z, k4x, k4y, k4z
+  real(kind=16)        :: r5x, r5y, r5z, v5x, v5y, v5z, p5x, p5y, p5z          &
+                        , l5x, l5y, l5z, k5x, k5y, k5z
   real                 :: xt, yt, zt, xi, yi, zi
   real(kind=16)        :: mev, ulen, plen, en
   real(kind=16)        :: vx, vy, vz, px, py, pz, xp1, yp1, zp1, vx1, vy1, vz1, vu
-  real(kind=16)        :: tm, dt, dtp, dt1, dt2, fc, aa, bb, vc, tmr, dtr, dto
+  real(kind=16)        :: tm, dt, dtp, dtn, dt2, fc, aa, bb, vc, tmr, dtr, dto
   real(kind=4)         :: xmn, xmx, ymn, ymx, zmn, zmx, dx, dy, dz, dtc        &
                         , dxi, dyi, dzi
   logical              :: per = .false., fin = .false., res = .false., out
@@ -526,13 +532,14 @@ program paccel
 !
   do while (tmr .le. tmax .and. .not. fin)
 
-! update time
-!
-    tm  = tm  + dt
-    tmr = tmr + dtr
-
 !! 1st step of the RK integration
 !!
+! integrate the position
+!
+    r1x = rx
+    r1y = ry
+    r1z = rz
+
 ! integrate the momentum
 !
     p1x = px
@@ -559,12 +566,6 @@ program paccel
     v1x = p1x / gm
     v1y = p1y / gm
     v1z = p1z / gm
-
-! integrate the position
-!
-    r1x = rx
-    r1y = ry
-    r1z = rz
 
 ! convert position to index
 !
@@ -597,17 +598,26 @@ program paccel
 
 ! set the first term
 !
-    k1x = qom * ax
-    k1y = qom * ay
-    k1z = qom * az
+    l1x = dt       * v1x
+    l1y = dt       * v1y
+    l1z = dt       * v1z
+    k1x = dt * qom * ax
+    k1y = dt * qom * ay
+    k1z = dt * qom * az
 
 !! 2nd step of the RK integration
 !!
+! integrate the position
+!
+    r2x = rx + 0.5 * l1x
+    r2y = ry + 0.5 * l1y
+    r2z = rz + 0.5 * l1z
+
 ! integrate the momentum
 !
-    p2x = px + 0.5 * dt * k1x
-    p2y = py + 0.5 * dt * k1y
-    p2z = pz + 0.5 * dt * k1z
+    p2x = px + 0.5 * k1x
+    p2y = py + 0.5 * k1y
+    p2z = pz + 0.5 * k1z
 
 ! calculate the Lorentz factor
 !
@@ -620,12 +630,6 @@ program paccel
     v2x = p2x / gm
     v2y = p2y / gm
     v2z = p2z / gm
-
-! integrate the position
-!
-    r2x = rx + 0.25 * dt * ( vx + v2x )
-    r2y = ry + 0.25 * dt * ( vy + v2y )
-    r2z = rz + 0.25 * dt * ( vz + v2z )
 
 ! convert position to index
 !
@@ -658,17 +662,26 @@ program paccel
 
 ! the second term
 !
-    k2x = qom * ax
-    k2y = qom * ay
-    k2z = qom * az
+    l2x = dt       * v2x
+    l2y = dt       * v2y
+    l2z = dt       * v2z
+    k2x = dt * qom * ax
+    k2y = dt * qom * ay
+    k2z = dt * qom * az
 
 !! 3rd step of the RK integration
 !!
+! integrate the position
+!
+    r3x = rx + 0.5 * l2x
+    r3y = ry + 0.5 * l2y
+    r3z = rz + 0.5 * l2z
+
 ! integrate the momentum
 !
-    p3x = px + 0.5 * dt * k2x
-    p3y = py + 0.5 * dt * k2y
-    p3z = pz + 0.5 * dt * k2z
+    p3x = px + 0.5 * k2x
+    p3y = py + 0.5 * k2y
+    p3z = pz + 0.5 * k2z
 
 ! calculate the Lorentz factor
 !
@@ -681,12 +694,6 @@ program paccel
     v3x = p3x / gm
     v3y = p3y / gm
     v3z = p3z / gm
-
-! integrate the position
-!
-    r3x = rx + 0.25 * dt * ( vx + v2x )
-    r3y = ry + 0.25 * dt * ( vy + v2y )
-    r3z = rz + 0.25 * dt * ( vz + v2z )
 
 ! convert position to index
 !
@@ -721,17 +728,26 @@ program paccel
 
 ! the third term
 !
-    k3x = qom * ax
-    k3y = qom * ay
-    k3z = qom * az
+    l3x = dt       * v3x
+    l3y = dt       * v3y
+    l3z = dt       * v3z
+    k3x = dt * qom * ax
+    k3y = dt * qom * ay
+    k3z = dt * qom * az
 
 !! 4th step of the RK integration
 !!
+! integrate the position
+!
+    r4x = rx + l3x
+    r4y = ry + l3y
+    r4z = rz + l3z
+
 ! integrate the momentum
 !
-    p4x = px + dt * k3x
-    p4y = py + dt * k3y
-    p4z = pz + dt * k3z
+    p4x = px + k3x
+    p4y = py + k3y
+    p4z = pz + k3z
 
 ! calculate the Lorentz factor
 !
@@ -744,12 +760,6 @@ program paccel
     v4x = p4x / gm
     v4y = p4y / gm
     v4z = p4z / gm
-
-! integrate the position
-!
-    r4x = rx + dt * v4x
-    r4y = ry + dt * v4y
-    r4z = rz + dt * v4z
 
 ! convert position to index
 !
@@ -782,34 +792,37 @@ program paccel
 
 ! the fourth term
 !
-    k4x = qom * ax
-    k4y = qom * ay
-    k4z = qom * az
+    l4x = dt       * v4x
+    l4y = dt       * v4y
+    l4z = dt       * v4z
+    k4x = dt * qom * ax
+    k4y = dt * qom * ay
+    k4z = dt * qom * az
+
+! calcuate the particle position
+!
+    r5x = rx + ( l1x + 2.0 * ( l2x + l3x ) + l4x ) / 6.0
+    r5y = ry + ( l1y + 2.0 * ( l2y + l3y ) + l4y ) / 6.0
+    r5z = rz + ( l1z + 2.0 * ( l2z + l3z ) + l4z ) / 6.0
 
 !! the final integration of the particle velocity and position
 !!
-    px = px + dt * ( k1x + 2.0 * ( k2x + k3x ) + k4x ) / 6.0
-    py = py + dt * ( k1y + 2.0 * ( k2y + k3y ) + k4y ) / 6.0
-    pz = pz + dt * ( k1z + 2.0 * ( k2z + k3z ) + k4z ) / 6.0
+    p5x = px + ( k1x + 2.0 * ( k2x + k3x ) + k4x ) / 6.0
+    p5y = py + ( k1y + 2.0 * ( k2y + k3y ) + k4y ) / 6.0
+    p5z = pz + ( k1z + 2.0 * ( k2z + k3z ) + k4z ) / 6.0
 
 ! calculate the Lorentz factor
 !
-    pu = sqrt(px**2 + py**2 + pz**2)
+    pu = sqrt(p5x**2 + p5y**2 + p5z**2)
     bt = pu / c
     gm = sqrt( 1.0d0 + bt * bt )
     vu = pu / gm
 
 ! calculate the velocity
 !
-    vx = px / gm
-    vy = py / gm
-    vz = pz / gm
-
-! calcuate the particle position
-!
-    rx = rx + dt * ( vx + 2.0 * ( v1x + v2x ) + v3x ) / 6.0
-    ry = ry + dt * ( vy + 2.0 * ( v1y + v2y ) + v3y ) / 6.0
-    rz = rz + dt * ( vz + 2.0 * ( v1z + v2z ) + v3z ) / 6.0
+    v5x = p5x / gm
+    v5y = p5y / gm
+    v5z = p5z / gm
 
 ! convert position to index
 !
@@ -842,76 +855,106 @@ program paccel
 
 ! new time step
 !
-    k4x = k4x - qom * ax
-    k4y = k4y - qom * ay
-    k4z = k4z - qom * az
+    l4x = l4x - dt       * v5x
+    l4y = l4y - dt       * v5y
+    l4z = l4z - dt       * v5z
+    k4x = k4x - dt * qom * ax
+    k4y = k4y - dt * qom * ay
+    k4z = k4z - dt * qom * az
 
-    del = sqrt(k4x*k4x + k4y*k4y + k4z*k4z) / 6.0
-    dt1 = dt * sqrt(cfl * 1.0e-4 / del)
+    del = sqrt(l4x*l4x + l4y*l4y + l4z*l4z + k4x*k4x + k4y*k4y + k4z*k4z) / 6.0
+    dtn = dt * (rho * tol / del)**0.2
 
-    dt  = min(2.0 * dt, dt1)
-    dtr = tmulti * dt
+    if (del .gt. tol) then
+      dt = dtn
+    else
+
+! update time
+!
+      tm  = tm  + dt
+      tmr = tmr + dtr
+
+! update new time step
+!
+      dt  = min(2.0 * dt, dtn)
+      dtr = tmulti * dt
+
+! update position, velocity and momentum
+!
+      rx = r5x
+      ry = r5y
+      rz = r5z
+
+      vx = v5x
+      vy = v5y
+      vz = v5z
+
+      px = p5x
+      py = p5y
+      pz = p5z
 
 ! calculate the energy of particle
 !
-    en = gm * mev
+      en = gm * mev
 
 ! copy data to array
 !
-    if (p .eq. nstep) then
+      if (p .eq. nstep) then
 
 ! calculate the perpendicular particle speed
 !
-      ww = sqrt(wx*wx + wy*wy + wz*wz)
-      wx = wx / ww
-      wy = wy / ww
-      wz = wz / ww
+        ww = sqrt(wx*wx + wy*wy + wz*wz)
+        wx = wx / ww
+        wy = wy / ww
+        wz = wz / ww
 
-      ux = vy * wz - vz * wy
-      uy = vz * wx - vx * wz
-      uz = vx * wy - vy * wx
+        ux = vy * wz - vz * wy
+        uy = vz * wx - vx * wz
+        uz = vx * wy - vy * wx
 
-      vr = sqrt(ux*ux + uy*uy + uz*uz)
-      vp = sqrt(vu*vu - vr*vr)
+        vr = sqrt(ux*ux + uy*uy + uz*uz)
+        vp = sqrt(vu*vu - vr*vr)
 
 ! calculate gyroperiod and gyroradius
 !
-      om  = om0 * ww / gm
-      tg  = pi2 / om
-      rg  = vr * va / om
+        om  = om0 * ww / gm
+        tg  = pi2 / om
+        rg  = vr * va / om
 
 ! write the progress
 !
-      write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, tmr, dtr, vu/c, en, char(13)
+        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, tmr, dtr, vu/c, en, char(13)
 
 ! write results to the output file
 !
-      open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-      write (10, "(23(1pe18.10))") tmr, rx, ry, rz, mp*px, mp*py, mp*pz, vx, vy &
-          , vz, vu, vp, vr, vu/c, vp/c, vr/c, gm, en, bavg*ww, om, tg, rg, rg/ln
-      close (10)
+        open  (10, file = 'output.dat', form = 'formatted', position = 'append')
+        write (10, "(23(1pe18.10))") tmr, rx, ry, rz, mp*px, mp*py, mp*pz, vx, vy &
+            , vz, vu, vp, vr, vu/c, vp/c, vr/c, gm, en, bavg*ww, om, tg, rg, rg/ln
+        close (10)
 
-      n = n + 1
-      p = 1
+        n = n + 1
+        p = 1
 
-    endif
+      end if
 
 ! increase the size of the box if necessary
 !
-    if (res) then
-      if (rg .ge. ln) then
-        fc     = 2.0
-        tmulti = tmulti * fc
-        qom    = qom * fc
-        ln     = ln  * fc
-        dr     = dr  * fc
-        ts     = ts  * fc
+      if (res) then
+        if (rg .ge. ln) then
+          fc     = 2.0
+          tmulti = tmulti * fc
+          qom    = qom * fc
+          ln     = ln  * fc
+          dr     = dr  * fc
+          ts     = ts  * fc
+        end if
       end if
+
+      p = p + 1
+
+      if (en .ge. ethres) fin = .true.
+
     end if
-
-    p = p + 1
-
-    if (en .ge. ethres) fin = .true.
 
   enddo
 

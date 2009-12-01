@@ -64,7 +64,8 @@ module params
   character(len =   1), save :: efield   = 'y'         ! take electric field into account
   character(len =   1), save :: current  = 'y'         ! take current density into account
   character(len =   1), save :: resize   = 'n'         ! resize the box if gyroradius > L
-  real                , save :: cfl      = 0.5         ! cfl condition
+  real                , save :: rho      = 0.5         ! safety coefficient
+  real                , save :: tol      = 1.0e-4      ! integration tolerance
   real                , save :: dtout    = 1.0         ! interval between data writing
   real                , save :: tmax     = 1.0         ! maximum time for integration
   real                , save :: ethres   = 1.0         ! energy threshold
@@ -154,8 +155,10 @@ module params
       case ('resize')
         l = len_trim(value)
         write(resize  , "(a)" ) value(2:l-1)
-      case ('cfl')
-        read (value  , *) cfl
+      case ('rho')
+        read (value  , *) rho
+      case ('tol')
+        read (value  , *) tol
       case ('dtout')
         read (value  , *) dtout
       case ('tmax')
