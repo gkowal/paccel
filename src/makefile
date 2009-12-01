@@ -24,8 +24,8 @@ name = paccel
 
 default: $(name).x
 
-sources = $(name).f90 params.f90 fits.f90 hdf5.f90 interpolation.f90
-objects = $(name).o   params.o   fits.o   hdf5.o   interpolation.o
+sources = $(name).f90 params.f90 fits.f90 hdf5io.f90 interpolation.f90
+objects = $(name).o   params.o   fits.o   hdf5io.o   interpolation.o
 files   = $(sources) makefile params.in license.txt
 
 $(name).x: $(objects)
@@ -42,10 +42,10 @@ clean-all:
 
 #-------------------------------------------------------------------------------
 
-paccel.o        : makefile paccel.f90 params.o hdf5.o fits.o interpolation.o
+paccel.o        : makefile paccel.f90 params.o hdf5io.o fits.o interpolation.o
 params.o        : makefile params.f90
 fits.o          : makefile fits.f90 params.o
-hdf5.o          : makefile hdf5.f90 params.o
-interpolation.o : makefile interpolation.f90 fits.o hdf5.o params.o
+hdf5io.o        : makefile hdf5io.f90 params.o
+interpolation.o : makefile interpolation.f90 fits.o hdf5io.o params.o
 
 #-------------------------------------------------------------------------------

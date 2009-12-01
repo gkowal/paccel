@@ -298,7 +298,7 @@ module interpolation
 
     use params  , only : fformat, periodic
     use mod_fits, only : fits_get_dims, fits_get_bounds
-    use mod_hdf5, only : hdf5_get_dims, hdf5_get_bounds
+    use hdf5io  , only : hdf5_get_dims, hdf5_get_bounds
 
     implicit none
 
