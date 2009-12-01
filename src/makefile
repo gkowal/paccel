@@ -42,12 +42,10 @@ clean-all:
 
 #-------------------------------------------------------------------------------
 
-paccel.o        : makefile paccel.f90 params.o hdf5.o fits.o interpolation.o   \
-                  random.o
+paccel.o        : makefile paccel.f90 params.o hdf5.o fits.o interpolation.o
 params.o        : makefile params.f90
 fits.o          : makefile fits.f90 params.o
 hdf5.o          : makefile hdf5.f90 params.o
 interpolation.o : makefile interpolation.f90 fits.o hdf5.o params.o
-random.o        : makefile random.f90
 
 #-------------------------------------------------------------------------------
