@@ -24,7 +24,7 @@
 !!******************************************************************************
 !!
 !
-module mod_hdf5
+module hdf5io
 
   use hdf5
 
@@ -809,4 +809,4 @@ module mod_hdf5
 
   end subroutine hdf5_get_coords
 
-end module mod_hdf5
+end module hdf5io
