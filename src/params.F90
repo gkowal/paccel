@@ -70,6 +70,7 @@ module params
   real                , save :: tmax     = 1.0         ! maximum time for integration
   real                , save :: ethres   = 1.0         ! energy threshold
   integer             , save :: nstep    = 1000        ! number of steps between subsequent dumps
+  real(kind=8)        , save :: c2                     ! square of the speed of light
 !
 !-------------------------------------------------------------------------------
 !
@@ -173,6 +174,8 @@ module params
     go to 10
 
 20  close(1)
+!
+    c2 = c * c
 !
     return
 !
