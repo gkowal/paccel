@@ -13,10 +13,10 @@ LIBS    = -L$(HDF5DIR)/lib -lhdf5_fortran -lhdf5 -L$(FITSDIR)/lib -lcfitsio -lz
 #-------------------------------------------------------------------------------
 
 .SUFFIXES:
-.SUFFIXES: .f90 .o
+.SUFFIXES: .F90 .o
 
-.f90.o:
-	$(FC) -c $(FFLAGS) $*.f90
+.F90.o:
+	$(FC) -c $(FFLAGS) $*.F90
 
 #-------------------------------------------------------------------------------
 
@@ -24,7 +24,7 @@ name = paccel
 
 default: $(name).x
 
-sources = $(name).f90 params.f90 fitsio.f90 hdf5io.f90 interpolation.f90
+sources = $(name).F90 params.F90 fitsio.F90 hdf5io.F90 interpolation.F90
 objects = $(name).o   params.o   fitsio.o   hdf5io.o   interpolation.o
 files   = $(sources) makefile params.in license.txt
 
@@ -42,10 +42,10 @@ clean-all:
 
 #-------------------------------------------------------------------------------
 
-paccel.o        : makefile paccel.f90 params.o hdf5io.o fitsio.o interpolation.o
-params.o        : makefile params.f90
-fitsio.o        : makefile fitsio.f90 params.o
-hdf5io.o        : makefile hdf5io.f90 params.o
-interpolation.o : makefile interpolation.f90 fitsio.o hdf5io.o params.o
+paccel.o        : makefile paccel.F90 params.o hdf5io.o fitsio.o interpolation.o
+params.o        : makefile params.F90
+fitsio.o        : makefile fitsio.F90 params.o
+hdf5io.o        : makefile hdf5io.F90 params.o
+interpolation.o : makefile interpolation.F90 fitsio.o hdf5io.o params.o
 
 #-------------------------------------------------------------------------------
