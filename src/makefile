@@ -3,12 +3,30 @@
 HOST    := $(shell hostname)
 OS      := $(shell uname)
 
+DEBUG   = N
+PREC    = 8
+
 FC      = ifort
-#FFLAGS  = -g -O3 -i4 -mtune=core2 -xS -fno-omit-frame-pointer -ipo -finline-limit=1000 -I$(HDF5DIR)/include
-FFLAGS  = -g -O3 -i4 -I$(HDF5DIR)/include
+FFLAGS  = -O3 -i4 -mtune=core2 -xS -I$(HDF5DIR)/include
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)
-LIBS    = -L$(HDF5DIR)/lib -lhdf5_fortran -lhdf5 -L$(FITSDIR)/lib -lcfitsio -lz
+LIBS    =
+
+ifeq ($(DEBUG),Y)
+FFLAGS += -g
+endif
+FFLAGS += -DPREC=$(PREC)
+
+# HDF5 include and library paths
+#
+FFLAGS += -I$(HDF5DIR)/include
+LIBS   += -L$(HDF5DIR)/lib
+LIBS   += -lhdf5_fortran -lhdf5 -lsz
+
+# FITS library path
+#
+LIBS   += -L$(FITSDIR)/lib
+LIBS   += -lcfitsio -lz
 
 #-------------------------------------------------------------------------------
 
@@ -24,8 +42,8 @@ name = paccel
 
 default: $(name).x
 
-sources = $(name).F90 params.F90 fitsio.F90 hdf5io.F90 interpolation.F90
-objects = $(name).o   params.o   fitsio.o   hdf5io.o   interpolation.o
+sources = fitsio.F90 hdf5io.F90 interpolation.F90 paccel.F90 params.F90
+objects = fitsio.o   hdf5io.o   interpolation.o   paccel.o   params.o
 files   = $(sources) makefile params.in license.txt
 
 $(name).x: $(objects)
