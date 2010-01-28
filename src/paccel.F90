@@ -45,35 +45,35 @@ program paccel
   integer              :: dm(3)
   integer              :: i, j, k
   integer(kind=8)      :: p, n, nmax
-  real(kind=16)        :: va, dn, mu0, bavg, qom, om, tg, vp, pc, rg, gm, mp   &
+  real(kind=PREC)      :: va, dn, mu0, bavg, qom, om, tg, vp, pc, rg, gm, mp   &
                         , mu, ln, dr, ts, yy, bt, pu, del, vr, om0
-  real(kind=16)        :: rx, ry, rz, xr, yr, zr
+  real(kind=PREC)      :: rx, ry, rz, xr, yr, zr
   real                 :: jx, jy, jz, ja, et, xx
   real(kind=8)         :: ww, wx, wy, wz, uu, ux, uy, uz, vv
-  real(kind=16)        :: ax, ay, az
-  real(kind=16)        :: r1x, r1y, r1z, v1x, v1y, v1z, p1x, p1y, p1z          &
+  real(kind=PREC)      :: ax, ay, az
+  real(kind=PREC)      :: r1x, r1y, r1z, v1x, v1y, v1z, p1x, p1y, p1z          &
                         , l1x, l1y, l1z, k1x, k1y, k1z
-  real(kind=16)        :: r2x, r2y, r2z, v2x, v2y, v2z, p2x, p2y, p2z          &
+  real(kind=PREC)      :: r2x, r2y, r2z, v2x, v2y, v2z, p2x, p2y, p2z          &
                         , l2x, l2y, l2z, k2x, k2y, k2z
-  real(kind=16)        :: r3x, r3y, r3z, v3x, v3y, v3z, p3x, p3y, p3z          &
+  real(kind=PREC)      :: r3x, r3y, r3z, v3x, v3y, v3z, p3x, p3y, p3z          &
                         , l3x, l3y, l3z, k3x, k3y, k3z
-  real(kind=16)        :: r4x, r4y, r4z, v4x, v4y, v4z, p4x, p4y, p4z          &
+  real(kind=PREC)      :: r4x, r4y, r4z, v4x, v4y, v4z, p4x, p4y, p4z          &
                         , l4x, l4y, l4z, k4x, k4y, k4z
-  real(kind=16)        :: r5x, r5y, r5z, v5x, v5y, v5z, p5x, p5y, p5z          &
+  real(kind=PREC)      :: r5x, r5y, r5z, v5x, v5y, v5z, p5x, p5y, p5z          &
                         , l5x, l5y, l5z, k5x, k5y, k5z
   real                 :: xt, yt, zt, xi, yi, zi
-  real(kind=16)        :: mev, ulen, plen, en
-  real(kind=16)        :: vx, vy, vz, px, py, pz, xp1, yp1, zp1, vx1, vy1, vz1, vu
-  real(kind=16)        :: tm, dt, dtp, dtn, dt2, fc, aa, bb, vc, tmr, dtr, dto
+  real(kind=PREC)      :: mev, ulen, plen, en
+  real(kind=PREC)      :: vx, vy, vz, px, py, pz, xp1, yp1, zp1, vx1, vy1, vz1, vu
+  real(kind=PREC)      :: tm, dt, dtp, dtn, dt2, fc, aa, bb, vc, tmr, dtr, dto
   real(kind=4)         :: xmn, xmx, ymn, ymx, zmn, zmx, dx, dy, dz, dtc        &
                         , dxi, dyi, dzi
   logical              :: per = .false., fin = .false., res = .false., out
 
 ! parameters
 !
-  real(kind=16)        :: cc  = 299792457.99999998416751623153687d0
-  real(kind=16)        :: pi  = 3.1415926535897931159979634685442d0
-  real(kind=16)        :: pi2 = 6.2831853071795862319959269370884d0
+  real(kind=PREC)      :: cc  = 299792457.99999998416751623153687d0
+  real(kind=PREC)      :: pi  = 3.1415926535897931159979634685442d0
+  real(kind=PREC)      :: pi2 = 6.2831853071795862319959269370884d0
 
 ! allocatable arrays
 !

@@ -78,7 +78,7 @@ module interpolation
 !
     integer, dimension(3)               :: d
     real   , dimension(d(1),d(2),d(3))  :: u
-    real(kind=16)                       :: x, y, z
+    real(kind=PREC)                     :: x, y, z
 
 ! local variables
 !
@@ -144,7 +144,7 @@ module interpolation
 !
     integer, dimension(3)    , intent(in) :: dm
     real   , dimension(:,:,:), intent(in) :: u
-    real(kind=16)            , intent(in) :: x, y, z
+    real(kind=PREC)          , intent(in) :: x, y, z
 
 ! local flags
 !
@@ -304,9 +304,9 @@ module interpolation
 
 ! input and output arguments
 !
-    real(kind=16), intent(in)  :: xp, yp, zp
-    real(kind=16), intent(out) :: px, py, pz
-    logical      , intent(out) :: out
+    real(kind=PREC), intent(in)  :: xp, yp, zp
+    real(kind=PREC), intent(out) :: px, py, pz
+    logical        , intent(out) :: out
 
 ! local flags
 !
@@ -317,11 +317,11 @@ module interpolation
 !
     integer(kind=4), dimension(3), save :: dm, pm
     real(kind=4)                 , save :: xmn, xmx, ymn, ymx, zmn, zmx
-    real(kind=16)                , save :: xli, yli, zli
+    real(kind=PREC)              , save :: xli, yli, zli
 
 ! local temporary variables
 !
-    real(kind=16)                       :: xt, yt, zt
+    real(kind=PREC)                     :: xt, yt, zt
 !
 !------------------------------------------------------------------------------
 !
