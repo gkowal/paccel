@@ -65,12 +65,12 @@ module params
   character(len =   1), save :: current  = 'y'         ! take current density into account
   character(len =   1), save :: resize   = 'n'         ! resize the box if gyroradius > L
   real                , save :: rho      = 0.5         ! safety coefficient
-  real                , save :: tol      = 1.0e-4      ! integration tolerance
+  real                , save :: tolerance = 1.0e-4      ! integration tolerance
+  real                , save :: dtmax      = 1.0         ! maximum allowed step size
   real                , save :: dtout    = 1.0         ! interval between data writing
   real                , save :: tmax     = 1.0         ! maximum time for integration
   real                , save :: ethres   = 1.0         ! energy threshold
   integer             , save :: nstep    = 1000        ! number of steps between subsequent dumps
-  real(kind=8)        , save :: c2                     ! square of the speed of light
 !
 !-------------------------------------------------------------------------------
 !
@@ -89,6 +89,7 @@ module params
     character(len =   *), parameter :: configfile = './params.in' ! config file with parameters
     character(len=255) :: line, name, value
     integer            :: l, i, ios
+    real               :: vv
 !
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !
@@ -158,8 +159,10 @@ module params
         write(resize  , "(a)" ) value(2:l-1)
       case ('rho')
         read (value  , *) rho
-      case ('tol')
-        read (value  , *) tol
+      case ('tolerance')
+        read (value  , *) tolerance
+      case ('dtmax')
+        read (value  , *) dtmax
       case ('dtout')
         read (value  , *) dtout
       case ('tmax')
@@ -174,8 +177,15 @@ module params
     go to 10
 
 20  close(1)
+
+! check input parameters
 !
-    c2 = c * c
+    vv = sqrt(vpar**2 + vper**2)
+    if (vv .ge. 1.0) then
+      write( *, "('ERROR     : ',a)" ) "absolute speed of the particle is larger than c!"
+      write( *, "('ERROR     : ',a,1pe15.8)" ) "|v| = ", vv
+      stop
+    end if
 !
     return
 !
