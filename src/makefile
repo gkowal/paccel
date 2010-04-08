@@ -6,8 +6,9 @@ OS      := $(shell uname)
 DEBUG   = N
 INTERP  = C
 TVD     = Y
-BNDRY   = Y
+BNDRY   = N
 PREC    = 8
+DIMS    = 2
 
 FC      = ifort
 FFLAGS  = -O3 -i4 -mtune=core2 -xS -I$(HDF5DIR)/include
@@ -31,6 +32,7 @@ ifeq ($(BNDRY),Y)
 FFLAGS += -DBNDRY
 endif
 FFLAGS += -DPREC=$(PREC)
+FFLAGS += -DDIMS=$(DIMS)
 
 # HDF5 include and library paths
 #
