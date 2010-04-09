@@ -1,0 +1,1238 @@
+!!******************************************************************************
+!!
+!! module: particles - subroutines to prepare and advance particles
+!!
+!! Copyright (C) 2010 Grzegorz Kowal <grzegorz@gkowal.info>
+!!
+!!******************************************************************************
+!!
+!!  This file is part of PAccel.
+!!
+!!  PAccel is free software; you can redistribute it and/or modify
+!!  it under the terms of the GNU General Public License as published by
+!!  the Free Software Foundation; either version 3 of the License, or
+!!  (at your option) any later version.
+!!
+!!  PAccel is distributed in the hope that it will be useful,
+!!  but WITHOUT ANY WARRANTY; without even the implied warranty of
+!!  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!!  GNU General Public License for more details.
+!!
+!!  You should have received a copy of the GNU General Public License
+!!  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+!!
+!!******************************************************************************
+!!
+!
+module particles
+
+  implicit none
+
+! domain dimensions
+!
+  integer, dimension(3)  , save :: dm, qm
+
+! domain bounds
+!
+  real   , dimension(3,2), save :: bnds
+
+! domain size
+!
+  real   , dimension(3)  , save :: bsiz
+
+! particle mass and the speed of light
+!
+  real(kind=8)           , save :: mrest, qom, c2, om0, fc, bavg
+
+! arrays containing the initial positions and velocities of particle
+!
+  real(kind=PREC), dimension(3), save :: x0, v0, p0
+!
+!-------------------------------------------------------------------------------
+!
+  contains
+!
+!===============================================================================
+!
+! init_particle: subroutine initializes the particle position and momentum
+!
+!===============================================================================
+!
+  subroutine init_particle()
+
+    use fields, only : get_dimensions, get_domain_bounds, bx, by, bz
+    use params, only : ptype, vpar, vper, c, dens, tunit, tmulti, xc, yc, zc
+
+    implicit none
+
+! local variables
+!
+    integer      :: p
+    real(kind=8) :: vp, vr, vv, va
+    real(kind=8) :: gm, dn, mu0, om, tg, rg, mu, mp, en, ba, ln
+    real(kind=PREC) :: bb
+
+! arrays
+!
+    real(kind=PREC), dimension(3) :: r0
+    real(kind=PREC), dimension(3) :: b, u, w
+
+! position indices
+!
+    integer        , dimension(4) :: ii, jj, kk
+    real(kind=8   ), dimension(4) :: cx, cy, cz
+    real(kind=8   ), dimension(3) :: dr
+
+! parameters
+!
+    real(kind=8) :: dpi  = 3.1415926535897931159979634685442d0
+    real(kind=8) :: cc  = 299792457.99999998416751623153687    ! the speed of light [m/s]
+    real(kind=8) :: pc = 3.2407792896656065765177783686188e-17 ! 1 meter [pc]
+    real(kind=8) :: sc = 3.168876464084018437308447107767e-08  ! 1 second [yr]
+!
+!-------------------------------------------------------------------------------
+!
+! get dimain dimensions
+!
+    call get_dimensions(dm)
+
+#ifdef TRICUB
+    qm(:) = dm(:) + 2
+#else /* TRUCUB */
+    qm(:) = dm(:) + 1
+#endif /* TRUCUB */
+    if (dm(3) .eq. 1) qm(:) = 1
+
+! get domain bounds
+!
+    call get_domain_bounds(bnds)
+
+! calculate the domain size
+!
+    do p = 1, 3
+      bsiz(p) = bnds(p,2) - bnds(p,1)
+    end do
+
+! compute plasma parameters
+!                                                       ! c is expressed in Va
+    dn   = 1.6726215850718025379202284485224e-21 * dens ! density conversion from
+                                                        ! protonmass/cm^3 to kg/m^3
+    gm   = 1.0d0 / sqrt(1.0d0 - (1.0 / c)**2)           ! Lorentz factor
+    va   = gm * cc  / c                                 ! Alfven speed [m/s]
+    mu0  = 125.66370614359171042906382353976            ! magnetic permeability [Gs^2 m s^2 / kg]
+    bavg = va * sqrt(mu0 * dn)                          ! magnetic field strength [Gs]
+    c2    = c * c                                       ! square of the speed of light
+
+! initialize particle parameters
+!
+    select case(ptype)
+    case ('e')
+      mrest =  0.51099890307660134070033564057667   ! rest energy of electron [MeV]
+      qom   = -17588201.72265790030360221862793     ! e/m [1 / Gs s]
+      mp    = 9.1093818871545313708798643833606e-31 ! electron mass [kg]
+    case default
+      mrest =  938.27199893682302445085952058434    ! rest energy of proton   [MeV]
+      qom   =  9578.8340668294185888953506946564    ! e/m [1 / Gs s]
+      mp    = 1.6726215850718025086476640481627e-27 ! proton mass [kg]
+    end select
+    vp = cc * vpar                                  ! parallel particle speed
+    vr = cc * vper                                  ! perpendicular particle speed
+    vv = sqrt(vpar**2 + vper**2)                    ! absolute velocity
+    mu = 0.5d0 * mp * vr**2 / bavg                  ! magnetic moment [kg m^2 / s^2 Gs]
+    om0   = abs(qom * bavg)                             ! classical gyrofrequency
+    om = om0 / gm                                       ! relativistic gyrofrequency
+    tg = 1.0d0 / om                                     ! gyroperiod
+    tg = 2.0 * dpi * tg
+    rg = vr / om                                        ! gyroradius (Larmor radius)
+
+! print plasma parametes
+!
+    write( *, "('INFO      : plasma parameters:')" )
+    write( *, "('INFO      : c     =',1pe15.8,' [Va]')"       ) c
+    write( *, "('INFO      : Va    =',1pe15.8,' [m / s]')"    ) va
+    write( *, "('INFO      : dens  =',1pe15.8,' [u / cm^3] =',1pe15.8,' [kg / m^3]')" ) dens, dn
+    write( *, "('INFO      : <B>   =',1pe15.8,' [G]')"        ) bavg
+
+! print particle parameters
+!
+    write( *, "('INFO      : particle parameters:')" )
+    select case(ptype)
+    case ('e')
+      write( *, "('INFO      : trajectory for electron')" )
+    case default
+      write( *, "('INFO      : trajectory for proton')" )
+    end select
+    write( *, "('INFO      : e/m   =',1pe15.8,' [1 / G s]')" ) qom
+    write( *, "('INFO      : Vpar  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vpar, vp
+    write( *, "('INFO      : Vper  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vper, vr
+    write( *, "('INFO      : |V|   =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vv  , vv * cc
+    write( *, "('INFO      : gamma =',1pe15.8)"              ) gm
+    write( *, "('INFO      : Om    =',1pe15.8,' [1 / s]')"   ) om
+    write( *, "('INFO      : Tg    =',1pe15.8,' [s]')"       ) tg
+    write( *, "('INFO      : Rg    =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) rg, pc * rg
+    write( *, "('INFO      : mu    =',1pe15.8,' [N m / Gs]')") mu
+    write( *, "('INFO      : E0    =',1pe15.8,' [MeV]')"     ) mrest
+
+! change time unit
+!
+    select case(tunit)
+    case('u')
+      fc = 1.0d-6
+    case('s')
+      fc = 1.0
+    case('m')
+      fc = 60.0
+    case('h')
+      fc = 3600.0
+    case('d')
+      fc = 86400.0
+    case('w')
+      fc = 604800.0
+    case('y')
+      fc = 31556925.974678400903940200805664
+    case default
+      fc = 1.0
+    end select
+
+    fc  = tmulti * fc
+    qom = qom * fc
+
+! calculate geometry parameters
+!
+    ln = va                                               ! the size of the box
+!   dr = ln * min(dx, dy, dz)
+!   ts = dtc
+
+! print geometry parameters
+!
+      write( *, "('INFO      : geometry parameters:')" )
+      write( *, "('INFO      : T     =',1pe15.8,' [s] =',1pe15.8,' [yr]')" ) fc, sc * fc
+!     write( *, "('INFO      : dt    =',1pe15.8,' [s] =',1pe15.8,' [yr]')" ) ts, sc * ts
+      write( *, "('INFO      : L     =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) ln, pc * ln
+!     write( *, "('INFO      : dx    =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) dr, pc * dr
+
+! ! print conditions
+! !
+!     write( *, "('INFO      : conditions:')" )
+!     write( *, "('INFO      : Rg/L  =',1pe15.8)" ) rg / ln
+!     write( *, "('INFO      : Rg/dx =',1pe15.8)" ) rg / dr
+!     write( *, "('INFO      : Tg/dt =',1pe15.8)" ) tg / ts
+
+! write parameters to info.txt
+!
+    open  (10, file = 'info.txt', form = 'formatted', status = 'replace')
+
+! print plasma parametes
+!
+    write (10, "('INFO      : plasma parameters:')" )
+    write (10, "('INFO      : c     =',1pe15.8,' [Va]')"       ) c
+    write (10, "('INFO      : Va    =',1pe15.8,' [m / s]')"    ) va
+    write (10, "('INFO      : dens  =',1pe15.8,' [u / cm^3] =',1pe15.8,' [kg / m^3]')" ) dens, dn
+    write (10, "('INFO      : <B>   =',1pe15.8,' [G]')"        ) bavg
+
+    write (10, "('INFO      : particle parameters:')" )
+    select case(ptype)
+    case ('e')
+      write (10, "('INFO      : trajectory for electron')" )
+    case default
+      write (10, "('INFO      : trajectory for proton')" )
+    end select
+    write (10, "('INFO      : e/m   =',1pe15.8,' [1 / G s]')" ) qom
+    write (10, "('INFO      : Om    =',1pe15.8,' [1 / s]')"   ) om
+    write (10, "('INFO      : Tg    =',1pe15.8,' [s]')"       ) tg
+    write (10, "('INFO      : Vpar  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vpar, vp
+    write (10, "('INFO      : Vper  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vper, vr
+    write (10, "('INFO      : |V|   =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vv  , vv * cc
+    write (10, "('INFO      : Rg    =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) rg, pc * rg
+    write (10, "('INFO      : gamma =',1pe15.8)"              ) gm
+    write (10, "('INFO      : mu    =',1pe15.8,' [N m / Gs]')") mu
+    write (10, "('INFO      : E0    =',1pe15.8,' [MeV]')"     ) mrest
+
+! print geometry parameters
+!
+    write (10, "('INFO      : geometry parameters:')" )
+    write (10, "('INFO      : T     =',1pe15.8,' [s] =',1pe15.8,' [yr]')" ) fc, sc * fc
+!     write (10, "('INFO      : dt    =',1pe15.8,' [s] =',1pe15.8,' [yr]')" ) ts, sc * ts
+    write (10, "('INFO      : L     =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) ln, pc * ln
+!     write (10, "('INFO      : dx    =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) dr, pc * dr
+
+! ! print conditions
+! !
+!     write (10, "('INFO      : conditions:')" )
+!     write (10, "('INFO      : Rg/L  =',1pe15.8)" ) rg / ln
+!     write (10, "('INFO      : Rg/dx =',1pe15.8)" ) rg / dr
+!     write (10, "('INFO      : Tg/dt =',1pe15.8)" ) tg / ts
+
+    close (10)
+
+! convert e/m to the units of magnetic field
+!
+    qom = qom * bavg
+
+! initial position and velocity
+!
+    x0(:) = (/ xc, yc, zc /)
+
+! convert position to index
+!
+    call pos2index(x0, r0)
+
+! prepare coefficients for interpolation
+!
+    call prepare_interpolation(r0, ii, jj, kk, dr, cx, cy, cz)
+
+! interpolate field components at the particle position
+!
+    b(1) = interpolate(bx, ii, jj, kk, dr, cx, cy, cz)
+    b(2) = interpolate(by, ii, jj, kk, dr, cx, cy, cz)
+    b(3) = interpolate(bz, ii, jj, kk, dr, cx, cy, cz)
+
+! calculate the direction of the local magnetic field
+!
+    bb = sqrt(dot_product(b, b))
+    ba = bb
+    if (bb .gt. 0.0d0) then
+      b(:) = b(:) / bb
+    else
+      write( *, "('ERROR     : ',a)" ) "B=0 at the initial position! Choose another one."
+      stop
+    endif
+
+! calculate the perpendicular unit vector
+!
+    if (dm(3) .eq. 1) then
+      w(1) = 0.0
+      w(2) = 0.0
+      w(3) = 1.0
+    else
+      call random_number(w)
+      w = w - 0.5
+    end if
+
+    bb = sqrt(dot_product(w, w))
+    if (bb .gt. 0.0d0) then
+      w(:) = w(:) / bb
+    else
+      write( *, "('ERROR     : ',a)" ) "V=0 at the initial position! Choose another one."
+      stop
+    end if
+
+    u(1) = w(2) * b(3) - w(3) * b(2)
+    u(2) = w(3) * b(1) - w(1) * b(3)
+    u(3) = w(1) * b(2) - w(2) * b(1)
+
+    bb = sqrt(dot_product(u, u))
+    if (bb .gt. 0.0d0) then
+      u(:) = u(:) / bb
+    else
+      write( *, "('ERROR     : ',a)" ) "V=0 at the initial position! Choose another one."
+      stop
+    end if
+
+! calculate the initial velocity
+!
+    v0(:) = (vpar * b(:) + vper * u(:)) * c
+
+! calculate the Lorentz factor of the initial state
+!
+    gm = 1.0 / sqrt(1.0d0 - dot_product(v0, v0) / c2)
+
+! calculate the initial particle momentuum
+!
+    p0(:) = gm * v0(:)
+
+! calculate particle energy
+!
+    en = gm * mrest
+
+! print headers and the initial values
+!
+    open  (10, file = 'output.dat', form = 'formatted', status = 'replace')
+    write (10, "('#',1a16,22a18)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz'       &
+               , 'Vx', 'Vy', 'Vz', '|V|', '|Vpar|', '|Vper|', '|V|/c'            &
+               , '|Vpar|/c', '|Vper|/c', 'gamma', 'En [MeV]', '<B> [Gs]'         &
+               , 'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Rg/L'
+    write (10, "(23(1pe18.10))") 0.0, x0(1), x0(2), x0(3), p0(1), p0(2), p0(3) &
+                                    , v0(1), v0(2), v0(3)                      &
+                                    , vv * c, vpar * c, vper * c               &
+                                    , vv, vpar, vper, gm, en, bavg * ba        &
+                                    , om, tg, rg, rg
+    close (10)
+!
+!-------------------------------------------------------------------------------
+!
+  end subroutine init_particle
+!
+!===============================================================================
+!
+! finit_particle: subroutine deallocates the particle variables
+!
+!===============================================================================
+!
+  subroutine finit_particle()
+
+    implicit none
+!
+!-------------------------------------------------------------------------------
+!
+!     if (allocated(xp)) deallocate(xp)
+!     if (allocated(vp)) deallocate(vp)
+
+!-------------------------------------------------------------------------------
+!
+  end subroutine finit_particle
+!
+!===============================================================================
+!
+! integrate_trajectory: subroutine integrates particle trajectory
+!
+!===============================================================================
+!
+  subroutine integrate_trajectory()
+
+    use params, only : c, tmax, rho, tolerance, dtmax, nstep, vpar, vper
+
+    implicit none
+
+! local variables
+!
+    integer                       :: n, m
+    real(kind=PREC), dimension(3) :: x, x1, x2, x3, x4, x5
+    real(kind=PREC), dimension(3) :: v, v1, v2, v3, v4, v5
+    real(kind=PREC), dimension(3) :: p, p1, p2, p3, p4, p5
+    real(kind=PREC), dimension(3) ::    k1, k2, k3, k4, k5
+    real(kind=PREC), dimension(3) ::    l1, l2, l3, l4, l5
+    real(kind=PREC), dimension(3) :: a, u, b
+    real(kind=PREC)               :: gamma
+    real(kind=8   )               :: delta
+    real(kind=8   )               :: ba, vu, vp, vr, en, om, tg, rg
+    real(kind=8   )               :: t, dt, dtq, dtn
+    real(kind=8   )               :: tlm, dtl, tdl
+!
+!-------------------------------------------------------------------------------
+!
+! initialize time
+!
+    n   = 0
+    m   = 0
+
+    t   = 0.0
+    dt  = 1.0e-8
+    dtq = qom * dt
+
+! initial position and velocity
+!
+    x(:) = x0(:)
+    v(:) = v0(:)
+    p(:) = p0(:)
+
+! calculate parameters
+!
+    vu = sqrt(vpar**2 + vper**2)
+
+! calculate the Lorentz factor
+!
+    gamma = lorentz_factor(p)
+
+! calculate particle energy
+!
+    en = gamma * mrest
+
+! print the progress information
+!
+    write ( *,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP', 'SPEED (c)', 'ENERGY (MeV)'
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, vu, en, char(13)
+
+!== INTEGRATION LOOP ==
+!
+! integrate particles
+!
+    do while (t .le. tmax)
+
+!! 1st step of the RK integration
+!!
+! integrate the position and momentum
+!
+      x1(:) = x(:)
+      p1(:) = p(:)
+
+! calculate the Lorentz factor
+!
+      gamma = lorentz_factor(p1)
+
+! calculate velocity
+!
+      v1(:) = p1(:) / gamma
+
+! calculate acceleration for the location x1 and velocity v1
+!
+      call acceleration(x1, v1, a, u, b)
+
+! calculate the first term
+!
+      l1(:) = dt  * v1(:)
+      k1(:) = dtq * a (:)
+
+!! 2nd step of the RK integration
+!!
+! integrate the position and momentum
+!
+      x2(:) = x(:) + 0.5 * l1(:)
+      p2(:) = p(:) + 0.5 * k1(:)
+
+! calculate the Lorentz factor
+!
+      gamma = lorentz_factor(p2)
+
+! calculate the velocity
+!
+      v2(:) = p2(:) / gamma
+
+! calculate acceleration for the location x2 and velocity v2
+!
+      call acceleration(x2, v2, a, u, b)
+
+! calculate the second term
+!
+      l2(:) = dt  * v2(:)
+      k2(:) = dtq * a (:)
+
+!! 3rd step of the RK integration
+!!
+! integrate the position and momentum
+!
+      x3(:) = x(:) + 0.5 * l2(:)
+      p3(:) = p(:) + 0.5 * k2(:)
+
+! calculate the Lorentz factor
+!
+      gamma = lorentz_factor(p3(:))
+
+! calculate the velocity
+!
+      v3(:) = p3(:) / gamma
+
+! calculate acceleration for the location x3 and velocity v3
+!
+      call acceleration(x3, v3, a, u, b)
+
+! calculate the third term
+!
+      l3(:) = dt  * v3(:)
+      k3(:) = dtq * a (:)
+
+!! 4th step of the RK integration
+!!
+! integrate the position and momentum
+!
+      x4(:) = x(:) + l3(:)
+      p4(:) = p(:) + k3(:)
+
+! calculate the Lorentz factor
+!
+      gamma = lorentz_factor(p4(:))
+
+! calculate the velocity
+!
+      v4(:) = p4(:) / gamma
+
+! calculate acceleration for the location x4 and velocity v4
+!
+      call acceleration(x4, v4, a, u, b)
+
+! calculate the third term
+!
+      l4(:) = dt  * v4(:)
+      k4(:) = dtq * a (:)
+
+!! the final integration of the particle position and momentum
+!!
+      x5(:) = x(:) + ( l1(:) + 2.0 * ( l2(:) + l3(:) ) + l4(:) ) / 6.0
+      p5(:) = p(:) + ( k1(:) + 2.0 * ( k2(:) + k3(:) ) + k4(:) ) / 6.0
+
+! calculate the Lorentz factor
+!
+      gamma = lorentz_factor(p5(:))
+
+! calculate the velocity
+!
+      v5(:) = p5(:) / gamma
+
+! calculate acceleration at the location x
+!
+      call acceleration(x5, v5, a, u, b)
+
+! estimate error
+!
+      l4(:) = l4(:) - dt  * v5(:)
+      k4(:) = k4(:) - dtq * a (:)
+
+      delta = sqrt(dot_product(l4, l4) + dot_product(k4, k4)) / 6.0
+
+! estimate new timestep
+!
+      dtn   = dt * (rho * tolerance / delta)**0.2
+
+      if (delta .gt. tolerance) then
+
+! repeat integration with this timestep
+!
+        dt  = dtn
+        dtq = qom * dt
+
+      else
+
+! update time
+!
+        t   = t + dt
+
+! update new timestep
+!
+        dt  = min(2.0 * dt, dtn, dtmax)
+        dtq = qom * dt
+
+! update position, velocity and momentum
+!
+        x(:) = x5(:)
+        v(:) = v5(:)
+        p(:) = p5(:)
+
+! copy data to array
+!
+        if (m .eq. nstep) then
+
+! separate particle velocity into parallel and perpendicular components
+!
+          call separate_velocity(v, b, ba, vu, vp, vr)
+
+! calculate the particle gyroperiod and gyroradius
+!
+          call gyro_parameters(gamma, ba, vr, om, tg, rg)
+
+! calculate particle energy
+!
+          en = gamma * mrest
+
+! write the progress
+!
+          write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, vu / c, en, char(13)
+
+! write results to the output file
+!
+          open  (10, file = 'output.dat', form = 'formatted', position = 'append')
+          write (10, "(23(1pe18.10))") t, x(1), x(2), x(3), p(1), p(2), p(3)   &
+                                        , v(1), v(2), v(3)                     &
+                                        , vu, vp, vr, vu / c, vp / c, vr / c   &
+                                        , gamma, en, bavg * ba, om, tg, rg, rg
+          close (10)
+
+          n = n + 1
+          m = 0
+
+        end if
+
+! increase data write counter
+!
+        m = m + 1
+
+      end if
+
+    end do
+
+! separate particle velocity into parallel and perpendicular components
+!
+    call separate_velocity(v, b, ba, vu, vp, vr)
+
+! calculate the particle gyroperiod and gyroradius
+!
+    call gyro_parameters(gamma, ba, vr, om, tg, rg)
+
+! calculate particle energy
+!
+    en = gamma * mrest
+
+! write the progress
+!
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, vu / c, en
+
+! write results to the output file
+!
+    open  (10, file = 'output.dat', form = 'formatted', position = 'append')
+    write (10, "(23(1pe18.10))") t, x(1), x(2), x(3), p(1), p(2), p(3)   &
+                                  , v(1), v(2), v(3)                     &
+                                  , vu, vp, vr, vu / c, vp / c, vr / c   &
+                                  , gamma, en, bavg * ba, om, tg, rg, rg
+    close (10)
+
+!-------------------------------------------------------------------------------
+!
+  end subroutine integrate_trajectory
+!
+!===============================================================================
+!
+! pos2index: subroutine converts a give position to the array index
+!
+!===============================================================================
+!
+  subroutine pos2index(x, r)
+
+    implicit none
+
+! input and output arguments
+!
+    real(kind=PREC), dimension(3), intent(in)  :: x
+    real(kind=PREC), dimension(3), intent(out) :: r
+
+! local variables
+!
+    integer         :: i
+    real(kind=PREC) :: t
+!
+!------------------------------------------------------------------------------
+!
+    do i = 1, DIMS
+      t    = (x(i) - bnds(i,1)) / bsiz(i) + 0.5 / dm(i)
+      t    = t - floor(t)
+      r(i) = dm(i) * t
+    end do
+#if DIMS == 2
+    r(3) = 1.0
+#endif /* DIMS == 2 */
+!
+!------------------------------------------------------------------------------
+!
+  end subroutine pos2index
+!
+!===============================================================================
+!
+! prepare_interpolation: subroutine prepares coeafficients for interpolation
+!
+!===============================================================================
+!
+  subroutine prepare_interpolation(x, ii, jj, kk, dr, cx, cy, cz)
+
+    implicit none
+
+! input and output arguments
+!
+    real(kind=PREC), dimension(3), intent(in)  :: x
+    integer        , dimension(4), intent(out) :: ii, jj, kk
+    real(kind=8   ), dimension(3), intent(out) :: dr
+    real(kind=8   ), dimension(4), intent(out) :: cx, cy, cz
+!
+!------------------------------------------------------------------------------
+!
+#if !defined TRILIN && !defined TRICUB
+!
+!= nearest interpolation =
+!
+! calculate indices
+!
+    ii(1) = nint(x(1))
+    jj(1) = nint(x(2))
+#if DIMS == 2
+    kk(1) = 1
+#else /* DIMS == 2 */
+    kk(1) = nint(x(3))
+#endif /* DIMS == 2 */
+
+! increase the indices
+!
+    ii(:) = ii(:) + 1
+    jj(:) = jj(:) + 1
+#if DIMS == 3
+    kk(:) = kk(:) + 1
+#endif /* DIMS == 3 */
+#endif /* !TRILIN & !TRICUB */
+#ifdef TRILIN
+!
+!= trilinear interpolation =
+!
+! calculate indices
+!
+    ii(1) = int(floor(x(1)))
+    ii(2) = ii(1) + 1
+    jj(1) = int(floor(x(2)))
+    jj(2) = jj(1) + 1
+#if DIMS == 2
+    kk(1) = 1
+    kk(2) = 1
+#else /* DIMS == 2 */
+    kk(1) = int(floor(x(3)))
+    kk(2) = kk(1) + 1
+#endif /* DIMS == 2 */
+
+! calculate intercell position
+!
+    dr(1) = x(1) - ii(1)
+    dr(2) = x(2) - jj(1)
+#if DIMS == 2
+    dr(3) = 0.0
+#else /* DIMS == 2 */
+    dr(3) = x(3) - kk(1)
+#endif /* DIMS == 2 */
+
+! increase the indices
+!
+    ii(:) = ii(:) + 1
+    jj(:) = jj(:) + 1
+#if DIMS == 3
+    kk(:) = kk(:) + 1
+#endif /* DIMS == 3 */
+#endif /* TRILIN */
+#ifdef TRICUB
+!
+!= tricubic interpolation =
+!
+! calculate indices
+!
+    ii(2) = int(floor(x(1)))
+    ii(1) = ii(2) - 1
+    ii(3) = ii(2) + 1
+    ii(4) = ii(2) + 2
+    jj(2) = int(floor(x(2)))
+    jj(1) = jj(2) - 1
+    jj(3) = jj(2) + 1
+    jj(4) = jj(2) + 2
+#if DIMS == 2
+    kk(:) = 1
+#else /* DIMS == 2 */
+    kk(2) = int(floor(x(3)))
+    kk(1) = kk(2) - 1
+    kk(3) = kk(2) + 1
+    kk(4) = kk(2) + 2
+#endif /* DIMS == 2 */
+
+! calculate intercell position
+!
+    dr(1) = x(1) - ii(2)
+    dr(2) = x(2) - jj(2)
+#if DIMS == 2
+    dr(3) = 0.0
+#else /* DIMS == 2 */
+    dr(3) = x(3) - kk(2)
+#endif /* DIMS == 2 */
+
+! coefficients for dx, dy, and dz
+!
+    call coefficients_cubic(dr(1), cx(:))
+    call coefficients_cubic(dr(2), cy(:))
+    call coefficients_cubic(dr(3), cz(:))
+
+! increase the indices
+!
+    ii(:) = ii(:) + 2
+    jj(:) = jj(:) + 2
+#if DIMS == 3
+    kk(:) = kk(:) + 2
+#endif /* DIMS == 3 */
+#endif /* TRICUB */
+!
+!------------------------------------------------------------------------------
+!
+  end subroutine prepare_interpolation
+!
+!===============================================================================
+!
+! interpolate: subroutine interpolates field value for a given position
+!
+!===============================================================================
+!
+  real(kind=8) function interpolate(f, ii, jj, kk, dr, cx, cy, cz) result(q)
+
+    implicit none
+
+! input and output arguments
+!
+    real(kind=4), dimension(:,:,:), intent(in) :: f
+    integer     , dimension(4)    , intent(in) :: ii, jj, kk
+    real(kind=8), dimension(3)    , intent(in) :: dr
+    real(kind=8), dimension(4)    , intent(in) :: cx, cy, cz
+
+! local variables
+!
+#ifdef TRILIN
+    real(kind=4) :: q11, q12, q21, q22, q1, q2
+#endif /* TRILIN */
+#ifdef TRICUB
+    real(kind=4) :: q11, q12, q13, q14, q21, q22, q23, q24                     &
+                  , q31, q32, q33, q34, q41, q42, q43, q44, q1, q2, q3, q4
+#endif /* TRICUB */
+!
+!------------------------------------------------------------------------------
+!
+#if !defined TRILIN && !defined TRICUB
+!
+!= nearest interpolation =
+!
+    q = f(ii(1),jj(1),kk(1))
+#endif /* !TRILIN & !TRICUB */
+#ifdef TRILIN
+!
+!= trilinear interpolation =
+!
+! interpolate XY corners
+!
+    q11 = plinear(dr(3), f(ii(1),jj(1),kk(1)), f(ii(1),jj(1),kk(2)))
+    q12 = plinear(dr(3), f(ii(1),jj(2),kk(1)), f(ii(1),jj(2),kk(2)))
+    q21 = plinear(dr(3), f(ii(2),jj(1),kk(1)), f(ii(2),jj(1),kk(2)))
+    q22 = plinear(dr(3), f(ii(2),jj(2),kk(1)), f(ii(2),jj(2),kk(2)))
+
+! interpolate X corners
+!
+    q1 = plinear(dr(2), q11, q12)
+    q2 = plinear(dr(2), q21, q22)
+
+! interpolate the value ar a given position
+!
+    q  = plinear(dr(1), q1 , q2 )
+#endif /* TRILIN */
+#ifdef TRICUB
+!
+!= tricubic interpolation =
+!
+! interpolate along Z direction
+!
+    q11 = pcubic(dr(3), cz, f(ii(1),jj(1),kk(1)), f(ii(1),jj(1),kk(2))         &
+                          , f(ii(1),jj(1),kk(3)), f(ii(1),jj(1),kk(4)))
+    q12 = pcubic(dr(3), cz, f(ii(1),jj(2),kk(1)), f(ii(1),jj(2),kk(2))         &
+                          , f(ii(1),jj(2),kk(3)), f(ii(1),jj(2),kk(4)))
+    q13 = pcubic(dr(3), cz, f(ii(1),jj(3),kk(1)), f(ii(1),jj(3),kk(2))         &
+                          , f(ii(1),jj(3),kk(3)), f(ii(1),jj(3),kk(4)))
+    q14 = pcubic(dr(3), cz, f(ii(1),jj(4),kk(1)), f(ii(1),jj(4),kk(2))         &
+                          , f(ii(1),jj(4),kk(3)), f(ii(1),jj(4),kk(4)))
+
+    q21 = pcubic(dr(3), cz, f(ii(2),jj(1),kk(1)), f(ii(2),jj(1),kk(2))         &
+                          , f(ii(2),jj(1),kk(3)), f(ii(2),jj(1),kk(4)))
+    q22 = pcubic(dr(3), cz, f(ii(2),jj(2),kk(1)), f(ii(2),jj(2),kk(2))         &
+                          , f(ii(2),jj(2),kk(3)), f(ii(2),jj(2),kk(4)))
+    q23 = pcubic(dr(3), cz, f(ii(2),jj(3),kk(1)), f(ii(2),jj(3),kk(2))         &
+                          , f(ii(2),jj(3),kk(3)), f(ii(2),jj(3),kk(4)))
+    q24 = pcubic(dr(3), cz, f(ii(2),jj(4),kk(1)), f(ii(2),jj(4),kk(2))         &
+                          , f(ii(2),jj(4),kk(3)), f(ii(2),jj(4),kk(4)))
+
+    q31 = pcubic(dr(3), cz, f(ii(3),jj(1),kk(1)), f(ii(3),jj(1),kk(2))         &
+                          , f(ii(3),jj(1),kk(3)), f(ii(3),jj(1),kk(4)))
+    q32 = pcubic(dr(3), cz, f(ii(3),jj(2),kk(1)), f(ii(3),jj(2),kk(2))         &
+                          , f(ii(3),jj(2),kk(3)), f(ii(3),jj(2),kk(4)))
+    q33 = pcubic(dr(3), cz, f(ii(3),jj(3),kk(1)), f(ii(3),jj(3),kk(2))         &
+                          , f(ii(3),jj(3),kk(3)), f(ii(3),jj(3),kk(4)))
+    q34 = pcubic(dr(3), cz, f(ii(3),jj(4),kk(1)), f(ii(3),jj(4),kk(2))         &
+                          , f(ii(3),jj(4),kk(3)), f(ii(3),jj(4),kk(4)))
+
+    q41 = pcubic(dr(3), cz, f(ii(4),jj(1),kk(1)), f(ii(4),jj(1),kk(2))         &
+                          , f(ii(4),jj(1),kk(3)), f(ii(4),jj(1),kk(4)))
+    q42 = pcubic(dr(3), cz, f(ii(4),jj(2),kk(1)), f(ii(4),jj(2),kk(2))         &
+                          , f(ii(4),jj(2),kk(3)), f(ii(4),jj(2),kk(4)))
+    q43 = pcubic(dr(3), cz, f(ii(4),jj(3),kk(1)), f(ii(4),jj(3),kk(2))         &
+                          , f(ii(4),jj(3),kk(3)), f(ii(4),jj(3),kk(4)))
+    q44 = pcubic(dr(3), cz, f(ii(4),jj(4),kk(1)), f(ii(4),jj(4),kk(2))         &
+                          , f(ii(4),jj(4),kk(3)), f(ii(4),jj(4),kk(4)))
+
+! interpolate along Y direction
+!
+    q1  = pcubic(dr(2), cy, q11, q12, q13, q14)
+    q2  = pcubic(dr(2), cy, q21, q22, q23, q24)
+    q3  = pcubic(dr(2), cy, q31, q32, q33, q34)
+    q4  = pcubic(dr(2), cy, q41, q42, q43, q44)
+
+! interpolate along X direction
+!
+    q   = pcubic(dr(1), cx, q1 , q2 , q3 , q4 )
+#endif /* TRICUB */
+!
+!------------------------------------------------------------------------------
+!
+  end function interpolate
+!
+!===============================================================================
+!
+! plinear: subroutine performs one dimensional linear interpolation
+!
+!===============================================================================
+!
+  real(kind=8) function plinear(x, fl, fr) result(q)
+
+    implicit none
+
+! input and output arguments
+!
+    real(kind=8), intent(in)  :: x
+    real(kind=4), intent(in)  :: fl, fr
+!
+!------------------------------------------------------------------------------
+!
+    q = fl + x * (fr - fl)
+!
+!------------------------------------------------------------------------------
+!
+  end function plinear
+!
+!===============================================================================
+!
+! pcubic: subroutine performs one dimensional cubic interpolation
+!
+!===============================================================================
+!
+  real(kind=8) function pcubic(x, c, fk, fl, fr, fq) result(q)
+
+    implicit none
+
+! input and output arguments
+!
+    real(kind=8)              , intent(in)  :: x
+    real(kind=8), dimension(4), intent(in)  :: c
+    real(kind=4)              , intent(in)  :: fk, fl, fr, fq
+
+#ifdef TVD
+! local parameters
+!
+    real(kind=4) :: dfl, dfr, ds, dl, dr
+#endif /* TVD */
+!
+!------------------------------------------------------------------------------
+!
+#ifdef TVD
+    ds  = (fr - fl)
+    dl  = (fl - fk)
+    dr  = (fq - fr)
+    dfl = sign(1.0, ds) * min(abs(ds), abs(dl))
+    dfr = sign(1.0, ds) * min(abs(ds), abs(dr))
+
+    if ((dl * ds) .le. 0.0) then
+      dfl = 0.0
+    end if
+
+    if ((dr * ds) .le. 0.0) then
+      dfr = 0.0
+    end if
+
+    q = c(1) * fl + c(2) * fr + c(3) * dfl + c(4) * dfr
+#else /* TVD */
+    q = c(1) * fk + c(2) * fl + c(3) * fr + c(4) * fq
+#endif /* TVD */
+!
+!------------------------------------------------------------------------------
+!
+  end function pcubic
+!
+!===============================================================================
+!
+! coefficients_cubic: subroutine prepares coeafficients for cubic interpolation
+!
+!===============================================================================
+!
+  subroutine coefficients_cubic(x, c)
+
+    implicit none
+
+! input and output arguments
+!
+    real(kind=8)              , intent(in)  :: x
+    real(kind=8), dimension(4), intent(out) :: c
+
+! local variables
+!
+    real(kind=8) :: x1, x2, x3, xd
+!
+!------------------------------------------------------------------------------
+!
+! prepare local variables
+!
+    x1 = x - 1.0
+    x2 = x * x
+#ifdef TVD
+    x3 = x1 * x1
+    xd = 2.0 * x
+#else /* TVD */
+#endif /* TVD */
+
+! calculate coefficients
+!
+#ifdef TVD
+    c(1) = x3 * (xd + 1.0)
+    c(2) = x2 * (3.0 - xd)
+    c(3) = x  * x3
+    c(4) = x2 * x1
+#else /* TVD */
+    c(1) = 0.5 * x * ( ( 2.0 - x ) * x - 1.0 )
+    c(2) = 0.5 * x2 * ( 3.0 * x - 5.0 ) + 1.0
+    c(3) = 0.5 * x * ( ( 4.0 - 3.0 * x ) * x + 1.0 )
+    c(4) = 0.5 * x1 * x2
+#endif /* TVD */
+!
+!------------------------------------------------------------------------------
+!
+  end subroutine coefficients_cubic
+!
+!===============================================================================
+!
+! lorentz_factor: subroutine calculates the Lorentz factor
+!
+!===============================================================================
+!
+  real(kind=PREC) function lorentz_factor(p) result(gm)
+
+    implicit none
+
+! input and output arguments
+!
+    real(kind=PREC), dimension(3), intent(in)  :: p
+!
+!------------------------------------------------------------------------------
+!
+    gm = sqrt(1.0d0 + dot_product(p, p) / c2)
+!
+!-------------------------------------------------------------------------------
+!
+  end function lorentz_factor
+!
+!===============================================================================
+!
+! acceleration: subroutine calculates acceleration vector at a given location
+!
+!===============================================================================
+!
+  subroutine acceleration(x, v, a, u, b)
+
+    use fields, only : ux, uy, uz, bx, by, bz
+
+    implicit none
+
+! input and output arguments
+!
+    real(kind=PREC), dimension(3), intent(in)  :: x, v
+    real(kind=PREC), dimension(3), intent(out) :: a, u, b
+
+! local variables
+!
+    real(kind=PREC), dimension(3) :: r, w
+
+! position indices
+!
+    integer        , dimension(4) :: ii, jj, kk
+    real(kind=8   ), dimension(4) :: cx, cy, cz
+    real(kind=8   ), dimension(3) :: dr
+!
+!------------------------------------------------------------------------------
+!
+! convert position to index
+!
+      call pos2index(x, r)
+
+#ifdef BNDRY
+      if (minval(r) .gt. 4 .or. minval(dm - r) .gt. 4) then
+#endif /* BNDRY */
+
+! prepare coefficients for interpolation
+!
+        call prepare_interpolation(r, ii, jj, kk, dr, cx, cy, cz)
+
+! interpolate field components at the particle position
+!
+        u(1) = interpolate(ux, ii, jj, kk, dr, cx, cy, cz)
+        u(2) = interpolate(uy, ii, jj, kk, dr, cx, cy, cz)
+        u(3) = interpolate(uz, ii, jj, kk, dr, cx, cy, cz)
+        b(1) = interpolate(bx, ii, jj, kk, dr, cx, cy, cz)
+        b(2) = interpolate(by, ii, jj, kk, dr, cx, cy, cz)
+        b(3) = interpolate(bz, ii, jj, kk, dr, cx, cy, cz)
+
+! compute the acceleration
+!
+        w(:) = v(:) - u(:)
+
+        a(1) = w(2) * b(3) - w(3) * b(2)
+        a(2) = w(3) * b(1) - w(1) * b(3)
+        a(3) = w(1) * b(2) - w(2) * b(1)
+#ifdef BNDRY
+      else
+        a(:) = 0.0
+      endif
+#endif /* BNDRY */
+!
+!-------------------------------------------------------------------------------
+!
+  end subroutine acceleration
+!
+!===============================================================================
+!
+! separate_velocity: subroutine separates velocity into two components, parallel
+!                    and perpendicular to the local magnetic field
+!
+!===============================================================================
+!
+  subroutine separate_velocity(v, b, ba, vu, vp, vr)
+
+    implicit none
+
+! input and output arguments
+!
+    real(kind=PREC), dimension(3), intent(in)  :: v, b
+    real(kind=8   )              , intent(out) :: ba, vu, vp, vr
+
+! local variables
+!
+    real(kind=8   ), dimension(3) :: p
+    real(kind=8   )               :: pp, bb, vv
+!
+!------------------------------------------------------------------------------
+!
+! calculate amplitude of magnetic field
+!
+    ba = sqrt(dot_product(b, b))
+    bb = max(1e-8, ba)
+
+! calculate unit vector parallel to B
+!
+    p  = b / bb
+
+! calculate component parallel to B
+!
+    pp = dot_product(v, p)**2
+
+! calculate amplitude of velocity
+!
+    vv = dot_product(v, v)
+
+! calculate amplitude of the parallel and perpendicular components of velocity
+!
+    vu = sqrt(vv)
+    vp = sqrt(pp)
+    vr = sqrt(vv - pp)
+!
+!-------------------------------------------------------------------------------
+!
+  end subroutine separate_velocity
+!
+!===============================================================================
+!
+! gyro_parameters: subroutine calculates particle gyrofrequency, gyroperiod and
+!                  gyroradius
+!
+!===============================================================================
+!
+  subroutine gyro_parameters(gm, ba, vr, om, tg, rg)
+
+    implicit none
+
+! input and output arguments
+!
+    real(kind=PREC), intent(in)  :: gm
+    real(kind=8   ), intent(in)  :: ba, vr
+    real(kind=8   ), intent(out) :: om, tg, rg
+
+! parameters
+!
+    real(kind=8   ) :: pi2 = 6.2831853071795862319959269370884d0
+!
+!------------------------------------------------------------------------------
+!
+    om = om0 * ba / gm
+    tg = pi2 / om
+    rg = vr / om / fc
+!
+!-------------------------------------------------------------------------------
+!
+  end subroutine gyro_parameters
+!
+end module particles
