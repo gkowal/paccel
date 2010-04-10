@@ -28,17 +28,31 @@ module fields
 
   implicit none
 
-! field component dimensions
+! the dimesion of the field components
 !
   integer, dimension(3), save :: dm, qm
 
-! domain bounds
+! the domain bounds
 !
-  real                 , save :: xmin, xmax, ymin, ymax, zmin, zmax
+  real            , save :: xmin, xmax, ymin, ymax, zmin, zmax
 
-! arrays for storing the electric and magnetic field components
+! the indices needed to extend arrays
+!
+  integer, private, save :: ib, jb, kb, ie, je, ke
+  integer, private, save :: il, jl, kl, iu, ju, ku
+  integer, private, save :: is, js, ks, it, jt, kt
+
+! the allocatable arrays for storing the electric and magnetic field components
 !
   real, dimension(:,:,:), allocatable, save :: ux, uy, uz, bx, by, bz
+
+! the number of ghost layers for interpolation
+!
+#ifdef TRICUB
+  integer, parameter :: ng = 2
+#else /* TRICUB */
+  integer, parameter :: ng = 1
+#endif /* TRICUB */
 !
 !-------------------------------------------------------------------------------
 !
@@ -52,32 +66,19 @@ module fields
 !
   subroutine init_fields()
 
-    use params  , only : fformat
-    use fitsio  , only : fits_init, fits_get_dims, fits_get_bounds, fits_read_var
-    use hdf5io  , only : hdf5_init, hdf5_get_dims, hdf5_get_bounds, hdf5_read_var
+    use params, only : fformat
+    use fitsio, only : fits_init, fits_get_dims, fits_get_bounds, fits_read_var
+    use hdf5io, only : hdf5_init, hdf5_get_dims, hdf5_get_bounds, hdf5_read_var
 
     implicit none
 
-! local variables
-!
-    integer            :: p, n, ib, ie, jb, je, kb, ke
-    real, dimension(6) :: buf
-
-! parameters
-!
-#ifdef TRICUB
-    integer, parameter :: nguard = 2
-#else /* TRICUB */
-    integer, parameter :: nguard = 1
-#endif /* TRICUB */
-
-! local allocatable arrays
+! the local temporary allocatable arrays
 !
     real, dimension(:,:,:), allocatable :: tt
 !
 !-------------------------------------------------------------------------------
 !
-! initialize component dimensions
+! initialize dimensions
 !
     dm(:) = 1
 
@@ -97,75 +98,86 @@ module fields
       stop
     end select
 
-! prepare extended dimension
+! prepare extended dimensions
 !
-    qm(:) = dm(:) + nguard
+    qm(:) = dm(:) + 2 * ng
+    if (dm(3) .eq. 1) qm(3) = 1
 
-    ib =     1 - nguard
-    ie = dm(1) + nguard
-    jb =     1 - nguard
-    je = dm(2) + nguard
-    kb =     1 - nguard
-    ke = dm(3) + nguard
+! prepare indices for array extension
+!
+    ib =  1 + ng
+    ie = ib + dm(1) - 1
+    il = ib + ng - 1
+    iu = ie - ng + 1
+    is = ib - 1
+    it = ie + 1
 
-    if (dm(3) .eq. 1) then
-      qm(3) = 1
-      kb    = 1
-      ke    = 1
+    jb =  1 + ng
+    je = jb + dm(2) - 1
+    jl = jb + ng - 1
+    ju = je - ng + 1
+    js = jb - 1
+    jt = je + 1
+
+    if (dm(3) .gt. 1) then
+      kb =  1 + ng
+      ke = kb + dm(3) - 1
+      kl = kb + ng - 1
+      ku = ke - ng + 1
+      ks = kb - 1
+      kt = ke + 1
+    else
+      kb = 1
+      ke = 1
+      kl = 1
+      ku = 1
+      ks = 1
+      kt = 1
     end if
 
-! allocate space for field components
+! allocate space for the field components
 !
     allocate(tt(dm(1),dm(2),dm(3)))
-#if DIMS == 2
-    allocate(ux(ib:ie,jb:je,dm(3)))
-    allocate(uy(ib:ie,jb:je,dm(3)))
-    allocate(uz(ib:ie,jb:je,dm(3)))
-    allocate(bx(ib:ie,jb:je,dm(3)))
-    allocate(by(ib:ie,jb:je,dm(3)))
-    allocate(bz(ib:ie,jb:je,dm(3)))
-#else /* DIMS == 2 */
-    allocate(ux(ib:ie,jb:je,kb:ke))
-    allocate(uy(ib:ie,jb:je,kb:ke))
-    allocate(uz(ib:ie,jb:je,kb:ke))
-    allocate(bx(ib:ie,jb:je,kb:ke))
-    allocate(by(ib:ie,jb:je,kb:ke))
-    allocate(bz(ib:ie,jb:je,kb:ke))
-#endif /* DIMS == 2 */
+    allocate(ux(qm(1),qm(2),qm(3)))
+    allocate(uy(qm(1),qm(2),qm(3)))
+    allocate(uz(qm(1),qm(2),qm(3)))
+    allocate(bx(qm(1),qm(2),qm(3)))
+    allocate(by(qm(1),qm(2),qm(3)))
+    allocate(bz(qm(1),qm(2),qm(3)))
 
-! read field components from the file
+! read the field components from the file
 !
     write( *, "('INFO      : ',a)" ) "reading velocity and magnetic field"
     select case(fformat)
     case('fits')
       call fits_read_var('velx', tt)
-      call expand_array(tt, ux, ib, jb, kb, nguard)
+      call expand_array(tt, ux)
       call fits_read_var('vely', tt)
-      call expand_array(tt, uy, ib, jb, kb, nguard)
+      call expand_array(tt, uy)
       call fits_read_var('velz', tt)
-      call expand_array(tt, uz, ib, jb, kb, nguard)
+      call expand_array(tt, uz)
       call fits_read_var('magx', tt)
-      call expand_array(tt, bx, ib, jb, kb, nguard)
+      call expand_array(tt, bx)
       call fits_read_var('magy', tt)
-      call expand_array(tt, by, ib, jb, kb, nguard)
+      call expand_array(tt, by)
       call fits_read_var('magz', tt)
-      call expand_array(tt, bz, ib, jb, kb, nguard)
+      call expand_array(tt, bz)
     case('hdf5')
       call hdf5_read_var('velx', tt)
-      call expand_array(tt, ux, ib, jb, kb, nguard)
+      call expand_array(tt, ux)
       call hdf5_read_var('vely', tt)
-      call expand_array(tt, uy, ib, jb, kb, nguard)
+      call expand_array(tt, uy)
       call hdf5_read_var('velz', tt)
-      call expand_array(tt, uz, ib, jb, kb, nguard)
+      call expand_array(tt, uz)
       call hdf5_read_var('magx', tt)
-      call expand_array(tt, bx, ib, jb, kb, nguard)
+      call expand_array(tt, bx)
       call hdf5_read_var('magy', tt)
-      call expand_array(tt, by, ib, jb, kb, nguard)
+      call expand_array(tt, by)
       call hdf5_read_var('magz', tt)
-      call expand_array(tt, bz, ib, jb, kb, nguard)
+      call expand_array(tt, bz)
     end select
 
-! deallocate temporary local array
+! deallocate the temporary local array
 !
     if (allocated(tt)) deallocate(tt)
 !
@@ -191,14 +203,14 @@ module fields
     if (allocated(bx)) deallocate(bx)
     if (allocated(by)) deallocate(by)
     if (allocated(bz)) deallocate(bz)
-
+!
 !-------------------------------------------------------------------------------
 !
   end subroutine finit_fields
 !
 !===============================================================================
 !
-! get_dimensions: subroutine returns the variable array dimensions
+! get_dimensions: subroutine returns the array dimensions
 !
 !===============================================================================
 !
@@ -247,69 +259,41 @@ module fields
 !
 !===============================================================================
 !
-! expand_array: subroutine expand array by additional boundary layers
+! expand_array: subroutine expands an input array by adding the boundary layers
 !
 !===============================================================================
 !
-  subroutine expand_array(a, b, ib, jb, kb, ng)
+  subroutine expand_array(a, b)
 
     implicit none
 
 ! output arguments
 !
-    integer                                    , intent(in)  :: ib, jb, kb, ng
-    real, dimension( 1:dm(1), 1:dm(2), 1:dm(3)), intent(in)  :: a
-#if DIMS == 2
-#ifdef TRICUB
-    real, dimension(-1:qm(1),-1:qm(2), 1      ), intent(out) :: b
-#else /* TRICUB */
-    real, dimension( 0:qm(1), 0:qm(2), 1      ), intent(out) :: b
-#endif /* TRICUB */
-#else /* DIMS = 2 */
-#ifdef TRICUB
-    real, dimension(-1:qm(1),-1:qm(2),-1:qm(3)), intent(out) :: b
-#else /* TRICUB */
-    real, dimension( 0:qm(1), 0:qm(2), 0:qm(3)), intent(out) :: b
-#endif /* TRICUB */
-#endif /* DIMS = 2 */
-
-! local variables
-!
-    integer :: il, jl, kl, iu, ju, ku
+    real, dimension(dm(1),dm(2),dm(3)), intent(in)  :: a
+    real, dimension(qm(1),qm(2),qm(3)), intent(out) :: b
 !
 !-------------------------------------------------------------------------------
 !
 ! copy the interior
 !
-    b(1:dm(1),1:dm(2),1:dm(3)) = a(1:dm(1),1:dm(2),1:dm(3))
+    b(ib:ie,jb:je,kb:ke) = a(1:dm(1),1:dm(2),1:dm(3))
 
-! calculate indices
+! copy the X boundaries
 !
-    il = dm(1) + 1 - ng
-    iu = dm(1) + 1
-    jl = dm(2) + 1 - ng
-    ju = dm(2) + 1
+    b( 1:is   ,jb:je,kb:ke) = b(iu:ie,jb:je,kb:ke)
+    b(it:qm(1),jb:je,kb:ke) = b(ib:il,jb:je,kb:ke)
 
-! copy X boundaries
+! copy the Y boundaries
 !
-    b(ib:0    ,1:dm(2),1:dm(3)) = b(il:dm(1),1:dm(2),1:dm(3))
-    b(iu:qm(1),1:dm(2),1:dm(3)) = b( 1:ng   ,1:dm(2),1:dm(3))
+    b(1:qm(1), 1:js   ,kb:ke) = b(1:qm(1),ju:je,kb:ke)
+    b(1:qm(1),jt:qm(2),kb:ke) = b(1:qm(1),jb:jl,kb:ke)
 
-! copy Y boundaries
-!
-    b(ib:qm(1),jb:0    ,1:dm(3)) = b(ib:qm(1),jl:dm(2),1:dm(3))
-    b(ib:qm(1),ju:qm(2),1:dm(3)) = b(ib:qm(1), 1:ng   ,1:dm(3))
-
-#if DIMS == 3
-! copy Z boundaries
+! copy the Z boundaries
 !
     if (dm(3) .gt. 1) then
-      kl = dm(3) + 1 - ng
-      ku = dm(3) + 1
-      b(ib:qm(1),jb:qm(2),kb:0    ) = b(ib:qm(1),jb:qm(2),kl:dm(3))
-      b(ib:qm(1),jb:qm(2),ku:qm(3)) = b(ib:qm(1),jb:qm(2), 1:ng   )
+      b(1:qm(1),1:qm(2), 1:ks   ) = b(1:qm(1),1:qm(2),ku:ke)
+      b(1:qm(1),1:qm(2),kt:qm(3)) = b(1:qm(1),1:qm(2),kb:kl)
     end if
-#endif /* DIMS == 3 */
 !
 !-------------------------------------------------------------------------------
 !
