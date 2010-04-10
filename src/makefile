@@ -59,10 +59,8 @@ name = paccel
 
 default: $(name).x
 
-sources = fields.F90 fitsio.F90 hdf5io.F90 interpolation.F90 paccel.F90        \
-          params.F90 particles.F90
-objects = fields.o   fitsio.o   hdf5io.o   interpolation.o   paccel.o          \
-          params.o   particles.o
+sources = fields.F90 fitsio.F90 hdf5io.F90 paccel.F90 params.F90 particles.F90
+objects = fields.o   fitsio.o   hdf5io.o   paccel.o   params.o   particles.o
 files   = $(sources) makefile params.in license.txt
 
 $(name).x: $(objects)
@@ -82,9 +80,7 @@ clean-all:
 fields.o        : makefile fields.F90 params.o fitsio.o hdf5io.o
 fitsio.o        : makefile fitsio.F90 params.o
 hdf5io.o        : makefile hdf5io.F90 params.o
-interpolation.o : makefile interpolation.F90 fitsio.o hdf5io.o params.o
-paccel.o        : makefile paccel.F90 hdf5io.o fitsio.o interpolation.o        \
-                  params.o particles.o
+paccel.o        : makefile paccel.F90 fields.o params.o particles.o
 params.o        : makefile params.F90
 particles.o     : makefile particles.F90 fields.o params.o
 
