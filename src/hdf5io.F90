@@ -1,19 +1,19 @@
 !!******************************************************************************
 !!
-!! module: hdf5 - subroutines to read data from HDF files
+!! module: hdf5io - subroutines to read data from HDF files
 !!
-!! Copyright (C) 2007 Grzegorz Kowal <kowal@astro.wisc.edu>
+!! Copyright (C) 2007-2010 Grzegorz Kowal <grzegorz@gkowal.info>
 !!
 !!******************************************************************************
 !!
-!!  This file is part of Spectrum.
+!!  This file is part of PAccel.
 !!
-!!  Godunov-MHD is free software; you can redistribute it and/or modify
+!!  PAccel is free software; you can redistribute it and/or modify
 !!  it under the terms of the GNU General Public License as published by
 !!  the Free Software Foundation; either version 3 of the License, or
 !!  (at your option) any later version.
 !!
-!!  Foobar is distributed in the hope that it will be useful,
+!!  PAccel is distributed in the hope that it will be useful,
 !!  but WITHOUT ANY WARRANTY; without even the implied warranty of
 !!  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !!  GNU General Public License for more details.
@@ -41,7 +41,7 @@ module hdf5io
 !
 !===============================================================================
 !
-! hdf4_init: subroutine reads attributes from a HDF file
+! hdf5_init: subroutine reads attributes from a HDF file
 !
 !===============================================================================
 !

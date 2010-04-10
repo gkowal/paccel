@@ -2,7 +2,7 @@
 !!
 !! module: interpolation - subroutines to interpolation 3D data.
 !!
-!! Copyright (C) 2008 Grzegorz Kowal <kowal@astro.wisc.edu>
+!! Copyright (C) 2008-2010 Grzegorz Kowal <grzegorz@gkowal.info>
 !!
 !!******************************************************************************
 !!

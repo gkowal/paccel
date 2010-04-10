@@ -1,19 +1,19 @@
 !!******************************************************************************
 !!
-!! module: fits - subroutines to read data from FITS files
+!! module: fitsio - subroutines to read data from FITS files
 !!
-!! Copyright (C) 2007 Grzegorz Kowal <kowal@astro.wisc.edu>
+!! Copyright (C) 2007-2010 Grzegorz Kowal <grzegorz@gkowal.info>
 !!
 !!******************************************************************************
 !!
-!!  This file is part of Spectrum.
+!!  This file is part of PAccel.
 !!
-!!  Godunov-MHD is free software; you can redistribute it and/or modify
+!!  PAccel is free software; you can redistribute it and/or modify
 !!  it under the terms of the GNU General Public License as published by
 !!  the Free Software Foundation; either version 3 of the License, or
 !!  (at your option) any later version.
 !!
-!!  Foobar is distributed in the hope that it will be useful,
+!!  PAccel is distributed in the hope that it will be useful,
 !!  but WITHOUT ANY WARRANTY; without even the implied warranty of
 !!  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !!  GNU General Public License for more details.
