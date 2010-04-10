@@ -49,9 +49,13 @@ module fields
 ! the number of ghost layers for interpolation
 !
 #ifdef TRICUB
-  integer, parameter :: ng = 2
+  integer, parameter :: ng = 3
 #else /* TRICUB */
+#ifdef TRILIN
+  integer, parameter :: ng = 2
+#else /* TRILIN */
   integer, parameter :: ng = 1
+#endif /* TRILIN */
 #endif /* TRICUB */
 !
 !-------------------------------------------------------------------------------
