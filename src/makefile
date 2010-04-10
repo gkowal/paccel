@@ -38,7 +38,7 @@ FFLAGS += -DDIMS=$(DIMS)
 #
 FFLAGS += -I$(HDF5DIR)/include
 LIBS   += -L$(HDF5DIR)/lib
-LIBS   += -lhdf5_fortran -lhdf5 -lsz
+LIBS   += -lhdf5_fortran -lhdf5
 
 # FITS library path
 #
