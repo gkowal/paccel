@@ -670,11 +670,13 @@ module particles
 !
 !===============================================================================
 !
-! pos2index: subroutine converts a give position to the array index
+! pos2index: subroutine converts a given position to the array index
 !
 !===============================================================================
 !
   subroutine pos2index(x, r)
+
+    use fields, only : ng
 
     implicit none
 
@@ -693,11 +695,8 @@ module particles
     do i = 1, DIMS
       t    = (x(i) - bnds(i,1)) / bsiz(i) + 0.5 / dm(i)
       t    = t - floor(t)
-      r(i) = dm(i) * t
+      r(i) = dm(i) * t + ng
     end do
-#if DIMS == 2
-    r(3) = 1.0
-#endif /* DIMS == 2 */
 !
 !------------------------------------------------------------------------------
 !
@@ -730,18 +729,8 @@ module particles
 !
     ii(1) = nint(x(1))
     jj(1) = nint(x(2))
-#if DIMS == 2
-    kk(1) = 1
-#else /* DIMS == 2 */
-    kk(1) = nint(x(3))
-#endif /* DIMS == 2 */
-
-! increase the indices
-!
-    ii(:) = ii(:) + 1
-    jj(:) = jj(:) + 1
 #if DIMS == 3
-    kk(:) = kk(:) + 1
+    kk(1) = nint(x(3))
 #endif /* DIMS == 3 */
 #endif /* !TRILIN & !TRICUB */
 #ifdef TRILIN
@@ -750,34 +739,21 @@ module particles
 !
 ! calculate indices
 !
-    ii(1) = int(floor(x(1)))
+    ii(1) = floor(x(1))
     ii(2) = ii(1) + 1
-    jj(1) = int(floor(x(2)))
+    jj(1) = floor(x(2))
     jj(2) = jj(1) + 1
-#if DIMS == 2
-    kk(1) = 1
-    kk(2) = 1
-#else /* DIMS == 2 */
-    kk(1) = int(floor(x(3)))
+#if DIMS == 3
+    kk(1) = floor(x(3))
     kk(2) = kk(1) + 1
-#endif /* DIMS == 2 */
+#endif /* DIMS == 3 */
 
 ! calculate intercell position
 !
     dr(1) = x(1) - ii(1)
     dr(2) = x(2) - jj(1)
-#if DIMS == 2
-    dr(3) = 0.0
-#else /* DIMS == 2 */
-    dr(3) = x(3) - kk(1)
-#endif /* DIMS == 2 */
-
-! increase the indices
-!
-    ii(:) = ii(:) + 1
-    jj(:) = jj(:) + 1
 #if DIMS == 3
-    kk(:) = kk(:) + 1
+    dr(3) = x(3) - kk(1)
 #endif /* DIMS == 3 */
 #endif /* TRILIN */
 #ifdef TRICUB
@@ -786,45 +762,35 @@ module particles
 !
 ! calculate indices
 !
-    ii(2) = int(floor(x(1)))
+    ii(2) = floor(x(1))
     ii(1) = ii(2) - 1
     ii(3) = ii(2) + 1
     ii(4) = ii(2) + 2
-    jj(2) = int(floor(x(2)))
+    jj(2) = floor(x(2))
     jj(1) = jj(2) - 1
     jj(3) = jj(2) + 1
     jj(4) = jj(2) + 2
-#if DIMS == 2
-    kk(:) = 1
-#else /* DIMS == 2 */
-    kk(2) = int(floor(x(3)))
+#if DIMS == 3
+    kk(2) = floor(x(3))
     kk(1) = kk(2) - 1
     kk(3) = kk(2) + 1
     kk(4) = kk(2) + 2
-#endif /* DIMS == 2 */
+#endif /* DIMS == 3 */
 
 ! calculate intercell position
 !
     dr(1) = x(1) - ii(2)
     dr(2) = x(2) - jj(2)
-#if DIMS == 2
-    dr(3) = 0.0
-#else /* DIMS == 2 */
+#if DIMS == 3
     dr(3) = x(3) - kk(2)
-#endif /* DIMS == 2 */
+#endif /* DIMS == 3 */
 
 ! coefficients for dx, dy, and dz
 !
     call coefficients_cubic(dr(1), cx(:))
     call coefficients_cubic(dr(2), cy(:))
-    call coefficients_cubic(dr(3), cz(:))
-
-! increase the indices
-!
-    ii(:) = ii(:) + 2
-    jj(:) = jj(:) + 2
 #if DIMS == 3
-    kk(:) = kk(:) + 2
+    call coefficients_cubic(dr(3), cz(:))
 #endif /* DIMS == 3 */
 #endif /* TRICUB */
 !
@@ -865,30 +831,55 @@ module particles
 !
 != nearest interpolation =
 !
+#if DIMS == 2
+    q = f(ii(1),jj(1),1)
+#else /* DIMS == 2 */
     q = f(ii(1),jj(1),kk(1))
+#endif /* DIMS == 2 */
 #endif /* !TRILIN & !TRICUB */
 #ifdef TRILIN
+#if DIMS == 2
+!= bilinear interpolation =
 !
+! interpolate along the Y direction
+!
+    q1 = plinear(dr(2), f(ii(1),jj(1),1), f(ii(1),jj(2),1))
+    q2 = plinear(dr(2), f(ii(2),jj(1),1), f(ii(2),jj(2),1))
+#else /* DIMS == 2 */
 != trilinear interpolation =
 !
-! interpolate XY corners
+! interpolate along the Z direction
 !
     q11 = plinear(dr(3), f(ii(1),jj(1),kk(1)), f(ii(1),jj(1),kk(2)))
     q12 = plinear(dr(3), f(ii(1),jj(2),kk(1)), f(ii(1),jj(2),kk(2)))
     q21 = plinear(dr(3), f(ii(2),jj(1),kk(1)), f(ii(2),jj(1),kk(2)))
     q22 = plinear(dr(3), f(ii(2),jj(2),kk(1)), f(ii(2),jj(2),kk(2)))
 
-! interpolate X corners
+! interpolate along the Y direction
 !
     q1 = plinear(dr(2), q11, q12)
     q2 = plinear(dr(2), q21, q22)
+#endif /* DIMS == 2 */
 
-! interpolate the value ar a given position
+! interpolate the value at a given position
 !
     q  = plinear(dr(1), q1 , q2 )
 #endif /* TRILIN */
 #ifdef TRICUB
+#if DIMS == 2
+!= bicubic interpolation =
 !
+! interpolate along the Y direction
+!
+    q1  = pcubic(dr(2), cy, f(ii(1),jj(1),1), f(ii(1),jj(2),1)                 &
+                          , f(ii(1),jj(3),1), f(ii(1),jj(4),1))
+    q2  = pcubic(dr(2), cy, f(ii(2),jj(1),1), f(ii(2),jj(2),1)                 &
+                          , f(ii(2),jj(3),1), f(ii(2),jj(4),1))
+    q3  = pcubic(dr(2), cy, f(ii(3),jj(1),1), f(ii(3),jj(2),1)                 &
+                          , f(ii(3),jj(3),1), f(ii(3),jj(4),1))
+    q4  = pcubic(dr(2), cy, f(ii(4),jj(1),1), f(ii(4),jj(2),1)                 &
+                          , f(ii(4),jj(3),1), f(ii(4),jj(4),1))
+#else /* DIMS == 2 */
 != tricubic interpolation =
 !
 ! interpolate along Z direction
@@ -929,14 +920,15 @@ module particles
     q44 = pcubic(dr(3), cz, f(ii(4),jj(4),kk(1)), f(ii(4),jj(4),kk(2))         &
                           , f(ii(4),jj(4),kk(3)), f(ii(4),jj(4),kk(4)))
 
-! interpolate along Y direction
+! interpolate along the Y direction
 !
     q1  = pcubic(dr(2), cy, q11, q12, q13, q14)
     q2  = pcubic(dr(2), cy, q21, q22, q23, q24)
     q3  = pcubic(dr(2), cy, q31, q32, q33, q34)
     q4  = pcubic(dr(2), cy, q41, q42, q43, q44)
+#endif /* DIMS == 2 */
 
-! interpolate along X direction
+! interpolate along the X direction
 !
     q   = pcubic(dr(1), cx, q1 , q2 , q3 , q4 )
 #endif /* TRICUB */
@@ -1173,18 +1165,21 @@ module particles
 ! local variables
 !
     real(kind=8   ), dimension(3) :: p
-    real(kind=8   )               :: pp, bb, vv
+    real(kind=8   )               :: pp, vv
 !
 !------------------------------------------------------------------------------
 !
 ! calculate amplitude of magnetic field
 !
     ba = sqrt(dot_product(b, b))
-    bb = max(1e-8, ba)
 
 ! calculate unit vector parallel to B
 !
-    p  = b / bb
+    if (ba .gt. 0.0) then
+      p  = b / ba
+    else
+      p  = 0.0
+    end if
 
 ! calculate component parallel to B
 !
