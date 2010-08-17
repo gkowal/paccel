@@ -131,12 +131,12 @@ module fitsio
 !
 !-------------------------------------------------------------------------------
 !
-    xmin = 0.0
-    xmax = 1.0
-    ymin = 0.0
-    ymax = 1.0
-    zmin = 0.0
-    zmax = 1.0
+    xmin = -0.5
+    xmax =  0.5
+    ymin = -0.5
+    ymax =  0.5
+    zmin = -0.5
+    zmax =  0.5
 
   end subroutine fits_get_bounds
 !

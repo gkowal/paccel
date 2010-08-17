@@ -59,11 +59,6 @@ module params
   real                , save :: zc       = 0.0
   real                , save :: vpar     = 0.0         ! initial parallel speed [in c]
   real                , save :: vper     = 0.1         ! initial perpendicular speed [in c]
-  character(len =   1), save :: approx   = 'n'         ! guiding centre approximation
-  character(len =   1), save :: periodic = 'y'         ! periodic box or not
-  character(len =   1), save :: efield   = 'y'         ! take electric field into account
-  character(len =   1), save :: current  = 'y'         ! take current density into account
-  character(len =   1), save :: resize   = 'n'         ! resize the box if gyroradius > L
   real                , save :: rho      = 0.5         ! safety coefficient
   real                , save :: tolerance = 1.0e-4      ! integration tolerance
   real                , save :: dtmax      = 1.0         ! maximum allowed step size
@@ -71,6 +66,12 @@ module params
   real                , save :: tmax     = 1.0         ! maximum time for integration
   real                , save :: ethres   = 1.0         ! energy threshold
   integer             , save :: nstep    = 1000        ! number of steps between subsequent dumps
+#ifdef TEST
+  real                , save :: omega    = 1.0         ! omega
+  real                , save :: bini     = 1.0         ! mean magnetic field
+  real                , save :: bamp     = 0.1         ! amplitude of magnetic field fluctuations
+  real                , save :: vamp     = 0.1         ! amplitude of velocity field fluctuations
+#endif /* TEST */
 !
 !-------------------------------------------------------------------------------
 !
@@ -142,21 +143,6 @@ module params
         read (value  , *) vpar
       case ('vper')
         read (value  , *) vper
-      case ('approximation')
-        l = len_trim(value)
-        write(approx  , "(a)" ) value(2:l-1)
-      case ('periodic')
-        l = len_trim(value)
-        write(periodic, "(a)" ) value(2:l-1)
-      case ('efield')
-        l = len_trim(value)
-        write(efield  , "(a)" ) value(2:l-1)
-      case ('current')
-        l = len_trim(value)
-        write(current , "(a)" ) value(2:l-1)
-      case ('resize')
-        l = len_trim(value)
-        write(resize  , "(a)" ) value(2:l-1)
       case ('rho')
         read (value  , *) rho
       case ('tolerance')
@@ -171,6 +157,16 @@ module params
         read (value  , *) ethres
       case ('nstep')
         read (value  , "(i9)") nstep
+#ifdef TEST
+      case ('omega')
+        read (value  , *) omega
+      case ('bini')
+        read (value  , *) bini
+      case ('bamp')
+        read (value  , *) bamp
+      case ('vamp')
+        read (value  , *) vamp
+#endif /* TEST */
       case default
     end select
 

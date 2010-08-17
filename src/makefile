@@ -4,11 +4,13 @@ HOST    := $(shell hostname)
 OS      := $(shell uname)
 
 DEBUG   = N
+RELAT   = Y
 INTERP  = C
 TVD     = Y
 BNDRY   = N
 PREC    = 8
-DIMS    = 2
+DIMS    = 3
+TEST    = WAVE
 
 FC      = ifort
 FFLAGS  = -O3 -i4 -mtune=core2 -xS -I$(HDF5DIR)/include
@@ -18,6 +20,9 @@ LIBS    =
 
 ifeq ($(DEBUG),Y)
 FFLAGS += -g -DDEBUG
+endif
+ifeq ($(RELAT),Y)
+FFLAGS += -DRELAT
 endif
 ifeq ($(INTERP),L)
 FFLAGS += -DTRILIN
@@ -33,6 +38,12 @@ FFLAGS += -DBNDRY
 endif
 FFLAGS += -DPREC=$(PREC)
 FFLAGS += -DDIMS=$(DIMS)
+ifeq ($(TEST),WAVE)
+FFLAGS += -DTEST -DWTEST
+endif
+ifeq ($(TEST),ISLAND)
+FFLAGS += -DTEST -DITEST
+endif
 
 # HDF5 include and library paths
 #

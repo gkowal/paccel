@@ -62,6 +62,9 @@ module particles
 
     use fields, only : get_dimensions, get_domain_bounds, bx, by, bz
     use params, only : ptype, vpar, vper, c, dens, tunit, tmulti, xc, yc, zc
+#ifdef TEST
+    use params, only : bini, bamp, vamp
+#endif /* TEST */
 
     implicit none
 
@@ -70,7 +73,7 @@ module particles
     integer      :: p
     real(kind=8) :: vp, vr, vv, va
     real(kind=8) :: gm, dn, mu0, om, tg, rg, mu, mp, en, ba, ln
-    real(kind=PREC) :: bb
+    real(kind=PREC) :: bb, rt
 
 ! arrays
 !
@@ -85,10 +88,11 @@ module particles
 
 ! parameters
 !
-    real(kind=8) :: dpi  = 3.1415926535897931159979634685442d0
-    real(kind=8) :: cc  = 299792457.99999998416751623153687    ! the speed of light [m/s]
-    real(kind=8) :: pc = 3.2407792896656065765177783686188e-17 ! 1 meter [pc]
-    real(kind=8) :: sc = 3.168876464084018437308447107767e-08  ! 1 second [yr]
+    real(kind=8) :: dpi = 3.1415926535897931159979634685442d0
+    real(kind=8) :: pi2 = 6.2831853071795862319959269370884d0
+    real(kind=8) :: cc  = 299792457.99999998416751623153687     ! the speed of light [m/s]
+    real(kind=8) :: pc  = 3.2407792896656065765177783686188e-17 ! 1 meter [pc]
+    real(kind=8) :: sc  = 3.168876464084018437308447107767e-08  ! 1 second [yr]
 !
 !-------------------------------------------------------------------------------
 !
@@ -142,7 +146,7 @@ module particles
     om0   = abs(qom * bavg)                             ! classical gyrofrequency
     om = om0 / gm                                       ! relativistic gyrofrequency
     tg = 1.0d0 / om                                     ! gyroperiod
-    tg = 2.0 * dpi * tg
+    tg = pi2 * tg
     rg = vr / om                                        ! gyroradius (Larmor radius)
 
 ! print plasma parametes
@@ -199,7 +203,7 @@ module particles
 
 ! calculate geometry parameters
 !
-    ln = va                                               ! the size of the box
+    ln = va * fc                                               ! the size of the box
 !   dr = ln * min(dx, dy, dz)
 !   ts = dtc
 
@@ -213,8 +217,8 @@ module particles
 
 ! ! print conditions
 ! !
-!     write( *, "('INFO      : conditions:')" )
-!     write( *, "('INFO      : Rg/L  =',1pe15.8)" ) rg / ln
+      write( *, "('INFO      : conditions:')" )
+      write( *, "('INFO      : Rg/L  =',1pe15.8)" ) rg / ln
 !     write( *, "('INFO      : Rg/dx =',1pe15.8)" ) rg / dr
 !     write( *, "('INFO      : Tg/dt =',1pe15.8)" ) tg / ts
 
@@ -256,10 +260,10 @@ module particles
     write (10, "('INFO      : L     =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) ln, pc * ln
 !     write (10, "('INFO      : dx    =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) dr, pc * dr
 
-! ! print conditions
-! !
-!     write (10, "('INFO      : conditions:')" )
-!     write (10, "('INFO      : Rg/L  =',1pe15.8)" ) rg / ln
+! print conditions
+!
+    write (10, "('INFO      : conditions:')" )
+    write (10, "('INFO      : Rg/L  =',1pe15.8)" ) rg / ln
 !     write (10, "('INFO      : Rg/dx =',1pe15.8)" ) rg / dr
 !     write (10, "('INFO      : Tg/dt =',1pe15.8)" ) tg / ts
 
@@ -273,6 +277,29 @@ module particles
 !
     x0(:) = (/ xc, yc, zc /)
 
+#ifdef TEST
+#ifdef WTEST
+    b(1) = bini
+    b(2) = bamp * sin(pi2 * xc)
+    b(3) = 0.0
+
+    u(1) = 0.0
+    u(2) = 0.0
+    u(3) = 1.0
+#endif /* WTEST */
+
+#ifdef ITEST
+    rt   = sqrt(xc * xc + yc * yc)
+
+    if (rt .gt. 0.0) then
+      b(1) = - bini * yc / rt
+      b(2) =   bini * xc / rt
+      b(3) = 0.0
+    else
+      b(:) = 0.0
+    end if
+#endif /* ITEST */
+#else /* TEST */
 ! convert position to index
 !
     call pos2index(x0, r0)
@@ -286,6 +313,7 @@ module particles
     b(1) = interpolate(bx, ii, jj, kk, dr, cx, cy, cz)
     b(2) = interpolate(by, ii, jj, kk, dr, cx, cy, cz)
     b(3) = interpolate(bz, ii, jj, kk, dr, cx, cy, cz)
+#endif /* TEST */
 
 ! calculate the direction of the local magnetic field
 !
@@ -298,6 +326,7 @@ module particles
       stop
     endif
 
+#ifndef TEST
 ! calculate the perpendicular unit vector
 !
     if (dm(3) .eq. 1) then
@@ -328,6 +357,7 @@ module particles
       write( *, "('ERROR     : ',a)" ) "V=0 at the initial position! Choose another one."
       stop
     end if
+#endif /* !TEST */
 
 ! calculate the initial velocity
 !
@@ -335,7 +365,11 @@ module particles
 
 ! calculate the Lorentz factor of the initial state
 !
+#ifdef RELAT
     gm = 1.0 / sqrt(1.0d0 - dot_product(v0, v0) / c2)
+#else
+    gm = 1.0
+#endif
 
 ! calculate the initial particle momentuum
 !
@@ -343,7 +377,11 @@ module particles
 
 ! calculate particle energy
 !
+#ifdef RELAT
     en = gm * mrest
+#else
+    en = 0.5 * (vpar**2 + vper**2)
+#endif
 
 ! print headers and the initial values
 !
@@ -397,6 +435,7 @@ module particles
 ! local variables
 !
     integer                       :: n, m
+    real(kind=PREC)               ::    t1, t2, t3, t4, t5
     real(kind=PREC), dimension(3) :: x, x1, x2, x3, x4, x5
     real(kind=PREC), dimension(3) :: v, v1, v2, v3, v4, v5
     real(kind=PREC), dimension(3) :: p, p1, p2, p3, p4, p5
@@ -436,7 +475,11 @@ module particles
 
 ! calculate particle energy
 !
+#ifdef RELAT
     en = gamma * mrest
+#else
+    en = 0.5 * (vu / c)**2
+#endif
 
 ! print the progress information
 !
@@ -453,6 +496,7 @@ module particles
 !!
 ! integrate the position and momentum
 !
+      t1    = t
       x1(:) = x(:)
       p1(:) = p(:)
 
@@ -466,7 +510,7 @@ module particles
 
 ! calculate acceleration for the location x1 and velocity v1
 !
-      call acceleration(x1, v1, a, u, b)
+      call acceleration(t1, x1, v1, a, u, b)
 
 ! calculate the first term
 !
@@ -477,6 +521,7 @@ module particles
 !!
 ! integrate the position and momentum
 !
+      t2    = t    + 0.5 * dt
       x2(:) = x(:) + 0.5 * l1(:)
       p2(:) = p(:) + 0.5 * k1(:)
 
@@ -490,7 +535,7 @@ module particles
 
 ! calculate acceleration for the location x2 and velocity v2
 !
-      call acceleration(x2, v2, a, u, b)
+      call acceleration(t2, x2, v2, a, u, b)
 
 ! calculate the second term
 !
@@ -501,6 +546,7 @@ module particles
 !!
 ! integrate the position and momentum
 !
+      t3    = t    + 0.5 * dt
       x3(:) = x(:) + 0.5 * l2(:)
       p3(:) = p(:) + 0.5 * k2(:)
 
@@ -514,7 +560,7 @@ module particles
 
 ! calculate acceleration for the location x3 and velocity v3
 !
-      call acceleration(x3, v3, a, u, b)
+      call acceleration(t3, x3, v3, a, u, b)
 
 ! calculate the third term
 !
@@ -525,6 +571,7 @@ module particles
 !!
 ! integrate the position and momentum
 !
+      t4    = t    + 0.5 * dt
       x4(:) = x(:) + l3(:)
       p4(:) = p(:) + k3(:)
 
@@ -538,7 +585,7 @@ module particles
 
 ! calculate acceleration for the location x4 and velocity v4
 !
-      call acceleration(x4, v4, a, u, b)
+      call acceleration(t4, x4, v4, a, u, b)
 
 ! calculate the third term
 !
@@ -547,6 +594,7 @@ module particles
 
 !! the final integration of the particle position and momentum
 !!
+      t5    = t    + dt
       x5(:) = x(:) + ( l1(:) + 2.0 * ( l2(:) + l3(:) ) + l4(:) ) / 6.0
       p5(:) = p(:) + ( k1(:) + 2.0 * ( k2(:) + k3(:) ) + k4(:) ) / 6.0
 
@@ -560,7 +608,7 @@ module particles
 
 ! calculate acceleration at the location x
 !
-      call acceleration(x5, v5, a, u, b)
+      call acceleration(t5, x5, v5, a, u, b)
 
 ! estimate error
 !
@@ -611,7 +659,11 @@ module particles
 
 ! calculate particle energy
 !
+#ifdef RELAT
           en = gamma * mrest
+#else
+          en = 0.5 * (vu / c)**2
+#endif
 
 ! write the progress
 !
@@ -649,7 +701,11 @@ module particles
 
 ! calculate particle energy
 !
+#ifdef RELAT
     en = gamma * mrest
+#else
+    en = 0.5 * (vu / c)**2
+#endif
 
 ! write the progress
 !
@@ -1073,7 +1129,11 @@ module particles
 !
 !------------------------------------------------------------------------------
 !
+#ifdef RELAT
     gm = sqrt(1.0d0 + dot_product(p, p) / c2)
+#else
+    gm = 1.0
+#endif
 !
 !-------------------------------------------------------------------------------
 !
@@ -1085,17 +1145,33 @@ module particles
 !
 !===============================================================================
 !
-  subroutine acceleration(x, v, a, u, b)
+  subroutine acceleration(t, x, v, a, u, b)
 
     use fields, only : ux, uy, uz, bx, by, bz
+#ifdef TEST
+    use params, only : omega, bini, bamp, vamp
+#endif /* TEST */
 
     implicit none
 
 ! input and output arguments
 !
+    real(kind=PREC)              , intent(in)  :: t
     real(kind=PREC), dimension(3), intent(in)  :: x, v
     real(kind=PREC), dimension(3), intent(out) :: a, u, b
 
+#ifdef TEST
+! local variables
+!
+    real(kind=PREC), dimension(3) :: w
+#ifdef ITEST
+    real(kind=PREC)               :: ra, rb, xt, yt, rt
+#endif /* ITEST */
+
+! parameters
+!
+    real(kind=8   ) :: pi2 = 6.2831853071795862319959269370884d0
+#else /* TEST */
 ! local variables
 !
     real(kind=PREC), dimension(3) :: r, w
@@ -1105,9 +1181,11 @@ module particles
     integer        , dimension(4) :: ii, jj, kk
     real(kind=8   ), dimension(4) :: cx, cy, cz
     real(kind=8   ), dimension(3) :: dr
+#endif /* TEST */
 !
 !------------------------------------------------------------------------------
 !
+#ifndef TEST
 ! convert position to index
 !
       call pos2index(x, r)
@@ -1119,28 +1197,77 @@ module particles
 ! prepare coefficients for interpolation
 !
         call prepare_interpolation(r, ii, jj, kk, dr, cx, cy, cz)
+#endif /* !TEST */
 
 ! interpolate field components at the particle position
 !
+#ifdef TEST
+#ifdef WTEST
+        u(1) = 0.0
+        u(2) = vamp * cos(pi2 * x(1))
+        u(3) = 0.0
+
+        b(1) = bini
+        b(2) = bamp * sin(pi2 * x(1))
+        b(3) = 0.0
+#endif /* WTEST */
+
+#ifdef ITEST
+!         ra   = 1.0 + amp * sin(pi2 * omega * t)
+!         rb   = amp * pi2 * omega * cos(pi2 * omega * t)
+        ra   = 1.0 + bamp
+
+        rt   = sqrt(x(1) * x(1) + x(2) * x(2))
+
+        u(1) = - x(1)
+        u(2) =   x(2)
+        u(3) = 0.0
+!         if (rt .gt. 0.0) then
+!           u(1) = - x(1) * rb / ra**2
+!           u(2) =   x(2) * rb
+!           u(3) = 0.0
+!         else
+!           u(:) = 0.0
+!         end if
+
+        xt   = x(1) / ra
+        yt   = x(2) * ra
+
+        rt   = sqrt(xt * xt + yt * yt)
+
+        if (rt .gt. 0.0) then
+          b(1) = - yt / rt
+          b(2) =   xt / rt
+          b(3) = 0.0
+        else
+          b(:) = 0.0
+        end if
+#endif /* ITEST */
+#else /* TEST */
         u(1) = interpolate(ux, ii, jj, kk, dr, cx, cy, cz)
         u(2) = interpolate(uy, ii, jj, kk, dr, cx, cy, cz)
         u(3) = interpolate(uz, ii, jj, kk, dr, cx, cy, cz)
         b(1) = interpolate(bx, ii, jj, kk, dr, cx, cy, cz)
         b(2) = interpolate(by, ii, jj, kk, dr, cx, cy, cz)
         b(3) = interpolate(bz, ii, jj, kk, dr, cx, cy, cz)
+#endif /* TEST */
 
-! compute the acceleration
+! subtract the fluid velocity
 !
         w(:) = v(:) - u(:)
 
+! compute the acceleration
+!
         a(1) = w(2) * b(3) - w(3) * b(2)
         a(2) = w(3) * b(1) - w(1) * b(3)
         a(3) = w(1) * b(2) - w(2) * b(1)
+#ifndef TEST
 #ifdef BNDRY
       else
         a(:) = 0.0
       endif
 #endif /* BNDRY */
+#endif /* !TEST */
 !
 !-------------------------------------------------------------------------------
 !

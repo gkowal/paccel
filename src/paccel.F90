@@ -49,10 +49,12 @@ program paccel
 !
   call read_params()
 
+#ifndef TEST
 ! initialize field variables
 !
   write( *, "('INFO      : ',a)" ) "initializing and reading field components"
   call init_fields()
+#endif /* !TEST */
 
 ! initiate particle
 !
