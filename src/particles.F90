@@ -209,18 +209,21 @@ module particles
 
 ! print geometry parameters
 !
-      write( *, "('INFO      : geometry parameters:')" )
-      write( *, "('INFO      : T     =',1pe15.8,' [s] =',1pe15.8,' [yr]')" ) fc, sc * fc
+    write( *, "('INFO      : geometry parameters:')" )
+    write( *, "('INFO      : T     =',1pe15.8,' [s] =',1pe15.8,' [yr]')" ) fc, sc * fc
 !     write( *, "('INFO      : dt    =',1pe15.8,' [s] =',1pe15.8,' [yr]')" ) ts, sc * ts
-      write( *, "('INFO      : L     =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) ln, pc * ln
+    write( *, "('INFO      : L     =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) ln, pc * ln
 !     write( *, "('INFO      : dx    =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) dr, pc * dr
 
 ! ! print conditions
 ! !
-      write( *, "('INFO      : conditions:')" )
-      write( *, "('INFO      : Rg/L  =',1pe15.8)" ) rg / ln
+    write( *, "('INFO      : conditions:')" )
+    write( *, "('INFO      : Rg/L  =',1pe15.8)" ) rg / ln
 !     write( *, "('INFO      : Rg/dx =',1pe15.8)" ) rg / dr
 !     write( *, "('INFO      : Tg/dt =',1pe15.8)" ) tg / ts
+
+    write( *, "('INFO      : code units:')" )
+    write( *, "('INFO      : e/m   =',1pe15.8)" ) qom * bavg
 
 ! write parameters to info.txt
 !
@@ -266,6 +269,9 @@ module particles
     write (10, "('INFO      : Rg/L  =',1pe15.8)" ) rg / ln
 !     write (10, "('INFO      : Rg/dx =',1pe15.8)" ) rg / dr
 !     write (10, "('INFO      : Tg/dt =',1pe15.8)" ) tg / ts
+
+    write (10, "('INFO      : code units:')" )
+    write (10, "('INFO      : e/m   =',1pe15.8)" ) qom * bavg
 
     close (10)
 
@@ -380,7 +386,7 @@ module particles
 #ifdef RELAT
     en = gm * mrest
 #else
-    en = 0.5 * (vpar**2 + vper**2)
+    en = 0.5 * (vpar**2 + vper**2) * c2
 #endif
 
 ! print headers and the initial values
@@ -478,7 +484,7 @@ module particles
 #ifdef RELAT
     en = gamma * mrest
 #else
-    en = 0.5 * (vu / c)**2
+    en = 0.5 * vu**2
 #endif
 
 ! print the progress information
@@ -662,7 +668,7 @@ module particles
 #ifdef RELAT
           en = gamma * mrest
 #else
-          en = 0.5 * (vu / c)**2
+          en = 0.5 * vu**2
 #endif
 
 ! write the progress
@@ -704,7 +710,7 @@ module particles
 #ifdef RELAT
     en = gamma * mrest
 #else
-    en = 0.5 * (vu / c)**2
+    en = 0.5 * vu**2
 #endif
 
 ! write the progress
