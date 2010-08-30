@@ -3,20 +3,27 @@
 HOST    := $(shell hostname)
 OS      := $(shell uname)
 
-DEBUG   = N
-RELAT   = Y
-INTERP  = C
-TVD     = Y
-BNDRY   = N
-PREC    = 8
-DIMS    = 3
-TEST    = WAVE
+COMPILER = GNU
+DEBUG    = N
+RELAT    = Y
+INTERP   = C
+TVD      = Y
+BNDRY    = N
+PREC     = 8
+DIMS     = 3
+TEST     = WAVE
 
-FC      = ifort
-FFLAGS  = -O3 -i4 -mtune=core2 -xS -I$(HDF5DIR)/include
-LD      = $(FC)
-LDFLAGS = $(FFLAGS)
-LIBS    =
+ifeq ($(COMPILER),GNU)
+FC       = gfortran
+FFLAGS   = -O2
+endif
+ifeq ($(COMPILER),INTEL)
+FC       = ifort
+FFLAGS   = -O3 -i4 -mtune=core2 -xS
+endif
+LD       = $(FC)
+LDFLAGS  = $(FFLAGS)
+LIBS     =
 
 ifeq ($(DEBUG),Y)
 FFLAGS += -g -DDEBUG
@@ -45,6 +52,7 @@ ifeq ($(TEST),ISLAND)
 FFLAGS += -DTEST -DITEST
 endif
 
+ifeq ($(TEST),N)
 # HDF5 include and library paths
 #
 FFLAGS += -I$(HDF5DIR)/include
@@ -55,6 +63,7 @@ LIBS   += -lhdf5_fortran -lhdf5
 #
 LIBS   += -L$(FITSDIR)/lib
 LIBS   += -lcfitsio -lz
+endif
 
 #-------------------------------------------------------------------------------
 

@@ -26,7 +26,9 @@
 !
 module hdf5io
 
+#ifndef TEST
   use hdf5
+#endif /* TEST */
 
   implicit none
 
@@ -47,6 +49,7 @@ module hdf5io
 !
   subroutine hdf5_init
 
+#ifndef TEST
     use params, only : idir, ftype, fnumber
 
     implicit none
@@ -62,6 +65,7 @@ module hdf5io
 !
     integer(hid_t)                 :: fid, gid, aid
     integer(hsize_t), dimension(1) :: am = (/1/), cm = (/3/)
+#endif /* !TEST */
 !
 !-------------------------------------------------------------------------------
 !
@@ -89,6 +93,7 @@ module hdf5io
     dzi    = 1.0
     dtc    = 1.0
 
+#ifndef TEST
 ! generate filename
 !
     write(fl,"(a,a1,i6.6,'_',i5.5,'.h5')") trim(idir), ftype, fnumber, 0
@@ -228,6 +233,7 @@ module hdf5io
     where(dm .gt. 1) qb(:) = ng + 1
     qe(:) = qb(:) + cdm(:) - 1
 
+#endif /* !TEST */
   end subroutine hdf5_init
 !
 !===============================================================================
@@ -334,6 +340,7 @@ module hdf5io
     integer               , intent(in)    :: n
     integer, dimension(3) , intent(out)   :: coord
 
+#ifndef TEST
 ! local variables
 !
     character(len=255) :: fl
@@ -345,6 +352,7 @@ module hdf5io
 !
     integer(hid_t)                 :: fid, gid, aid
     integer(hsize_t), dimension(1) :: am = (/1/)
+#endif /* !TEST */
 !
 !-------------------------------------------------------------------------------
 !
@@ -352,6 +360,7 @@ module hdf5io
 !
     coord(:) = 0
 
+#ifndef TEST
 ! generate filename
 !
     write(fl,"(a,a1,i6.6,'_',i5.5,'.h5')") trim(idir), ftype, fnumber, n
@@ -413,6 +422,7 @@ module hdf5io
       call h5close_f(err)
 
     endif
+#endif /* !TEST */
 
   end subroutine hdf5_get_coord
 !
@@ -443,6 +453,7 @@ module hdf5io
 !
     qty(:,:,:) = 0.0
 
+#ifndef TEST
 ! allocate small subarray for variable chunks
 !
     allocate(q(cdm(1),cdm(2),cdm(3)))
@@ -479,6 +490,7 @@ module hdf5io
     deallocate(q)
 
     write(*,"('')")
+#endif /* !TEST */
 
   end subroutine hdf5_read_var
 !
@@ -688,6 +700,7 @@ module hdf5io
     character(len=*)      , intent(in)    :: var
     real, dimension(:,:,:), intent(inout) :: qty
 
+#ifndef TEST
 ! local variables
 !
     character(len=255) :: fl
@@ -779,6 +792,7 @@ module hdf5io
       call h5close_f(err)
 
     end if
+#endif /* !TEST */
 
   end subroutine hdf5_read_data
 !

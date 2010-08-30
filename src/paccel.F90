@@ -27,8 +27,9 @@
 program paccel
 
   use fields   , only : init_fields, finit_fields
-  use params   , only : read_params
-  use particles, only : init_particle, finit_particle, integrate_trajectory
+  use params   , only : read_params, output
+  use particles, only : init_particle, finit_particle, integrate_trajectory    &
+                      , integrate_trajectory_log
 
   implicit none
 
@@ -68,12 +69,21 @@ program paccel
 ! integrate particle trajectories
 !
   write( *, "('INFO      : ',a)" ) "integrating particle trajectories"
-  call integrate_trajectory()
+  if (output .eq. 'i') &
+    call integrate_trajectory()
+  if (output .eq. 'l') &
+    call integrate_trajectory_log()
 
 ! display performance information
 !
   timer = secnds(timer)
   write( *, "('COMPUTED  : ',a,1pe12.5,a)" ) 'computing done in ', timer, ' seconds'
+
+! write parameters to info.txt
+!
+  open  (10, file = 'info.txt', form = 'formatted', access = 'append')
+  write (10, "('COMPUTED  : ',a,1pe12.5,a)" ) 'computing done in ', timer, ' seconds'
+  close (10)
 
 ! deallocate particles
 !

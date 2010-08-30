@@ -83,11 +83,13 @@ module fitsio
 !
     status  = 0
 
+#ifndef TEST
     call ftgiou(iunit, status)
     call ftopen(iunit, fl, 0, bsize, status)
     call ftgipr(iunit, 3, bpix, naxes, dm, status)
     call ftclos(iunit, status)
     call ftfiou(iunit, status)
+#endif /* !TEST */
 
 ! calculate number of elements in array
 !
@@ -289,11 +291,13 @@ module fitsio
 !
     status  = 0
 
+#ifndef TEST
     call ftgiou(iunit, status)
     call ftopen(iunit, fl, 0, bsize, status)
     call ftgpve(iunit, 0, 1, nl, 0.0, qty, info, status)
     call ftclos(iunit, status)
     call ftfiou(iunit, status)
+#endif /* !TEST */
 
   end subroutine fits_read_data
 !
@@ -326,6 +330,7 @@ module fitsio
     status = 0
     naxes(:) = 1
 
+#ifndef TEST
     call ftgiou(iunit, status)
     call ftopen(iunit, rfile, 0, bsize, status)
     call ftgipr(iunit, 3, bpix, naxis, naxes, status)
@@ -333,6 +338,7 @@ module fitsio
     call ftgpve(iunit, 0, 1, nelems, 0.0, qty, anyf, status)
     call ftclos(iunit, status)
     call ftfiou(iunit, status)
+#endif /* !TEST */
 
 
   end subroutine fits_get_data
@@ -368,6 +374,7 @@ module fitsio
 
     qty(:,:) = 0.0
 
+#ifndef TEST
     call ftgiou(iunit, status)
     call ftopen(iunit, rfile, 0, bsize, status)
     call ftgipr(iunit, 2, bpix, naxis, naxes, status)
@@ -375,6 +382,7 @@ module fitsio
     call ftgpve(iunit, 0, 1, nelems, 0.0, qty, anyf, status)
     call ftclos(iunit, status)
     call ftfiou(iunit, status)
+#endif /* !TEST */
 
   end subroutine fits_get_data_2d
 
@@ -409,6 +417,7 @@ module fitsio
 
     qty(:) = 0.0
 
+#ifndef TEST
     call ftgiou(iunit, status)
     call ftopen(iunit, rfile, 0, bsize, status)
     call ftgipr(iunit, 1, bpix, naxis, naxes, status)
@@ -416,6 +425,7 @@ module fitsio
     call ftgpve(iunit, 0, 1, nelems, 0.0, qty, anyf, status)
     call ftclos(iunit, status)
     call ftfiou(iunit, status)
+#endif /* !TEST */
 
   end subroutine fits_get_data_1d
 
@@ -462,6 +472,7 @@ module fitsio
 
     fft(:,:,:) = cmplx(0.0, 0.0)
 
+#ifndef TEST
     call ftgiou(iunit, status)
     call ftopen(iunit, refile, 0, bsize, status)
     call ftgipr(iunit, 3, bpix, naxis, naxes, status)
@@ -485,6 +496,7 @@ module fitsio
     call ftgpve(iunit, 0, 1, nelems, 0.0, tmp, anyf, status)
     call ftclos(iunit, status)
     call ftfiou(iunit, status)
+#endif /* !TEST */
 
 !     print *, minval(tmp), maxval(tmp)
 
@@ -521,6 +533,7 @@ module fitsio
     naxes(2) = size(qty, 2)
     naxes(3) = size(qty, 3)
 
+#ifndef TEST
     call ftgiou(iunit, status)
     call ftinit(iunit, rfile, 1, status)
     nelems = product(naxes(:))
@@ -528,6 +541,7 @@ module fitsio
     call ftppre(iunit, 1, 1, nelems, qty, status)
     call ftclos(iunit, status)
     call ftfiou(iunit, status)
+#endif /* !TEST */
 
   end subroutine fits_put_data
 
@@ -552,6 +566,7 @@ module fitsio
     naxes(1) = size(qty, 1)
     naxes(2) = size(qty, 2)
 
+#ifndef TEST
     call ftgiou(iunit, status)
     call ftinit(iunit, rfile, 1, status)
     nelems = naxes(1) * naxes(2)
@@ -559,6 +574,7 @@ module fitsio
     call ftppre(iunit, 1, 1, nelems, qty, status)
     call ftclos(iunit, status)
     call ftfiou(iunit, status)
+#endif /* !TEST */
 
   end subroutine fits_put_data_2d
 
@@ -582,6 +598,7 @@ module fitsio
     status = 0
     naxes(1) = size(qty, 1)
 
+#ifndef TEST
     call ftgiou(iunit, status)
     call ftinit(iunit, rfile, 1, status)
     nelems = naxes(1)
@@ -589,6 +606,7 @@ module fitsio
     call ftppre(iunit, 1, 1, nelems, qty, status)
     call ftclos(iunit, status)
     call ftfiou(iunit, status)
+#endif /* !TEST */
 
   end subroutine fits_put_data_1d
 

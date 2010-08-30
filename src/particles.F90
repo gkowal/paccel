@@ -42,7 +42,7 @@ module particles
 
 ! particle mass and the speed of light
 !
-  real(kind=8)           , save :: mrest, qom, c2, om0, fc, bavg
+  real(kind=8)           , save :: mrest, qom, c2, om0, fc, ln, bavg, bpar
 
 ! arrays containing the initial positions and velocities of particle
 !
@@ -63,7 +63,7 @@ module particles
     use fields, only : get_dimensions, get_domain_bounds, bx, by, bz
     use params, only : ptype, vpar, vper, c, dens, tunit, tmulti, xc, yc, zc
 #ifdef TEST
-    use params, only : bini, bamp, vamp
+    use params, only : bini, bamp, vamp, freq
 #endif /* TEST */
 
     implicit none
@@ -72,7 +72,7 @@ module particles
 !
     integer      :: p
     real(kind=8) :: vp, vr, vv, va
-    real(kind=8) :: gm, dn, mu0, om, tg, rg, mu, mp, en, ba, ln
+    real(kind=8) :: gm, dn, mu0, om, tg, rg, mu, mp, en, ba
     real(kind=PREC) :: bb, rt
 
 ! arrays
@@ -88,7 +88,6 @@ module particles
 
 ! parameters
 !
-    real(kind=8) :: dpi = 3.1415926535897931159979634685442d0
     real(kind=8) :: pi2 = 6.2831853071795862319959269370884d0
     real(kind=8) :: cc  = 299792457.99999998416751623153687     ! the speed of light [m/s]
     real(kind=8) :: pc  = 3.2407792896656065765177783686188e-17 ! 1 meter [pc]
@@ -118,36 +117,36 @@ module particles
     end do
 
 ! compute plasma parameters
-!                                                       ! c is expressed in Va
-    dn   = 1.6726215850718025379202284485224e-21 * dens ! density conversion from
-                                                        ! protonmass/cm^3 to kg/m^3
-    gm   = 1.0d0 / sqrt(1.0d0 - (1.0 / c)**2)           ! Lorentz factor
-    va   = gm * cc  / c                                 ! Alfven speed [m/s]
-    mu0  = 125.66370614359171042906382353976            ! magnetic permeability [Gs^2 m s^2 / kg]
-    bavg = va * sqrt(mu0 * dn)                          ! magnetic field strength [Gs]
-    c2    = c * c                                       ! square of the speed of light
+!                                                        ! c is expressed in Va
+    dn   = 1.6726215850718025379202284485224e-21 * dens  ! density conversion from
+                                                         ! protonmass/cm^3 to kg/m^3
+    gm   = 1.0d0 / sqrt(1.0d0 - (1.0 / c)**2)            ! Lorentz factor
+    va   = gm * cc  / c                                  ! Alfven speed [m/s]
+    mu0  = 125.66370614359171042906382353976             ! magnetic permeability [Gs^2 m s^2 / kg]
+    bavg = va * sqrt(mu0 * dn)                           ! magnetic field strength [Gs]
+    c2    = c * c                                        ! square of the speed of light
 
 ! initialize particle parameters
 !
     select case(ptype)
     case ('e')
-      mrest =  0.51099890307660134070033564057667   ! rest energy of electron [MeV]
-      qom   = -17588201.72265790030360221862793     ! e/m [1 / Gs s]
-      mp    = 9.1093818871545313708798643833606e-31 ! electron mass [kg]
+      mrest =  0.51099890307660134070033564057667        ! rest energy of electron [MeV]
+      qom   = -17588201.72265790030360221862793          ! e/m [1 / Gs s]
+      mp    = 9.1093818871545313708798643833606e-31      ! electron mass [kg]
     case default
-      mrest =  938.27199893682302445085952058434    ! rest energy of proton   [MeV]
-      qom   =  9578.8340668294185888953506946564    ! e/m [1 / Gs s]
-      mp    = 1.6726215850718025086476640481627e-27 ! proton mass [kg]
+      mrest =  938.27199893682302445085952058434         ! rest energy of proton   [MeV]
+      qom   =  9578.8340668294185888953506946564         ! e/m [1 / Gs s]
+      mp    = 1.6726215850718025086476640481627e-27      ! proton mass [kg]
     end select
-    vp = cc * vpar                                  ! parallel particle speed
-    vr = cc * vper                                  ! perpendicular particle speed
-    vv = sqrt(vpar**2 + vper**2)                    ! absolute velocity
-    mu = 0.5d0 * mp * vr**2 / bavg                  ! magnetic moment [kg m^2 / s^2 Gs]
-    om0   = abs(qom * bavg)                             ! classical gyrofrequency
-    om = om0 / gm                                       ! relativistic gyrofrequency
-    tg = 1.0d0 / om                                     ! gyroperiod
+    vp = cc * vpar                                       ! parallel particle speed
+    vr = cc * vper                                       ! perpendicular particle speed
+    vv = sqrt(vpar**2 + vper**2)                         ! absolute velocity
+    mu = 0.5d0 * mp * vr**2 / bavg                       ! magnetic moment [kg m^2 / s^2 Gs]
+    om0   = abs(qom * bavg)                              ! classical gyrofrequency
+    om = om0 / gm                                        ! relativistic gyrofrequency
+    tg = 1.0d0 / om                                      ! gyroperiod
     tg = pi2 * tg
-    rg = vr / om                                        ! gyroradius (Larmor radius)
+    rg = vr / om                                         ! gyroradius (Larmor radius)
 
 ! print plasma parametes
 !
@@ -203,24 +202,15 @@ module particles
 
 ! calculate geometry parameters
 !
-    ln = va * fc                                               ! the size of the box
-!   dr = ln * min(dx, dy, dz)
-!   ts = dtc
+    ln = va * fc                                         ! the size of the box
 
 ! print geometry parameters
 !
     write( *, "('INFO      : geometry parameters:')" )
     write( *, "('INFO      : T     =',1pe15.8,' [s] =',1pe15.8,' [yr]')" ) fc, sc * fc
-!     write( *, "('INFO      : dt    =',1pe15.8,' [s] =',1pe15.8,' [yr]')" ) ts, sc * ts
     write( *, "('INFO      : L     =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) ln, pc * ln
-!     write( *, "('INFO      : dx    =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) dr, pc * dr
-
-! ! print conditions
-! !
-    write( *, "('INFO      : conditions:')" )
     write( *, "('INFO      : Rg/L  =',1pe15.8)" ) rg / ln
-!     write( *, "('INFO      : Rg/dx =',1pe15.8)" ) rg / dr
-!     write( *, "('INFO      : Tg/dt =',1pe15.8)" ) tg / ts
+    write( *, "('INFO      : Tg/T  =',1pe15.8)" ) tg / fc
 
     write( *, "('INFO      : code units:')" )
     write( *, "('INFO      : e/m   =',1pe15.8)" ) qom * bavg
@@ -259,16 +249,9 @@ module particles
 !
     write (10, "('INFO      : geometry parameters:')" )
     write (10, "('INFO      : T     =',1pe15.8,' [s] =',1pe15.8,' [yr]')" ) fc, sc * fc
-!     write (10, "('INFO      : dt    =',1pe15.8,' [s] =',1pe15.8,' [yr]')" ) ts, sc * ts
     write (10, "('INFO      : L     =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) ln, pc * ln
-!     write (10, "('INFO      : dx    =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) dr, pc * dr
-
-! print conditions
-!
-    write (10, "('INFO      : conditions:')" )
     write (10, "('INFO      : Rg/L  =',1pe15.8)" ) rg / ln
-!     write (10, "('INFO      : Rg/dx =',1pe15.8)" ) rg / dr
-!     write (10, "('INFO      : Tg/dt =',1pe15.8)" ) tg / ts
+    write (10, "('INFO      : Tg/T  =',1pe15.8)" ) tg / fc
 
     write (10, "('INFO      : code units:')" )
     write (10, "('INFO      : e/m   =',1pe15.8)" ) qom * bavg
@@ -285,9 +268,10 @@ module particles
 
 #ifdef TEST
 #ifdef WTEST
-    b(1) = bini
-    b(2) = bamp * sin(pi2 * xc)
-    b(3) = 0.0
+    bpar = sqrt(bini**2 - bamp**2)
+    b(1) = bpar
+    b(2) = bamp * cos(pi2 * freq * xc)
+    b(3) = bamp * sin(pi2 * freq * xc)
 
     u(1) = 0.0
     u(2) = 0.0
@@ -392,15 +376,15 @@ module particles
 ! print headers and the initial values
 !
     open  (10, file = 'output.dat', form = 'formatted', status = 'replace')
-    write (10, "('#',1a16,22a18)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz'       &
+    write (10, "('#',1a16,23a18)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz'       &
                , 'Vx', 'Vy', 'Vz', '|V|', '|Vpar|', '|Vper|', '|V|/c'            &
                , '|Vpar|/c', '|Vper|/c', 'gamma', 'En [MeV]', '<B> [Gs]'         &
-               , 'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Rg/L'
-    write (10, "(23(1pe18.10))") 0.0, x0(1), x0(2), x0(3), p0(1), p0(2), p0(3) &
+               , 'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg/T', 'Rg/L'
+    write (10, "(24(1pe18.10))") 0.0, x0(1), x0(2), x0(3), p0(1), p0(2), p0(3) &
                                     , v0(1), v0(2), v0(3)                      &
                                     , vv * c, vpar * c, vper * c               &
                                     , vv, vpar, vper, gm, en, bavg * ba        &
-                                    , om, tg, rg, rg
+                                    , om, tg, rg, tg / fc, rg / ln
     close (10)
 !
 !-------------------------------------------------------------------------------
@@ -434,7 +418,7 @@ module particles
 !
   subroutine integrate_trajectory()
 
-    use params, only : c, tmax, rho, tolerance, dtmax, nstep, vpar, vper
+    use params, only : c, tmin, tmax, rho, tolerance, dtmax, ndumps, vpar, vper
 
     implicit none
 
@@ -489,7 +473,7 @@ module particles
 
 ! print the progress information
 !
-    write ( *,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP', 'SPEED (c)', 'ENERGY (MeV)'
+    write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP', 'SPEED (c)', 'ENERGY (MeV)'
     write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, vu, en, char(13)
 
 !== INTEGRATION LOOP ==
@@ -653,7 +637,7 @@ module particles
 
 ! copy data to array
 !
-        if (m .eq. nstep) then
+        if (m .eq. ndumps .and. t .ge. tmin) then
 
 ! separate particle velocity into parallel and perpendicular components
 !
@@ -678,10 +662,11 @@ module particles
 ! write results to the output file
 !
           open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-          write (10, "(23(1pe18.10))") t, x(1), x(2), x(3), p(1), p(2), p(3)   &
+          write (10, "(24(1pe18.10))") t, x(1), x(2), x(3), p(1), p(2), p(3)   &
                                         , v(1), v(2), v(3)                     &
                                         , vu, vp, vr, vu / c, vp / c, vr / c   &
-                                        , gamma, en, bavg * ba, om, tg, rg, rg
+                                        , gamma, en, bavg * ba, om, tg * fc    &
+                                        , rg * ln, tg, rg
           close (10)
 
           n = n + 1
@@ -720,15 +705,316 @@ module particles
 ! write results to the output file
 !
     open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-    write (10, "(23(1pe18.10))") t, x(1), x(2), x(3), p(1), p(2), p(3)   &
+    write (10, "(24(1pe18.10))") t, x(1), x(2), x(3), p(1), p(2), p(3)   &
                                   , v(1), v(2), v(3)                     &
                                   , vu, vp, vr, vu / c, vp / c, vr / c   &
-                                  , gamma, en, bavg * ba, om, tg, rg, rg
+                                  , gamma, en, bavg * ba, om, tg * fc    &
+                                  , rg * ln, tg, rg
     close (10)
 
 !-------------------------------------------------------------------------------
 !
   end subroutine integrate_trajectory
+!
+!===============================================================================
+!
+! integrate_trajectory: subroutine integrates particle trajectory
+!
+!===============================================================================
+!
+  subroutine integrate_trajectory_log()
+
+    use params, only : c, tmin, tmax, rho, tolerance, dtmax, ndumps, vpar, vper
+
+    implicit none
+
+! local variables
+!
+    integer                       :: n, m
+    real(kind=PREC)               ::    t1, t2, t3, t4, t5
+    real(kind=PREC), dimension(3) :: x, x1, x2, x3, x4, x5
+    real(kind=PREC), dimension(3) :: v, v1, v2, v3, v4, v5
+    real(kind=PREC), dimension(3) :: p, p1, p2, p3, p4, p5
+    real(kind=PREC), dimension(3) ::    k1, k2, k3, k4, k5
+    real(kind=PREC), dimension(3) ::    l1, l2, l3, l4, l5
+    real(kind=PREC), dimension(3) :: a, u, b
+    real(kind=PREC)               :: gamma
+    real(kind=8   )               :: delta
+    real(kind=8   )               :: ba, vu, vp, vr, en, om, tg, rg
+    real(kind=8   )               :: t, dt, dtq, dtn
+    real(kind=8   )               :: tlm, dtl, tdl
+!
+!-------------------------------------------------------------------------------
+!
+! initialize time
+!
+    n   = 0
+
+    t   = 0.0
+    dt  = 1.0e-8
+    dtq = qom * dt
+
+! initial position and velocity
+!
+    x(:) = x0(:)
+    v(:) = v0(:)
+    p(:) = p0(:)
+
+! calculate parameters
+!
+    vu = sqrt(vpar**2 + vper**2)
+
+! calculate the Lorentz factor
+!
+    gamma = lorentz_factor(p)
+
+! calculate particle energy
+!
+#ifdef RELAT
+    en = gamma * mrest
+#else
+    en = 0.5 * vu**2
+#endif
+
+! print the progress information
+!
+    write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP', 'SPEED (c)', 'ENERGY (MeV)'
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, vu, en, char(13)
+
+!== INTEGRATION LOOP ==
+!
+! integrate particles
+!
+    do while (t .le. tmax)
+
+!! 1st step of the RK integration
+!!
+! integrate the position and momentum
+!
+      t1    = t
+      x1(:) = x(:)
+      p1(:) = p(:)
+
+! calculate the Lorentz factor
+!
+      gamma = lorentz_factor(p1)
+
+! calculate velocity
+!
+      v1(:) = p1(:) / gamma
+
+! calculate acceleration for the location x1 and velocity v1
+!
+      call acceleration(t1, x1, v1, a, u, b)
+
+! calculate the first term
+!
+      l1(:) = dt  * v1(:)
+      k1(:) = dtq * a (:)
+
+!! 2nd step of the RK integration
+!!
+! integrate the position and momentum
+!
+      t2    = t    + 0.5 * dt
+      x2(:) = x(:) + 0.5 * l1(:)
+      p2(:) = p(:) + 0.5 * k1(:)
+
+! calculate the Lorentz factor
+!
+      gamma = lorentz_factor(p2)
+
+! calculate the velocity
+!
+      v2(:) = p2(:) / gamma
+
+! calculate acceleration for the location x2 and velocity v2
+!
+      call acceleration(t2, x2, v2, a, u, b)
+
+! calculate the second term
+!
+      l2(:) = dt  * v2(:)
+      k2(:) = dtq * a (:)
+
+!! 3rd step of the RK integration
+!!
+! integrate the position and momentum
+!
+      t3    = t    + 0.5 * dt
+      x3(:) = x(:) + 0.5 * l2(:)
+      p3(:) = p(:) + 0.5 * k2(:)
+
+! calculate the Lorentz factor
+!
+      gamma = lorentz_factor(p3(:))
+
+! calculate the velocity
+!
+      v3(:) = p3(:) / gamma
+
+! calculate acceleration for the location x3 and velocity v3
+!
+      call acceleration(t3, x3, v3, a, u, b)
+
+! calculate the third term
+!
+      l3(:) = dt  * v3(:)
+      k3(:) = dtq * a (:)
+
+!! 4th step of the RK integration
+!!
+! integrate the position and momentum
+!
+      t4    = t    + 0.5 * dt
+      x4(:) = x(:) + l3(:)
+      p4(:) = p(:) + k3(:)
+
+! calculate the Lorentz factor
+!
+      gamma = lorentz_factor(p4(:))
+
+! calculate the velocity
+!
+      v4(:) = p4(:) / gamma
+
+! calculate acceleration for the location x4 and velocity v4
+!
+      call acceleration(t4, x4, v4, a, u, b)
+
+! calculate the third term
+!
+      l4(:) = dt  * v4(:)
+      k4(:) = dtq * a (:)
+
+!! the final integration of the particle position and momentum
+!!
+      t5    = t    + dt
+      x5(:) = x(:) + ( l1(:) + 2.0 * ( l2(:) + l3(:) ) + l4(:) ) / 6.0
+      p5(:) = p(:) + ( k1(:) + 2.0 * ( k2(:) + k3(:) ) + k4(:) ) / 6.0
+
+! calculate the Lorentz factor
+!
+      gamma = lorentz_factor(p5(:))
+
+! calculate the velocity
+!
+      v5(:) = p5(:) / gamma
+
+! calculate acceleration at the location x
+!
+      call acceleration(t5, x5, v5, a, u, b)
+
+! estimate error
+!
+      l4(:) = l4(:) - dt  * v5(:)
+      k4(:) = k4(:) - dtq * a (:)
+
+      delta = sqrt(dot_product(l4, l4) + dot_product(k4, k4)) / 6.0
+
+! estimate new timestep
+!
+      dtn   = dt * (rho * tolerance / delta)**0.2
+
+      if (delta .gt. tolerance) then
+
+! repeat integration with this timestep
+!
+        dt  = dtn
+        dtq = qom * dt
+
+      else
+
+! update time
+!
+        t   = t + dt
+
+! update new timestep
+!
+        dt  = min(2.0 * dt, dtn, dtmax)
+        dtq = qom * dt
+
+! update position, velocity and momentum
+!
+        x(:) = x5(:)
+        v(:) = v5(:)
+        p(:) = p5(:)
+
+! copy data to array
+!
+        if ((log10(t) - log10(tmin))*ndumps .gt. n) then
+
+! separate particle velocity into parallel and perpendicular components
+!
+          call separate_velocity(v, b, ba, vu, vp, vr)
+
+! calculate the particle gyroperiod and gyroradius
+!
+          call gyro_parameters(gamma, ba, vr, om, tg, rg)
+
+! calculate particle energy
+!
+#ifdef RELAT
+          en = gamma * mrest
+#else
+          en = 0.5 * vu**2
+#endif
+
+! write the progress
+!
+          write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, vu / c, en, char(13)
+
+! write results to the output file
+!
+          open  (10, file = 'output.dat', form = 'formatted', position = 'append')
+          write (10, "(24(1pe18.10))") t, x(1), x(2), x(3), p(1), p(2), p(3)   &
+                                        , v(1), v(2), v(3)                     &
+                                        , vu, vp, vr, vu / c, vp / c, vr / c   &
+                                        , gamma, en, bavg * ba, om, tg * fc    &
+                                        , rg * ln, tg, rg
+          close (10)
+
+          n = n + 1
+
+        end if
+
+      end if
+
+    end do
+
+! separate particle velocity into parallel and perpendicular components
+!
+    call separate_velocity(v, b, ba, vu, vp, vr)
+
+! calculate the particle gyroperiod and gyroradius
+!
+    call gyro_parameters(gamma, ba, vr, om, tg, rg)
+
+! calculate particle energy
+!
+#ifdef RELAT
+    en = gamma * mrest
+#else
+    en = 0.5 * vu**2
+#endif
+
+! write the progress
+!
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, vu / c, en
+
+! write results to the output file
+!
+    open  (10, file = 'output.dat', form = 'formatted', position = 'append')
+    write (10, "(24(1pe18.10))") t, x(1), x(2), x(3), p(1), p(2), p(3)   &
+                                  , v(1), v(2), v(3)                     &
+                                  , vu, vp, vr, vu / c, vp / c, vr / c   &
+                                  , gamma, en, bavg * ba, om, tg * fc    &
+                                  , rg * ln, tg, rg
+    close (10)
+
+!-------------------------------------------------------------------------------
+!
+  end subroutine integrate_trajectory_log
 !
 !===============================================================================
 !
@@ -1155,7 +1441,7 @@ module particles
 
     use fields, only : ux, uy, uz, bx, by, bz
 #ifdef TEST
-    use params, only : omega, bini, bamp, vamp
+    use params, only : omega, bini, bamp, vamp, freq, epar
 #endif /* TEST */
 
     implicit none
@@ -1210,12 +1496,12 @@ module particles
 #ifdef TEST
 #ifdef WTEST
         u(1) = 0.0
-        u(2) = vamp * cos(pi2 * x(1))
+        u(2) = - vamp * sin(pi2 * freq * x(1))
         u(3) = 0.0
 
-        b(1) = bini
-        b(2) = bamp * sin(pi2 * x(1))
-        b(3) = 0.0
+        b(1) = bpar
+        b(2) = bamp * cos(pi2 * freq * x(1))
+        b(3) = bamp * sin(pi2 * freq * x(1))
 #endif /* WTEST */
 
 #ifdef ITEST
@@ -1267,6 +1553,9 @@ module particles
         a(1) = w(2) * b(3) - w(3) * b(2)
         a(2) = w(3) * b(1) - w(1) * b(3)
         a(3) = w(1) * b(2) - w(2) * b(1)
+#ifdef TEST
+        a(1) = a(1) + epar
+#endif /* TEST */
 #ifndef TEST
 #ifdef BNDRY
       else
@@ -1356,7 +1645,7 @@ module particles
 !------------------------------------------------------------------------------
 !
     om = om0 * ba / gm
-    tg = pi2 / om
+    tg = pi2 / om / fc
     rg = vr / om / fc
 !
 !-------------------------------------------------------------------------------
