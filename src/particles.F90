@@ -47,6 +47,10 @@ module particles
 ! arrays containing the initial positions and velocities of particle
 !
   real(kind=PREC), dimension(3), save :: x0, v0, p0
+
+! array to store the dump times
+!
+  real(kind=8), dimension(:), save, allocatable :: tt
 !
 !-------------------------------------------------------------------------------
 !
@@ -62,6 +66,7 @@ module particles
 
     use fields, only : get_dimensions, get_domain_bounds, bx, by, bz
     use params, only : ptype, vpar, vper, c, dens, tunit, tmulti, xc, yc, zc
+    use params, only : output, tmin, tmax, ndumps
 #ifdef TEST
     use params, only : bini, bamp, vamp, freq
 #endif /* TEST */
@@ -70,7 +75,7 @@ module particles
 
 ! local variables
 !
-    integer      :: p
+    integer      :: p, n
     real(kind=8) :: vp, vr, vv, va
     real(kind=8) :: gm, dn, mu0, om, tg, rg, mu, mp, en, ba
     real(kind=PREC) :: bb, rt
@@ -386,6 +391,16 @@ module particles
                                     , vv, vpar, vper, gm, en, bavg * ba        &
                                     , om, tg, rg, tg / fc, rg / ln
     close (10)
+
+! prepare dump times
+!
+    if (output .eq. 'l') then
+      n = ndumps * (alog10(tmax) - alog10(tmin)) + 1
+      allocate(tt(n))
+      do p = 1, n
+        tt(p) = 10.0d0**((p - 1.0) / ndumps + alog10(tmin))
+      enddo
+    endif
 !
 !-------------------------------------------------------------------------------
 !
@@ -403,8 +418,7 @@ module particles
 !
 !-------------------------------------------------------------------------------
 !
-!     if (allocated(xp)) deallocate(xp)
-!     if (allocated(vp)) deallocate(vp)
+    if (allocated(tt)) deallocate(tt)
 
 !-------------------------------------------------------------------------------
 !
@@ -436,7 +450,6 @@ module particles
     real(kind=8   )               :: delta
     real(kind=8   )               :: ba, vu, vp, vr, en, om, tg, rg
     real(kind=8   )               :: t, dt, dtq, dtn
-    real(kind=8   )               :: tlm, dtl, tdl
 !
 !-------------------------------------------------------------------------------
 !
@@ -444,7 +457,6 @@ module particles
 !
     n   = 0
     m   = 0
-
     t   = 0.0
     dt  = 1.0e-8
     dtq = qom * dt
@@ -637,7 +649,7 @@ module particles
 
 ! copy data to array
 !
-        if (m .eq. ndumps .and. t .ge. tmin) then
+        if (m .eq. ndumps) then
 
 ! separate particle velocity into parallel and perpendicular components
 !
@@ -741,17 +753,16 @@ module particles
     real(kind=PREC)               :: gamma
     real(kind=8   )               :: delta
     real(kind=8   )               :: ba, vu, vp, vr, en, om, tg, rg
-    real(kind=8   )               :: t, dt, dtq, dtn
-    real(kind=8   )               :: tlm, dtl, tdl
+    real(kind=8   )               :: t, dt, dtq, dtn, dtc, dtp
 !
 !-------------------------------------------------------------------------------
 !
 ! initialize time
 !
-    n   = 0
-
+    n   = 1
     t   = 0.0
     dt  = 1.0e-8
+    dtc = tt(n) - t
     dtq = qom * dt
 
 ! initial position and velocity
@@ -929,11 +940,6 @@ module particles
 !
         t   = t + dt
 
-! update new timestep
-!
-        dt  = min(2.0 * dt, dtn, dtmax)
-        dtq = qom * dt
-
 ! update position, velocity and momentum
 !
         x(:) = x5(:)
@@ -942,7 +948,7 @@ module particles
 
 ! copy data to array
 !
-        if ((log10(t) - log10(tmin))*ndumps .gt. n) then
+        if (t .ge. tt(n)) then
 
 ! separate particle velocity into parallel and perpendicular components
 !
@@ -962,7 +968,7 @@ module particles
 
 ! write the progress
 !
-          write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, vu / c, en, char(13)
+          write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dtp, vu / c, en, char(13)
 
 ! write results to the output file
 !
@@ -977,6 +983,13 @@ module particles
           n = n + 1
 
         end if
+
+! update new timestep
+!
+        dtp = min(dtn, dtmax)
+        dtc = max(1.0e-8, tt(n) - t)
+        dt  = min(dtp, dtc)
+        dtq = qom * dt
 
       end if
 
@@ -1000,7 +1013,7 @@ module particles
 
 ! write the progress
 !
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, vu / c, en
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dtp, vu / c, en
 
 ! write results to the output file
 !
@@ -1011,7 +1024,7 @@ module particles
                                   , gamma, en, bavg * ba, om, tg * fc    &
                                   , rg * ln, tg, rg
     close (10)
-
+!
 !-------------------------------------------------------------------------------
 !
   end subroutine integrate_trajectory_log
