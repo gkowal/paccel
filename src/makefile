@@ -12,6 +12,7 @@ BNDRY    = N
 PREC     = 8
 DIMS     = 3
 TEST     = WAVE
+LOSS     = N
 
 ifeq ($(COMPILER),GNU)
 FC       = gfortran
@@ -50,6 +51,9 @@ FFLAGS += -DTEST -DWTEST
 endif
 ifeq ($(TEST),ISLAND)
 FFLAGS += -DTEST -DITEST
+endif
+ifeq ($(LOSS),Y)
+FFLAGS += -DLOSS
 endif
 
 ifeq ($(TEST),N)
