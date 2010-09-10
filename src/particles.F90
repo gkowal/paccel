@@ -77,7 +77,7 @@ module particles
 !
     integer      :: p, n
     real(kind=8) :: vp, vr, vv, va
-    real(kind=8) :: gm, dn, mu0, om, tg, rg, mu, mp, en, ba
+    real(kind=8) :: gm, dn, mu0, om, tg, rg, mu, mp, en, ek, ba
     real(kind=PREC) :: bb, rt
 
 ! arrays
@@ -374,21 +374,23 @@ module particles
 !
 #ifdef RELAT
     en = gm * mrest
+    ek = en - mrest
 #else
     en = 0.5 * (vpar**2 + vper**2) * c2
+    ek = en
 #endif
 
 ! print headers and the initial values
 !
     open  (10, file = 'output.dat', form = 'formatted', status = 'replace')
-    write (10, "('#',1a16,23a18)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz'       &
-               , 'Vx', 'Vy', 'Vz', '|V|', '|Vpar|', '|Vper|', '|V|/c'            &
-               , '|Vpar|/c', '|Vper|/c', 'gamma', 'En [MeV]', '<B> [Gs]'         &
-               , 'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg/T', 'Rg/L'
-    write (10, "(24(1pe18.10))") 0.0, x0(1), x0(2), x0(3), p0(1), p0(2), p0(3) &
+    write (10, "('#',1a16,24a18)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz'     &
+               , 'Vx', 'Vy', 'Vz', '|V|', '|Vpar|', '|Vper|', '|V|/c'          &
+               , '|Vpar|/c', '|Vper|/c', 'gamma', 'En [MeV]', 'Ek [MeV]'       &
+               , '<B> [Gs]', 'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg/T', 'Rg/L'
+    write (10, "(25(1pe18.10))") 0.0, x0(1), x0(2), x0(3), p0(1), p0(2), p0(3) &
                                     , v0(1), v0(2), v0(3)                      &
                                     , vv * c, vpar * c, vper * c               &
-                                    , vv, vpar, vper, gm, en, bavg * ba        &
+                                    , vv, vpar, vper, gm, en, ek, bavg * ba    &
                                     , om, tg, rg, tg / fc, rg / ln
     close (10)
 
@@ -448,7 +450,7 @@ module particles
     real(kind=PREC), dimension(3) :: a, u, b
     real(kind=PREC)               :: gamma
     real(kind=8   )               :: delta
-    real(kind=8   )               :: ba, vu, vp, vr, en, om, tg, rg
+    real(kind=8   )               :: ba, vu, vp, vr, en, ek, om, tg, rg
     real(kind=8   )               :: t, dt, dtq, dtn
 !
 !-------------------------------------------------------------------------------
@@ -479,14 +481,16 @@ module particles
 !
 #ifdef RELAT
     en = gamma * mrest
+    ek = en - mrest
 #else
     en = 0.5 * vu**2
+    ek = en
 #endif
 
 ! print the progress information
 !
     write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP', 'SPEED (c)', 'ENERGY (MeV)'
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, vu, en, char(13)
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, vu, ek, char(13)
 
 !== INTEGRATION LOOP ==
 !
@@ -663,22 +667,24 @@ module particles
 !
 #ifdef RELAT
           en = gamma * mrest
+          ek = en - mrest
 #else
           en = 0.5 * vu**2
+          ek = en
 #endif
 
 ! write the progress
 !
-          write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, vu / c, en, char(13)
+          write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, vu / c, ek, char(13)
 
 ! write results to the output file
 !
           open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-          write (10, "(24(1pe18.10))") t, x(1), x(2), x(3), p(1), p(2), p(3)   &
+          write (10, "(25(1pe18.10))") t, x(1), x(2), x(3), p(1), p(2), p(3)   &
                                         , v(1), v(2), v(3)                     &
                                         , vu, vp, vr, vu / c, vp / c, vr / c   &
-                                        , gamma, en, bavg * ba, om, tg * fc    &
-                                        , rg * ln, tg, rg
+                                        , gamma, en, ek, bavg * ba, om         &
+                                        , tg * fc, rg * ln, tg, rg
           close (10)
 
           n = n + 1
@@ -706,21 +712,23 @@ module particles
 !
 #ifdef RELAT
     en = gamma * mrest
+    ek = en - mrest
 #else
     en = 0.5 * vu**2
+    ek = en
 #endif
 
 ! write the progress
 !
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, vu / c, en
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, vu / c, ek
 
 ! write results to the output file
 !
     open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-    write (10, "(24(1pe18.10))") t, x(1), x(2), x(3), p(1), p(2), p(3)   &
-                                  , v(1), v(2), v(3)                     &
-                                  , vu, vp, vr, vu / c, vp / c, vr / c   &
-                                  , gamma, en, bavg * ba, om, tg * fc    &
+    write (10, "(25(1pe18.10))") t, x(1), x(2), x(3), p(1), p(2), p(3)         &
+                                  , v(1), v(2), v(3)                           &
+                                  , vu, vp, vr, vu / c, vp / c, vr / c         &
+                                  , gamma, en, ek, bavg * ba, om, tg * fc      &
                                   , rg * ln, tg, rg
     close (10)
 
@@ -752,7 +760,7 @@ module particles
     real(kind=PREC), dimension(3) :: a, u, b
     real(kind=PREC)               :: gamma
     real(kind=8   )               :: delta
-    real(kind=8   )               :: ba, vu, vp, vr, en, om, tg, rg
+    real(kind=8   )               :: ba, vu, vp, vr, en, ek, om, tg, rg
     real(kind=8   )               :: t, dt, dtq, dtn, dtc, dtp
 !
 !-------------------------------------------------------------------------------
@@ -783,20 +791,22 @@ module particles
 !
 #ifdef RELAT
     en = gamma * mrest
+    ek = en - mrest
 #else
     en = 0.5 * vu**2
+    ek = en
 #endif
 
 ! print the progress information
 !
     write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP', 'SPEED (c)', 'ENERGY (MeV)'
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, vu, en, char(13)
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, vu, ek, char(13)
 
 !== INTEGRATION LOOP ==
 !
 ! integrate particles
 !
-    do while (t .le. tmax)
+    do while (t .lt. tmax)
 
 !! 1st step of the RK integration
 !!
@@ -948,7 +958,7 @@ module particles
 
 ! copy data to array
 !
-        if (t .ge. tt(n)) then
+        if (t .eq. tt(n)) then
 
 ! separate particle velocity into parallel and perpendicular components
 !
@@ -962,22 +972,24 @@ module particles
 !
 #ifdef RELAT
           en = gamma * mrest
+          ek = en - mrest
 #else
           en = 0.5 * vu**2
+          ek = en
 #endif
 
 ! write the progress
 !
-          write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dtp, vu / c, en, char(13)
+          write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dtp, vu / c, ek, char(13)
 
 ! write results to the output file
 !
           open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-          write (10, "(24(1pe18.10))") t, x(1), x(2), x(3), p(1), p(2), p(3)   &
+          write (10, "(25(1pe18.10))") t, x(1), x(2), x(3), p(1), p(2), p(3)   &
                                         , v(1), v(2), v(3)                     &
                                         , vu, vp, vr, vu / c, vp / c, vr / c   &
-                                        , gamma, en, bavg * ba, om, tg * fc    &
-                                        , rg * ln, tg, rg
+                                        , gamma, en, ek, bavg * ba, om         &
+                                        , tg * fc, rg * ln, tg, rg
           close (10)
 
           n = n + 1
@@ -987,7 +999,7 @@ module particles
 ! update new timestep
 !
         dtp = min(dtn, dtmax)
-        dtc = max(1.0e-8, tt(n) - t)
+        dtc = max(1.0e-16, tt(n) - t)
         dt  = min(dtp, dtc)
         dtq = qom * dt
 
@@ -1007,23 +1019,15 @@ module particles
 !
 #ifdef RELAT
     en = gamma * mrest
+    ek = en - mrest
 #else
     en = 0.5 * vu**2
+    ek = en
 #endif
 
 ! write the progress
 !
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dtp, vu / c, en
-
-! write results to the output file
-!
-    open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-    write (10, "(24(1pe18.10))") t, x(1), x(2), x(3), p(1), p(2), p(3)   &
-                                  , v(1), v(2), v(3)                     &
-                                  , vu, vp, vr, vu / c, vp / c, vr / c   &
-                                  , gamma, en, bavg * ba, om, tg * fc    &
-                                  , rg * ln, tg, rg
-    close (10)
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dtp, vu / c, ek
 !
 !-------------------------------------------------------------------------------
 !
