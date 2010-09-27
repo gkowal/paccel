@@ -43,7 +43,7 @@ program paccel
   write (*,'(a)') '===        PAccel algorithm started         =================================='
   write (*,'(a)') '===  Copyright (C) 2008-2010 Grzegorz Kowal =================================='
   write (*,*)
-  write( *, "('TASK      : ',a)" ) "integrating trajectory of charged particle"
+  write( *, "('TASK      : ',a)" ) "integrating the trajectory of a charged particle"
   write( *, "('INFO      : ',a)" ) "reading parameters"
 
 ! read parameters
@@ -53,13 +53,13 @@ program paccel
 #ifndef TEST
 ! initialize field variables
 !
-  write( *, "('INFO      : ',a)" ) "initializing and reading field components"
+  write( *, "('INFO      : ',a)" ) "initializing and reading the field components"
   call init_fields()
 #endif /* !TEST */
 
 ! initiate particle
 !
-  write( *, "('INFO      : ',a)" ) "initializing particle positions and velocities"
+  write( *, "('INFO      : ',a)" ) "initializing the particle positions and velocities"
   call init_particle()
 
 ! take the time of calculations only
@@ -68,7 +68,7 @@ program paccel
 
 ! integrate particle trajectories
 !
-  write( *, "('INFO      : ',a)" ) "integrating particle trajectories"
+  write( *, "('INFO      : ',a)" ) "integrating the particle trajectory"
   if (output .eq. 'i') &
     call integrate_trajectory()
   if (output .eq. 'l') &
@@ -87,12 +87,12 @@ program paccel
 
 ! deallocate particles
 !
-  write( *, "('INFO      : ',a)" ) "deallocate particle"
+  write( *, "('INFO      : ',a)" ) "deallocating the particle"
   call finit_particle()
 
 ! deallocate field variables
 !
-  write( *, "('INFO      : ',a)" ) "deallocating field components"
+  write( *, "('INFO      : ',a)" ) "deallocating the field components"
   call finit_fields()
 !
 end program paccel
