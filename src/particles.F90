@@ -752,16 +752,16 @@ module particles
 !
     integer                       :: n, m
     real(kind=PREC)               ::    t1, t2, t3, t4, t5
-    real(kind=PREC), dimension(3) :: x, x1, x2, x3, x4, x5
-    real(kind=PREC), dimension(3) :: v, v1, v2, v3, v4, v5
-    real(kind=PREC), dimension(3) :: p, p1, p2, p3, p4, p5
+    real(kind=PREC), dimension(3) :: x, x1, x2, x3, x4, x5, xt
+    real(kind=PREC), dimension(3) :: v, v1, v2, v3, v4, v5, vt
+    real(kind=PREC), dimension(3) :: p, p1, p2, p3, p4, p5, pt
     real(kind=PREC), dimension(3) ::    k1, k2, k3, k4, k5
     real(kind=PREC), dimension(3) ::    l1, l2, l3, l4, l5
     real(kind=PREC), dimension(3) :: a, u, b
     real(kind=PREC)               :: gamma
     real(kind=8   )               :: delta
     real(kind=8   )               :: ba, vu, vp, vr, en, ek, om, tg, rg
-    real(kind=8   )               :: t, dt, dtq, dtn, dtc, dtp
+    real(kind=8   )               :: t, dt, dtq, dtn, wl, wr, tp
 !
 !-------------------------------------------------------------------------------
 !
@@ -769,8 +769,7 @@ module particles
 !
     n   = 1
     t   = 0.0
-    dt  = 1.0e-8
-    dtc = tt(n) - t
+    dt  = 1.0e-16
     dtq = qom * dt
 
 ! initial position and velocity
@@ -950,19 +949,29 @@ module particles
 !
         t   = t + dt
 
-! update position, velocity and momentum
-!
-        x(:) = x5(:)
-        v(:) = v5(:)
-        p(:) = p5(:)
-
 ! copy data to array
 !
-        if (t .eq. tt(n)) then
+        do while (tt(n) .le. t .and. t .ge. tmin .and. t .lt. tmax)
+
+! calculate the left and right weights
+!
+          wl = (t - tt(n)) / dt
+          wr = 1.0d0 - wl
+
+! interpolate the particle state at the proper time
+!
+          tp    = wl * (t - dt) + wr * t
+          xt(:) = wl * x(:) + wr * x5(:)
+          vt(:) = wl * v(:) + wr * v5(:)
+          pt(:) = wl * p(:) + wr * p5(:)
+
+! calculate acceleration for the location x4 and velocity v4
+!
+          call acceleration(tp, xt, vt, a, u, b)
 
 ! separate particle velocity into parallel and perpendicular components
 !
-          call separate_velocity(v, b, ba, vu, vp, vr)
+          call separate_velocity(vt, b, ba, vu, vp, vr)
 
 ! calculate the particle gyroperiod and gyroradius
 !
@@ -980,27 +989,31 @@ module particles
 
 ! write the progress
 !
-          write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dtp, vu / c, ek, char(13)
+          write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, tp, dt, vu / c, ek, char(13)
 
 ! write results to the output file
 !
           open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-          write (10, "(25(1pe18.10))") t, x(1), x(2), x(3), p(1), p(2), p(3)   &
-                                        , v(1), v(2), v(3)                     &
-                                        , vu, vp, vr, vu / c, vp / c, vr / c   &
-                                        , gamma, en, ek, bavg * ba, om         &
-                                        , tg * fc, rg * ln, tg, rg
+          write (10, "(25(1pe18.10))") tp, xt(1), xt(2), xt(3)                 &
+                                   , pt(1), pt(2), pt(3), vt(1), vt(2), vt(3)  &
+                                   , vu, vp, vr, vu / c, vp / c, vr / c        &
+                                   , gamma, en, ek, bavg * ba, om              &
+                                   , tg * fc, rg * ln, tg, rg
           close (10)
 
           n = n + 1
 
-        end if
+        end do
+
+! update position, velocity and momentum
+!
+        x(:) = x5(:)
+        v(:) = v5(:)
+        p(:) = p5(:)
 
 ! update new timestep
 !
-        dtp = min(dtn, dtmax)
-        dtc = max(1.0e-16, tt(n) - t)
-        dt  = min(dtp, dtc)
+        dt  = min(2.0 * dt, dtn, dtmax, max(1.0e-16, tmax - t))
         dtq = qom * dt
 
       end if
@@ -1027,7 +1040,17 @@ module particles
 
 ! write the progress
 !
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dtp, vu / c, ek
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, vu / c, ek
+
+! write results to the output file
+!
+    open  (10, file = 'output.dat', form = 'formatted', position = 'append')
+    write (10, "(25(1pe18.10))") t, x(1), x(2), x(3), p(1), p(2), p(3)   &
+                                  , v(1), v(2), v(3)                     &
+                                  , vu, vp, vr, vu / c, vp / c, vr / c   &
+                                  , gamma, en, ek, bavg * ba, om         &
+                                  , tg * fc, rg * ln, tg, rg
+    close (10)
 !
 !-------------------------------------------------------------------------------
 !
