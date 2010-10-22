@@ -1,9 +1,8 @@
 #-------------------------------------------------------------------------------
 
-HOST    := $(shell hostname)
+HOST    := $(shell hostname -s)
 OS      := $(shell uname)
 
-COMPILER = GNU
 DEBUG    = N
 RELAT    = Y
 INTERP   = C
@@ -14,17 +13,26 @@ DIMS     = 3
 TEST     = WAVE
 LOSS     = N
 
-ifeq ($(COMPILER),GNU)
+# compiler and options
+#
 FC       = gfortran
 FFLAGS   = -O2
-endif
-ifeq ($(COMPILER),INTEL)
-FC       = ifort
-FFLAGS   = -O3 -i4 -mtune=core2 -xS
-endif
 LD       = $(FC)
 LDFLAGS  = $(FFLAGS)
 LIBS     =
+
+# include the host compilation options
+#
+ifeq ($(wildcard make.$(HOST)),make.$(HOST))
+$(info )
+$(info Using host compilation options from "$(wildcard make.$(HOST))".)
+$(info )
+include make.$(HOST)
+else
+$(info )
+$(info Using default compilation options.)
+$(info )
+endif
 
 ifeq ($(DEBUG),Y)
 FFLAGS += -g -DDEBUG
