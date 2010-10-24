@@ -1,25 +1,26 @@
 #-------------------------------------------------------------------------------
 
-HOST    := $(shell hostname -s)
-OS      := $(shell uname)
+HOST         := $(shell hostname -s)
+OS           := $(shell uname)
 
-DEBUG    = N
-RELAT    = Y
-INTERP   = C
-TVD      = Y
-BNDRY    = N
-PREC     = 8
-DIMS     = 3
-TEST     = WAVE
-LOSS     = N
+DEBUG         = N
+RELAT         = Y
+INTEGRATION   = RK4
+INTERPOLATION = C
+TVD           = Y
+BNDRY         = N
+PREC          = 8
+DIMS          = 3
+TEST          = WAVE
+LOSS          = N
 
 # compiler and options
 #
-FC       = gfortran
-FFLAGS   = -O2
-LD       = $(FC)
-LDFLAGS  = $(FFLAGS)
-LIBS     =
+FC            = gfortran
+FFLAGS        = -O2
+LD            = $(FC)
+LDFLAGS       = $(FFLAGS)
+LIBS          =
 
 # include the host compilation options
 #
@@ -40,10 +41,11 @@ endif
 ifeq ($(RELAT),Y)
 FFLAGS += -DRELAT
 endif
-ifeq ($(INTERP),L)
+FFLAGS += -D$(INTEGRATION)
+ifeq ($(INTERPOLATION),L)
 FFLAGS += -DTRILIN
 endif
-ifeq ($(INTERP),C)
+ifeq ($(INTERPOLATION),C)
 FFLAGS += -DTRICUB
 ifeq ($(TVD),Y)
 FFLAGS += -DTVD

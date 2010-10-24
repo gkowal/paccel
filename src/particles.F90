@@ -432,7 +432,7 @@ module particles
 !
 !===============================================================================
 !
-  subroutine integrate_trajectory()
+  subroutine integrate_trajectory_rk4()
 
     use params, only : c, tmin, tmax, rho, tolerance, dtmax, ndumps, vpar, vper
 
@@ -734,7 +734,7 @@ module particles
 
 !-------------------------------------------------------------------------------
 !
-  end subroutine integrate_trajectory
+  end subroutine integrate_trajectory_rk4
 !
 !===============================================================================
 !
@@ -742,7 +742,7 @@ module particles
 !
 !===============================================================================
 !
-  subroutine integrate_trajectory_log()
+  subroutine integrate_trajectory_rk4_log()
 
     use params, only : c, tmin, tmax, rho, tolerance, dtmax, ndumps, vpar, vper
 
@@ -1054,7 +1054,7 @@ module particles
 !
 !-------------------------------------------------------------------------------
 !
-  end subroutine integrate_trajectory_log
+  end subroutine integrate_trajectory_rk4_log
 !
 !===============================================================================
 !
