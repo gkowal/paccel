@@ -428,7 +428,8 @@ module particles
 !
 !===============================================================================
 !
-! integrate_trajectory: subroutine integrates particle trajectory
+! integrate_trajectory_rk4: subroutine integrates particle trajectory using
+!                           the 4th order RK method
 !
 !===============================================================================
 !
@@ -738,7 +739,9 @@ module particles
 !
 !===============================================================================
 !
-! integrate_trajectory: subroutine integrates particle trajectory
+! integrate_trajectory_rk4_log: subroutine integrates particle trajectory using
+!                               the 4th order method with snapshots equally
+!                               distributed in the logarithm of time
 !
 !===============================================================================
 !
