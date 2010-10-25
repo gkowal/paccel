@@ -435,7 +435,8 @@ module particles
 !
   subroutine integrate_trajectory_rk4()
 
-    use params, only : c, tmin, tmax, rho, tolerance, dtmax, ndumps, vpar, vper
+    use params, only : c, tmin, tmax, rho, tolerance, dtini, dtmax, ndumps,    &
+                       vpar, vper
 
     implicit none
 
@@ -461,7 +462,7 @@ module particles
     n   = 0
     m   = 0
     t   = 0.0
-    dt  = 1.0e-8
+    dt  = dtini
     dtq = qom * dt
 
 ! initial position and velocity
@@ -747,7 +748,8 @@ module particles
 !
   subroutine integrate_trajectory_rk4_log()
 
-    use params, only : c, tmin, tmax, rho, tolerance, dtmax, ndumps, vpar, vper
+    use params, only : c, tmin, tmax, rho, tolerance, dtini, dtmax, ndumps,    &
+                       vpar, vper
 
     implicit none
 
@@ -772,7 +774,7 @@ module particles
 !
     n   = 1
     t   = 0.0
-    dt  = 1.0e-16
+    dt  = dtini
     dtq = qom * dt
 
 ! initial position and velocity
