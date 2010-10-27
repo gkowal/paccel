@@ -1054,38 +1054,6 @@ module particles
 !
 !===============================================================================
 !
-! integrate_trajectory_si4: subroutine integrates particle trajectory using
-!                           the 4th order simplectic method
-!
-!===============================================================================
-!
-  subroutine integrate_trajectory_si4()
-
-    implicit none
-!
-!-------------------------------------------------------------------------------
-!
-! iterate until the t = tmax
-!
-! - find initial guess for Y1 and Y2
-!
-! - solve iteratively:
-!
-!   Y1 = y(n) + h * [ 1/4 * F(Y1) + (1/4 - sqrt(3)/6) * F(Y2) ]
-!   Y2 = y(n) + h * [ (1/4 + sqrt(3)/6) * F(Y1) + 1/4 * F(Y2) ]
-!
-! - estimated solution:
-!
-!   y(n+1) = y(n) + 0.5 * h * [ F(Y1) + F(Y2) ]
-!
-! end of iteration
-!
-!-------------------------------------------------------------------------------
-!
-  end subroutine integrate_trajectory_si4
-!
-!===============================================================================
-!
 ! pos2index: subroutine converts a given position to the array index
 !
 !===============================================================================
