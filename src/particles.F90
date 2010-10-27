@@ -1062,6 +1062,12 @@ module particles
   subroutine integrate_trajectory_si4()
 
     implicit none
+
+! local parameters
+!
+    real(kind=8), parameter :: a11 = 0.25, a12 = -0.03867513459481288225       &
+                             , a22 = 0.25, a21 =  0.53867513459481288225       &
+                             , b1  = 0.5 , b2  =  0.5
 !
 !-------------------------------------------------------------------------------
 !
@@ -1071,12 +1077,12 @@ module particles
 !
 ! - solve iteratively:
 !
-!   Y1 = y(n) + h * [ 1/4 * F(Y1) + (1/4 - sqrt(3)/6) * F(Y2) ]
-!   Y2 = y(n) + h * [ (1/4 + sqrt(3)/6) * F(Y1) + 1/4 * F(Y2) ]
+!   Y1 = y(n) + h * [ a11 * F(Y1) + a12 * F(Y2) ]
+!   Y2 = y(n) + h * [ a21 * F(Y1) + a22 * F(Y2) ]
 !
 ! - estimated solution:
 !
-!   y(n+1) = y(n) + 0.5 * h * [ F(Y1) + F(Y2) ]
+!   y(n+1) = y(n) + h * [ b1 * F(Y1) + b2 * F(Y2) ]
 !
 ! end of iteration
 !
