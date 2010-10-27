@@ -29,7 +29,8 @@ program paccel
   use fields   , only : init_fields, finit_fields
   use params   , only : read_params, output
   use particles, only : init_particle, finit_particle                          &
-                      , integrate_trajectory_rk4, integrate_trajectory_rk4_log
+                      , integrate_trajectory_rk4, integrate_trajectory_rk4_log &
+                      , integrate_trajectory_si4
 
   implicit none
 
@@ -75,6 +76,9 @@ program paccel
   if (output .eq. 'l') &
     call integrate_trajectory_rk4_log()
 #endif /* RK4 */
+#ifdef SI4
+  call integrate_trajectory_si4()
+#endif /* SI4 */
 
 ! display performance information
 !

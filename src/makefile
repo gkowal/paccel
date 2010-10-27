@@ -5,7 +5,7 @@ OS           := $(shell uname)
 
 DEBUG         = N
 RELAT         = Y
-INTEGRATION   = RK4
+INTEGRATION   = SI4
 INTERPOLATION = C
 TVD           = Y
 BNDRY         = N
