@@ -1255,66 +1255,66 @@ module particles
 !
 ! interpolate along the Y direction
 !
-    q1  = pcubic(dr(2), cy, f(ii(1),jj(1),1), f(ii(1),jj(2),1)                 &
-                          , f(ii(1),jj(3),1), f(ii(1),jj(4),1))
-    q2  = pcubic(dr(2), cy, f(ii(2),jj(1),1), f(ii(2),jj(2),1)                 &
-                          , f(ii(2),jj(3),1), f(ii(2),jj(4),1))
-    q3  = pcubic(dr(2), cy, f(ii(3),jj(1),1), f(ii(3),jj(2),1)                 &
-                          , f(ii(3),jj(3),1), f(ii(3),jj(4),1))
-    q4  = pcubic(dr(2), cy, f(ii(4),jj(1),1), f(ii(4),jj(2),1)                 &
-                          , f(ii(4),jj(3),1), f(ii(4),jj(4),1))
+    q1  = pcubic(cy, f(ii(1),jj(1),1), f(ii(1),jj(2),1)                        &
+                   , f(ii(1),jj(3),1), f(ii(1),jj(4),1))
+    q2  = pcubic(cy, f(ii(2),jj(1),1), f(ii(2),jj(2),1)                        &
+                   , f(ii(2),jj(3),1), f(ii(2),jj(4),1))
+    q3  = pcubic(cy, f(ii(3),jj(1),1), f(ii(3),jj(2),1)                        &
+                   , f(ii(3),jj(3),1), f(ii(3),jj(4),1))
+    q4  = pcubic(cy, f(ii(4),jj(1),1), f(ii(4),jj(2),1)                        &
+                   , f(ii(4),jj(3),1), f(ii(4),jj(4),1))
 #else /* DIMS == 2 */
 != tricubic interpolation =
 !
 ! interpolate along Z direction
 !
-    q11 = pcubic(dr(3), cz, f(ii(1),jj(1),kk(1)), f(ii(1),jj(1),kk(2))         &
-                          , f(ii(1),jj(1),kk(3)), f(ii(1),jj(1),kk(4)))
-    q12 = pcubic(dr(3), cz, f(ii(1),jj(2),kk(1)), f(ii(1),jj(2),kk(2))         &
-                          , f(ii(1),jj(2),kk(3)), f(ii(1),jj(2),kk(4)))
-    q13 = pcubic(dr(3), cz, f(ii(1),jj(3),kk(1)), f(ii(1),jj(3),kk(2))         &
-                          , f(ii(1),jj(3),kk(3)), f(ii(1),jj(3),kk(4)))
-    q14 = pcubic(dr(3), cz, f(ii(1),jj(4),kk(1)), f(ii(1),jj(4),kk(2))         &
-                          , f(ii(1),jj(4),kk(3)), f(ii(1),jj(4),kk(4)))
+    q11 = pcubic(cz, f(ii(1),jj(1),kk(1)), f(ii(1),jj(1),kk(2))                &
+                   , f(ii(1),jj(1),kk(3)), f(ii(1),jj(1),kk(4)))
+    q12 = pcubic(cz, f(ii(1),jj(2),kk(1)), f(ii(1),jj(2),kk(2))                &
+                   , f(ii(1),jj(2),kk(3)), f(ii(1),jj(2),kk(4)))
+    q13 = pcubic(cz, f(ii(1),jj(3),kk(1)), f(ii(1),jj(3),kk(2))                &
+                   , f(ii(1),jj(3),kk(3)), f(ii(1),jj(3),kk(4)))
+    q14 = pcubic(cz, f(ii(1),jj(4),kk(1)), f(ii(1),jj(4),kk(2))                &
+                   , f(ii(1),jj(4),kk(3)), f(ii(1),jj(4),kk(4)))
 
-    q21 = pcubic(dr(3), cz, f(ii(2),jj(1),kk(1)), f(ii(2),jj(1),kk(2))         &
-                          , f(ii(2),jj(1),kk(3)), f(ii(2),jj(1),kk(4)))
-    q22 = pcubic(dr(3), cz, f(ii(2),jj(2),kk(1)), f(ii(2),jj(2),kk(2))         &
-                          , f(ii(2),jj(2),kk(3)), f(ii(2),jj(2),kk(4)))
-    q23 = pcubic(dr(3), cz, f(ii(2),jj(3),kk(1)), f(ii(2),jj(3),kk(2))         &
-                          , f(ii(2),jj(3),kk(3)), f(ii(2),jj(3),kk(4)))
-    q24 = pcubic(dr(3), cz, f(ii(2),jj(4),kk(1)), f(ii(2),jj(4),kk(2))         &
-                          , f(ii(2),jj(4),kk(3)), f(ii(2),jj(4),kk(4)))
+    q21 = pcubic(cz, f(ii(2),jj(1),kk(1)), f(ii(2),jj(1),kk(2))                &
+                   , f(ii(2),jj(1),kk(3)), f(ii(2),jj(1),kk(4)))
+    q22 = pcubic(cz, f(ii(2),jj(2),kk(1)), f(ii(2),jj(2),kk(2))                &
+                   , f(ii(2),jj(2),kk(3)), f(ii(2),jj(2),kk(4)))
+    q23 = pcubic(cz, f(ii(2),jj(3),kk(1)), f(ii(2),jj(3),kk(2))                &
+                   , f(ii(2),jj(3),kk(3)), f(ii(2),jj(3),kk(4)))
+    q24 = pcubic(cz, f(ii(2),jj(4),kk(1)), f(ii(2),jj(4),kk(2))                &
+                   , f(ii(2),jj(4),kk(3)), f(ii(2),jj(4),kk(4)))
 
-    q31 = pcubic(dr(3), cz, f(ii(3),jj(1),kk(1)), f(ii(3),jj(1),kk(2))         &
-                          , f(ii(3),jj(1),kk(3)), f(ii(3),jj(1),kk(4)))
-    q32 = pcubic(dr(3), cz, f(ii(3),jj(2),kk(1)), f(ii(3),jj(2),kk(2))         &
-                          , f(ii(3),jj(2),kk(3)), f(ii(3),jj(2),kk(4)))
-    q33 = pcubic(dr(3), cz, f(ii(3),jj(3),kk(1)), f(ii(3),jj(3),kk(2))         &
-                          , f(ii(3),jj(3),kk(3)), f(ii(3),jj(3),kk(4)))
-    q34 = pcubic(dr(3), cz, f(ii(3),jj(4),kk(1)), f(ii(3),jj(4),kk(2))         &
-                          , f(ii(3),jj(4),kk(3)), f(ii(3),jj(4),kk(4)))
+    q31 = pcubic(cz, f(ii(3),jj(1),kk(1)), f(ii(3),jj(1),kk(2))                &
+                   , f(ii(3),jj(1),kk(3)), f(ii(3),jj(1),kk(4)))
+    q32 = pcubic(cz, f(ii(3),jj(2),kk(1)), f(ii(3),jj(2),kk(2))                &
+                   , f(ii(3),jj(2),kk(3)), f(ii(3),jj(2),kk(4)))
+    q33 = pcubic(cz, f(ii(3),jj(3),kk(1)), f(ii(3),jj(3),kk(2))                &
+                   , f(ii(3),jj(3),kk(3)), f(ii(3),jj(3),kk(4)))
+    q34 = pcubic(cz, f(ii(3),jj(4),kk(1)), f(ii(3),jj(4),kk(2))                &
+                   , f(ii(3),jj(4),kk(3)), f(ii(3),jj(4),kk(4)))
 
-    q41 = pcubic(dr(3), cz, f(ii(4),jj(1),kk(1)), f(ii(4),jj(1),kk(2))         &
-                          , f(ii(4),jj(1),kk(3)), f(ii(4),jj(1),kk(4)))
-    q42 = pcubic(dr(3), cz, f(ii(4),jj(2),kk(1)), f(ii(4),jj(2),kk(2))         &
-                          , f(ii(4),jj(2),kk(3)), f(ii(4),jj(2),kk(4)))
-    q43 = pcubic(dr(3), cz, f(ii(4),jj(3),kk(1)), f(ii(4),jj(3),kk(2))         &
-                          , f(ii(4),jj(3),kk(3)), f(ii(4),jj(3),kk(4)))
-    q44 = pcubic(dr(3), cz, f(ii(4),jj(4),kk(1)), f(ii(4),jj(4),kk(2))         &
-                          , f(ii(4),jj(4),kk(3)), f(ii(4),jj(4),kk(4)))
+    q41 = pcubic(cz, f(ii(4),jj(1),kk(1)), f(ii(4),jj(1),kk(2))                &
+                   , f(ii(4),jj(1),kk(3)), f(ii(4),jj(1),kk(4)))
+    q42 = pcubic(cz, f(ii(4),jj(2),kk(1)), f(ii(4),jj(2),kk(2))                &
+                   , f(ii(4),jj(2),kk(3)), f(ii(4),jj(2),kk(4)))
+    q43 = pcubic(cz, f(ii(4),jj(3),kk(1)), f(ii(4),jj(3),kk(2))                &
+                   , f(ii(4),jj(3),kk(3)), f(ii(4),jj(3),kk(4)))
+    q44 = pcubic(cz, f(ii(4),jj(4),kk(1)), f(ii(4),jj(4),kk(2))                &
+                   , f(ii(4),jj(4),kk(3)), f(ii(4),jj(4),kk(4)))
 
 ! interpolate along the Y direction
 !
-    q1  = pcubic(dr(2), cy, q11, q12, q13, q14)
-    q2  = pcubic(dr(2), cy, q21, q22, q23, q24)
-    q3  = pcubic(dr(2), cy, q31, q32, q33, q34)
-    q4  = pcubic(dr(2), cy, q41, q42, q43, q44)
+    q1  = pcubic(cy, q11, q12, q13, q14)
+    q2  = pcubic(cy, q21, q22, q23, q24)
+    q3  = pcubic(cy, q31, q32, q33, q34)
+    q4  = pcubic(cy, q41, q42, q43, q44)
 #endif /* DIMS == 2 */
 
 ! interpolate along the X direction
 !
-    q   = pcubic(dr(1), cx, q1 , q2 , q3 , q4 )
+    q   = pcubic(cx, q1 , q2 , q3 , q4 )
 #endif /* TRICUB */
 !
 !------------------------------------------------------------------------------
@@ -1350,13 +1350,12 @@ module particles
 !
 !===============================================================================
 !
-  real(kind=8) function pcubic(x, c, fk, fl, fr, fq) result(q)
+  real(kind=8) function pcubic(c, fk, fl, fr, fq) result(q)
 
     implicit none
 
 ! input and output arguments
 !
-    real(kind=8)              , intent(in)  :: x
     real(kind=8), dimension(4), intent(in)  :: c
     real(kind=4)              , intent(in)  :: fk, fl, fr, fq
 
