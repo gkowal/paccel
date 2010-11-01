@@ -1070,7 +1070,7 @@ module particles
 ! local variables
 !
     integer                         :: n, m
-    real(kind=PREC), dimension(2,6) :: y
+    real(kind=PREC), dimension(2,6) :: y, y0, y1, y2
     real(kind=PREC), dimension(3)   :: x , u , p , a
     real(kind=PREC), dimension(3)   :: x1, u1, p1, a1
     real(kind=PREC), dimension(3)   :: x2, u2, p2, a2
@@ -1078,6 +1078,23 @@ module particles
     real(kind=8   ), dimension(3)   :: v, b
     real(kind=8   )                 :: t, dt, ds
     real(kind=8   )                 :: en, ek, ua, ba, up, ur, om, tg, rg
+
+! local flags
+!
+    logical :: flag = .true.
+
+! local parameters
+!
+    real(kind=8), parameter :: ac1  =    4.82308546376020871664d0              &
+                             , ac2  =   67.17691453623979128336d0
+    real(kind=8), parameter :: bc11 = -  8.36344801571300286532d0              &
+                             , bc12 =    7.48780366869514391996d0              &
+                             , bc21 = -115.48780366869514391996d0              &
+                             , bc22 =   90.36344801571300286532d0
+    real(kind=8), parameter :: gc11 = -  5.79422863405994782084d0              &
+                             , gc12 =    2.84678751731759804956d0              &
+                             , gc21 = - 50.84678751731759804956d0              &
+                             , gc22 =    9.79422863405994782084d0
 !
 !-------------------------------------------------------------------------------
 !
@@ -1126,12 +1143,34 @@ module particles
 !
     do while (t .le. tmax)
 
-! - TODO: find the initial guess for the states Y1 and Y2
+! update the previous estimates of Y1 and Y2
 !
-      y(1,1:3) = x(:)
-      y(1,4:6) = p(:)
-      y(2,1:3) = x(:)
-      y(2,4:6) = p(:)
+      y2 = y1
+      y1 = y
+
+      y0(1,1:3) = x(:)
+      y0(1,4:6) = p(:)
+      y0(2,1:3) = x(:)
+      y0(2,4:6) = p(:)
+
+! find the initial guess for the states Y1 and Y2
+!
+      if (flag) then
+
+        y(1,1:3) = x(:)
+        y(1,4:6) = p(:)
+        y(2,1:3) = x(:)
+        y(2,4:6) = p(:)
+
+      else
+
+        y(1,1:6) = ac1 * y0(1,1:6) + bc11 * y2(1,1:6) + bc12 * y2(2,1:6)       &
+                                   + gc11 * y1(1,1:6) + gc12 * y1(2,1:6)
+        y(2,1:6) = ac2 * y0(2,1:6) + bc21 * y2(1,1:6) + bc22 * y2(2,1:6)       &
+                                   + gc21 * y1(1,1:6) + gc22 * y1(2,1:6)
+
+        flag = .false.
+      end if
 
 ! estimate the states Y1 and Y2 iteratively
 !
