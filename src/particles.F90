@@ -1057,7 +1057,8 @@ module particles
 ! integrate_trajectory_si4: subroutine integrates particle trajectory using
 !                           the 4th order simplectic method
 !
-! reference: Mackey, Marchand & Kabin, 2006, JGR, 111, A06208
+! references: Mackey, Marchand & Kabin, 2006, JGR, 111, A06208
+!             Calvo, Laburta & Montijano, 2003, CaMwA, 25, 401
 !
 !===============================================================================
 !
