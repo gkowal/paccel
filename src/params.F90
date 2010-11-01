@@ -63,6 +63,7 @@ module params
   real                , save :: tolerance = 1.0e-4       ! integration tolerance
   real                , save :: dtini     = 1.0e-8       ! the initial time step
   real                , save :: dtmax     = 1.0          ! maximum allowed step size
+  integer             , save :: maxit     = 1000         ! the limit of iterations
 
 ! the parameters controlling the data output
 !
@@ -163,6 +164,9 @@ module params
         read (value  , *) dtini
       case ('dtmax')
         read (value  , *) dtmax
+
+      case ('maxit')
+        read (value  , "(i9)") maxit
 
       case ('output')
         l = len_trim(value)

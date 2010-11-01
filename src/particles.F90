@@ -1057,155 +1057,156 @@ module particles
 ! integrate_trajectory_si4: subroutine integrates particle trajectory using
 !                           the 4th order simplectic method
 !
+! reference: Mackey, Marchand & Kabin, 2006, JGR, 111, A06208
+!
 !===============================================================================
 !
   subroutine integrate_trajectory_si4()
 
-    use params, only : dtmax, tmin, tmax, c, ndumps
+    use params, only : dtmax, tmax, c, ndumps
 
     implicit none
 
 ! local variables
 !
     integer                         :: n, m
-    real(kind=PREC), dimension(3)   :: x, v, p, a, xn, pn, x1, x2, p1, p2, u1, u2, a1, a2
-    real(kind=PREC), dimension(2,6) :: y, yn
-    real(kind=PREC), dimension(3)   :: u, b, xt, vt, pt
-    real(kind=8   )                 :: t, dt, dtq, vu, gamma, g1, g2
-    real(kind=8   )                 :: wl, wr, tp, en, ek, ba, vp, vr, om, tg, rg
-
-! local parameters
-!
-    real(kind=8), parameter         :: b1  = 0.5 , b2  =  0.5
+    real(kind=PREC), dimension(2,6) :: y
+    real(kind=PREC), dimension(3)   :: x , u , p , a
+    real(kind=PREC), dimension(3)   :: x1, u1, p1, a1
+    real(kind=PREC), dimension(3)   :: x2, u2, p2, a2
+    real(kind=PREC)                 :: gm, g1, g2
+    real(kind=8   ), dimension(3)   :: v, b
+    real(kind=8   )                 :: t, dt, ds
+    real(kind=8   )                 :: en, ek, ua, ba, up, ur, om, tg, rg
 !
 !-------------------------------------------------------------------------------
 !
-! initialize time
+! initialize the iteration number, snapshot number, time, and time steps
 !
-    n   = 0
-    m   = 0
-    t   = 0.0
-    dt  = dtmax
-    dtq = qom * dt
+    n  = 0
+    m  = 0
+    t  = 0.0d0
+    dt = dtmax
+    ds = qom * dt
 
-! initial position velocity, and momentum
+! substitute the initial position, velocity, and momentum
 !
     x(:) = x0(:)
-    v(:) = v0(:)
+    u(:) = v0(:)
     p(:) = p0(:)
 
-! calculate parameters
+! calculate the particle speed
 !
-    vu = sqrt(sum(v(:)**2))
+    ua = sqrt(sum(u(:)**2))
 
 ! calculate the Lorentz factor
 !
-    gamma = lorentz_factor(p)
+    gm = lorentz_factor(p)
 
-! calculate particle energy
+! calculate the particle energy
 !
 #ifdef RELAT
-    en = gamma * mrest
+    en = gm * mrest
     ek = en - mrest
-#else
-    en = 0.5 * vu**2
+#else /* RELAT */
+    en = 0.5 * ua * ua
     ek = en
-#endif
+#endif /* RELAT */
 
 ! print the progress information
 !
-    write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP', 'SPEED (c)', 'ENERGY (MeV)'
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, vu, ek, char(13)
+    write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP'       &
+            , 'SPEED (c)', 'ENERGY (MeV)'
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua, ek        &
+            , char(13)
 
 !== INTEGRATION LOOP ==
 !
-! integrate particles
+! iterate until the maximum time is reached
 !
     do while (t .le. tmax)
 
-! iterate until the t = tmax
-!
-! - TODO: find initial guess for Y1 and Y2
+! - TODO: find the initial guess for the states Y1 and Y2
 !
       y(1,1:3) = x(:)
       y(1,4:6) = p(:)
       y(2,1:3) = x(:)
       y(2,4:6) = p(:)
 
-! - solve iteratively:
+! estimate the states Y1 and Y2 iteratively
 !
 !   Y1 = y(n) + h * [ a11 * F(Y1) + a12 * F(Y2) ]
 !   Y2 = y(n) + h * [ a21 * F(Y1) + a22 * F(Y2) ]
 !
-      call bicgstab(y, yn, t, dt, dtq)
+      call estimate(x, p, y, t, dt, ds)
 
-! calculate acceleration at y1 and y2
+! obtain the positions, momenta, gammas, and velocities for the estimated states
 !
-      x1(:) = yn(1,1:3)
-      x2(:) = yn(2,1:3)
-      p1(:) = yn(1,4:6)
-      p2(:) = yn(2,4:6)
+      x1(:) = y(1,1:3)
+      x2(:) = y(2,1:3)
+      p1(:) = y(1,4:6)
+      p2(:) = y(2,4:6)
       g1    = lorentz_factor(p1(:))
       g2    = lorentz_factor(p2(:))
       u1(:) = p1(:) / g1
       u2(:) = p2(:) / g2
 
-! calculate the acceleration at the locations x1 and x2
+! calculate the acceleration at the estimated states
 !
-      call acceleration(t, x1(1:3), u1(1:3), a1(1:3), u, b)
-      call acceleration(t, x2(1:3), u2(1:3), a2(1:3), u, b)
+      call acceleration(t, x1(1:3), u1(1:3), a1(1:3), v, b)
+      call acceleration(t, x2(1:3), u2(1:3), a2(1:3), v, b)
 
-! - estimated solution:
+! update the solution
 !
 !   y(n+1) = y(n) + h * [ b1 * F(Y1) + b2 * F(Y2) ]
 !
-      x(:) = x(:) + dt  * (b1 * u1(1:3) + b2 * u2(1:3))
-      p(:) = p(:) + dtq * (b1 * a1(1:3) + b2 * a2(1:3))
+      x(:) = x(:) + 0.5d0 * dt * (u1(1:3) + u2(1:3))
+      p(:) = p(:) + 0.5d0 * ds * (a1(1:3) + a2(1:3))
 
-! update time
+! update the integration time
 !
       t = t + dt
 
-! copy data to array
+! store the particle parameters at a given snapshot
 !
       if (m .eq. ndumps) then
 
-! calculate velocity
+! calculate the Lorentz factor and particle velocity
 !
-        gamma = lorentz_factor(p(:))
-        v(:)  = p(:) / gamma
+        gm   = lorentz_factor(p(:))
+        u(:) = p(:) / gm
 
 ! calculate the acceleration at the locations x1 and x2
 !
-        call acceleration(t, x(1:3), v(1:3), a(1:3), u, b)
+        call acceleration(t, x(1:3), u(1:3), a(1:3), v, b)
 
 ! separate particle velocity into parallel and perpendicular components
 !
-        call separate_velocity(v, b, ba, vu, vp, vr)
+        call separate_velocity(u, b, ba, ua, up, ur)
 
 ! calculate the particle gyroperiod and gyroradius
 !
-        call gyro_parameters(gamma, ba, vr, om, tg, rg)
+        call gyro_parameters(gm, ba, ur, om, tg, rg)
 
 ! calculate particle energy
 !
 #ifdef RELAT
-        en = gamma * mrest
+        en = gm * mrest
         ek = en - mrest
 #else
-        en = 0.5 * vu**2
+        en = 0.5 * ua * ua
         ek = en
 #endif
 
 ! write the progress
 !
-        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, vu / c, ek, char(13)
+        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek, char(13)
 
 ! write results to the output file
 !
         open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-        write (10, "(19(1pe18.10))") t, x(1), x(2), x(3), v(1), v(2), v(3)   &
-                                   , vu / c, vp / c, vr / c, gamma, en, ek   &
+        write (10, "(19(1pe18.10))") t, x(1), x(2), x(3), u(1), u(2), u(3)     &
+                                   , ua / c, up / c, ur / c, gm, en, ek        &
                                    , bavg * ba, om, tg * fc, rg * ln, tg, rg
         close (10)
 
@@ -1224,7 +1225,7 @@ module particles
 
 ! write the progress
 !
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, vu / c, ek
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua / c, ek
 !
 !-------------------------------------------------------------------------------
 !
@@ -1232,176 +1233,91 @@ module particles
 !
 !===============================================================================
 !
-! integrate_trajectory_si4: subroutine integrates particle trajectory using
-!                           the 4th order simplectic method
+! estimate: subroutine estimates the solution for the equation of motion using
+!           a simple functional iteration
 !
 !===============================================================================
 !
-  subroutine bicgstab(y, w, s, h, l)
+  subroutine estimate(x, p, y, t, dt, ds)
+
+    use params, only : tolerance, maxit
 
     implicit none
 
 ! subroutine arguments
 !
-    real(kind=PREC), dimension(2,6), intent(inout) :: y, w
-    real(kind=PREC)                , intent(in)    :: s, h, l
+    real(kind=PREC), dimension(3)  , intent(inout) :: x, p
+    real(kind=PREC), dimension(2,6), intent(inout) :: y
+    real(kind=PREC)                , intent(in)    :: t, dt, ds
 
 ! local variables
 !
-    integer                         :: n
-    real(kind=PREC), dimension(2,6) :: r, r0, p, v, t
-    real(kind=PREC)                 :: alpha, beta, rho, omega, temp, maxq
+    integer                         :: it
+    real(kind=PREC), dimension(2,6) :: yn
+    real(kind=PREC), dimension(3)   :: x1, p1, u1, a1
+    real(kind=PREC), dimension(3)   :: x2, p2, u2, a2
+    real(kind=PREC), dimension(3)   :: v, b
+    real(kind=PREC)                 :: g1, g2, eps
 
-! local parameters
+! local parameter
 !
-    integer, parameter :: maxit = 1000
-    real   , parameter :: tol   = 1.0e-16
+    real(kind=8), parameter :: a11 = 0.25d0, a12 = -0.03867513459481288225d0   &
+                             , a22 = 0.25d0, a21 =  0.53867513459481288225d0
 !
 !-------------------------------------------------------------------------------
 !
-! prepare the particle position, momentum, and velocity
+! initiate the iteration control parameters
 !
-    call operator(s, h, l, y, w)
+    it  = 1
+    eps = 1.0e+16
 
-! initialize the residua and method variables
+! perform the simple functional iteration until the conditions are met
 !
-    r (:,:) = y(:,:) - w(:,:)
-    r0(:,:) = r(:,:)
-    w (:,:) = y(:,:)
-    p (:,:) = 0.0
-    v (:,:) = 0.0
+    do while (eps .gt. tolerance .and. it .lt. maxit)
 
-! initialize the method parameters
+! prepare the initial particle position and momentum
 !
-    rho   = 1.0
-    alpha = 1.0
-    omega = 1.0
+      x1(:) = y(1,1:3)
+      x2(:) = y(2,1:3)
+      p1(:) = y(1,4:6)
+      p2(:) = y(2,4:6)
 
-! peform the iteratation
+! calculate the Lorentz factors and particle velocity
 !
-    do n = 1, maxit
+      g1    = lorentz_factor(p1(:))
+      g2    = lorentz_factor(p2(:))
+      u1(:) = p1(:) / g1
+      u2(:) = p2(:) / g2
 
-      maxq  = maxval(abs(w))
+! calculate the accelerations
+!
+      call acceleration(t, x1(1:3), u1(1:3), a1(1:3), v, b)
+      call acceleration(t, x2(1:3), u2(1:3), a2(1:3), v, b)
 
-      temp = norm(r0, r)
-      if (temp .eq. 0.0) go to 100
+! update the positions and momenta
+!
+      yn(1,1:3) = x(1:3) + dt * (a11 * u1(1:3) + a12 * u2(1:3))
+      yn(1,4:6) = p(1:3) + ds * (a11 * a1(1:3) + a12 * a2(1:3))
+      yn(2,1:3) = x(1:3) + dt * (a21 * u1(1:3) + a22 * u2(1:3))
+      yn(2,4:6) = p(1:3) + ds * (a21 * a1(1:3) + a22 * a2(1:3))
 
-      beta = alpha * (temp / rho) / omega
-      rho  = temp
+! calculate the maximum of residuum
+!
+      eps = maxval(abs(yn - y))
 
-      p = r + beta * p
+! substitute the new solution
+!
+      y = yn
 
-      call operator(s, h, l, p, v)
-
-      temp  = norm(r0, v)
-      alpha = rho / temp
-
-      w = w + alpha * p
-      r = r - alpha * v
-
-      if (maxval(abs(r))/maxq .lt. tol) go to 100
-
-      call operator(s, h, l, r, t)
-
-      temp  = norm(t, t)
-      omega = norm(t, r) / temp
-
-      w = w + omega * r
-      r = r - omega * t
-
-      if (maxval(abs(r))/maxq .lt. tol) go to 100
-
-      p = p - omega * v
+! increase the iteration counter
+!
+      it = it + 1
 
     end do
-
-100 continue
 !
 !-------------------------------------------------------------------------------
 !
-  end subroutine bicgstab
-!
-!===============================================================================
-!
-! operator: subroutine calculates the right hand side of the differential
-!           equation
-!
-!===============================================================================
-!
-  subroutine operator(s, h, l, y, w)
-
-    implicit none
-
-! subroutine arguments
-!
-    real(kind=PREC)                , intent(in)  :: s, h, l
-    real(kind=PREC), dimension(2,6), intent(in)  :: y
-    real(kind=PREC), dimension(2,6), intent(out) :: w
-
-! local variables
-!
-    real(kind=PREC), dimension(3)   :: x1, x2, p1, p2, u1, u2, a1, a2
-    real(kind=PREC), dimension(3)   :: u, b
-    real(kind=PREC)                 :: g1, g2
-
-! local parameters
-!
-    real(kind=8), parameter :: a11 = 0.25, a12 = -0.03867513459481288225       &
-                             , a22 = 0.25, a21 =  0.53867513459481288225
-!
-!-------------------------------------------------------------------------------
-!
-! prepare the particle position, momentum, and velocity
-!
-    x1(:) = y(1,1:3)
-    x2(:) = y(2,1:3)
-    p1(:) = y(1,4:6)
-    p2(:) = y(2,4:6)
-    g1    = lorentz_factor(p1(:))
-    g2    = lorentz_factor(p2(:))
-    u1(:) = p1(:) / g1
-    u2(:) = p2(:) / g2
-
-! calculate the acceleration at the locations x1 and x2
-!
-    call acceleration(s, x1(1:3), u1(1:3), a1(1:3), u, b)
-    call acceleration(s, x2(1:3), u2(1:3), a2(1:3), u, b)
-
-! prepare the right hand side of the differential equation
-!
-    w(1,1:3) = y(1,1:3) - h * (a11 * u1(1:3) + a12 * u2(1:3))
-    w(1,4:6) = y(1,4:6) - l * (a11 * a1(1:3) + a12 * a2(1:3))
-    w(2,1:3) = y(2,1:3) - h * (a21 * u1(1:3) + a22 * u2(1:3))
-    w(2,4:6) = y(2,4:6) - l * (a21 * a1(1:3) + a22 * a2(1:3))
-!
-!-------------------------------------------------------------------------------
-!
-  end subroutine operator
-!
-!===============================================================================
-!
-! norm: function calculates the norm of the product of two arrays
-!
-!===============================================================================
-!
-  function norm(a, b)
-
-    implicit none
-
-! input arguments
-!
-    real(kind=PREC), dimension(2,6), intent(in) :: a, b
-    real(kind=PREC)                             :: norm
-!
-!-------------------------------------------------------------------------------
-!
-    norm = sum(a(:,:) * b(:,:))
-
-    return
-!
-!-------------------------------------------------------------------------------
-!
-  end function norm
+  end subroutine estimate
 !
 !===============================================================================
 !
