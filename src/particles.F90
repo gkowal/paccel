@@ -1064,7 +1064,7 @@ module particles
 !
   subroutine integrate_trajectory_si4()
 
-    use params, only : dtmax, tmax, c, ndumps
+    use params, only : dtini, tmax, c, ndumps
 
     implicit none
 
@@ -1106,7 +1106,7 @@ module particles
     n  = 0
     m  = 0
     t  = 0.0d0
-    dt = dtmax
+    dt = dtini
     ds = qom * dt
 
 ! substitute the initial position, velocity, and momentum
