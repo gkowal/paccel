@@ -1088,6 +1088,8 @@ module particles
 !
     real(kind=8), parameter :: ac1  =    4.82308546376020871664d0              &
                              , ac2  =   67.17691453623979128336d0
+    real(kind=8), parameter :: bc1  =    0.21132486540518711775d0              &
+                             , bc2  =    0.78867513459481288225d0
     real(kind=8), parameter :: bc11 = -  8.36344801571300286532d0              &
                              , bc12 =    7.48780366869514391996d0              &
                              , bc21 = -115.48780366869514391996d0              &
@@ -1112,6 +1114,10 @@ module particles
     x(:) = x0(:)
     u(:) = v0(:)
     p(:) = p0(:)
+
+! calculate the acceleration at the starting point
+!
+    call acceleration(t, x, u, a, v, b)
 
 ! calculate the particle speed
 !
@@ -1158,10 +1164,10 @@ module particles
 !
       if (flag) then
 
-        y(1,1:3) = x(:)
-        y(1,4:6) = p(:)
-        y(2,1:3) = x(:)
-        y(2,4:6) = p(:)
+        y(1,1:3) = x(:) + bc1 * dt * u(:)
+        y(1,4:6) = p(:) + bc1 * ds * a(:)
+        y(2,1:3) = x(:) + bc2 * dt * u(:)
+        y(2,4:6) = p(:) + bc2 * ds * a(:)
 
       else
 
