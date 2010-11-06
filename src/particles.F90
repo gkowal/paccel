@@ -434,7 +434,7 @@ module particles
 !
   subroutine integrate_trajectory_rk4()
 
-    use params, only : c, tmin, tmax, rho, tolerance, dtini, dtmax, ndumps,    &
+    use params, only : c, tmin, tmax, rho, maxtol, dtini, dtmax, ndumps,    &
                        vpar, vper
 
     implicit none
@@ -626,9 +626,9 @@ module particles
 
 ! estimate new timestep
 !
-      dtn   = dt * (rho * tolerance / delta)**0.2
+      dtn   = dt * (rho * maxtol / delta)**0.2
 
-      if (delta .gt. tolerance) then
+      if (delta .gt. maxtol) then
 
 ! repeat integration with this timestep
 !
@@ -743,7 +743,7 @@ module particles
 !
   subroutine integrate_trajectory_rk4_log()
 
-    use params, only : c, tmin, tmax, rho, tolerance, dtini, dtmax, ndumps,    &
+    use params, only : c, tmin, tmax, rho, maxtol, dtini, dtmax, ndumps,    &
                        vpar, vper
 
     implicit none
@@ -934,9 +934,9 @@ module particles
 
 ! estimate new timestep
 !
-      dtn   = dt * (rho * tolerance / delta)**0.2
+      dtn   = dt * (rho * maxtol / delta)**0.2
 
-      if (delta .gt. tolerance) then
+      if (delta .gt. maxtol) then
 
 ! repeat integration with this timestep
 !
