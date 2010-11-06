@@ -1286,7 +1286,7 @@ module particles
 !
   subroutine estimate(x, p, y, t, dt, ds)
 
-    use params, only : tolerance, maxit
+    use params, only : maxeps, maxit
 
     implicit none
 
@@ -1319,7 +1319,7 @@ module particles
 
 ! perform the simple functional iteration until the conditions are met
 !
-    do while (eps .gt. tolerance .and. it .lt. maxit)
+    do while (eps .gt. maxeps .and. it .lt. maxit)
 
 ! prepare the initial particle position and momentum
 !

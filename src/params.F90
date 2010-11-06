@@ -61,6 +61,7 @@ module params
   real                , save :: vper     = 0.1           ! initial perpendicular speed [in c]
   real                , save :: rho      = 0.5           ! safety coefficient
   real                , save :: tolerance = 1.0e-4       ! integration tolerance
+  real                , save :: maxeps    = 1.0e-15      ! the maximum iteration error
   real                , save :: dtini     = 1.0e-8       ! the initial time step
   real                , save :: dtmax     = 1.0          ! maximum allowed step size
   integer             , save :: maxit     = 1000         ! the limit of iterations
@@ -164,6 +165,8 @@ module params
         read (value  , *) dtini
       case ('dtmax')
         read (value  , *) dtmax
+      case ('maxeps')
+        read (value  , *) maxeps
 
       case ('maxit')
         read (value  , "(i9)") maxit
