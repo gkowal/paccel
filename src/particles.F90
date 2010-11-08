@@ -1344,7 +1344,7 @@ module particles
       call acceleration(t, x1(1:3), u1(1:3), a1(1:3), v, b)
       call acceleration(t, x2(1:3), u2(1:3), a2(1:3), v, b)
 
-! calculate error
+! calculate the error and estimate the new time step
 !
       u1a     = max(1.0e-16, sqrt(sum(u1(:) * u1(:))))
       u2a     = max(1.0e-16, sqrt(sum(u2(:) * u2(:))))
