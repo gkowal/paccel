@@ -1323,7 +1323,7 @@ module particles
 
 ! perform the simple functional iteration until the conditions are met
 !
-    do while (eps .gt. maxeps .and. it .lt. maxit)
+    do while ((eps .gt. maxeps .or. abs(maxtol / tol - 1.0d0) .gt. 1.0e-8) .and. it .lt. maxit)
 
 ! prepare the initial particle position and momentum
 !
