@@ -396,10 +396,10 @@ module particles
 ! prepare dump times
 !
     if (output .eq. 'l') then
-      n = ndumps * (alog10(tmax) - alog10(tmin)) + 1
+      n = ndumps * (dlog10(tmax) - dlog10(tmin)) + 1
       allocate(tt(n))
       do p = 1, n
-        tt(p) = 10.0d0**((p - 1.0) / ndumps + alog10(tmin))
+        tt(p) = 10.0d0**((p - 1.0) / ndumps + dlog10(tmin))
       enddo
     endif
 !
@@ -1807,7 +1807,7 @@ module particles
 
     use fields, only : ux, uy, uz, bx, by, bz
 #ifdef TEST
-    use params, only : omega, bini, bamp, vamp, freq, epar
+    use params, only : bini, bamp, vamp, freq, epar
 #endif /* TEST */
 
     implicit none
@@ -1871,8 +1871,6 @@ module particles
 #endif /* WTEST */
 
 #ifdef ITEST
-!         ra   = 1.0 + amp * sin(pi2 * omega * t)
-!         rb   = amp * pi2 * omega * cos(pi2 * omega * t)
         ra   = 1.0 + bamp
 
         rt   = sqrt(x(1) * x(1) + x(2) * x(2))
@@ -1880,13 +1878,6 @@ module particles
         u(1) = - x(1)
         u(2) =   x(2)
         u(3) = 0.0
-!         if (rt .gt. 0.0) then
-!           u(1) = - x(1) * rb / ra**2
-!           u(2) =   x(2) * rb
-!           u(3) = 0.0
-!         else
-!           u(:) = 0.0
-!         end if
 
         xt   = x(1) / ra
         yt   = x(2) * ra
