@@ -1104,7 +1104,7 @@ module particles
 !
 ! initialize the iteration number, snapshot number, time, and time steps
 !
-    n  = 0
+    n  = 1
     m  = 0
     t  = 0.0d0
     dt = dtini
@@ -1346,12 +1346,12 @@ module particles
 
 ! calculate the error and estimate the new time step
 !
-      u1a     = max(1.0e-16, sqrt(sum(u1(:) * u1(:))))
-      u2a     = max(1.0e-16, sqrt(sum(u2(:) * u2(:))))
-      a1a     = max(1.0e-16, sqrt(sum(a1(:) * a1(:))))
-      a2a     = max(1.0e-16, sqrt(sum(a2(:) * a2(:))))
-      dh(1:3) = 2.0d0 * (u2(:) - u1(:)) / (u1a + u2a)
-      dh(4:6) = 2.0d0 * (a2(:) - a1(:)) / (a1a + a2a)
+      u1a    = max(1.0e-16, sqrt(sum(u1(:) * u1(:))))
+      u2a    = max(1.0e-16, sqrt(sum(u2(:) * u2(:))))
+      a1a    = max(1.0e-16, sqrt(sum(a1(:) * a1(:))))
+      a2a    = max(1.0e-16, sqrt(sum(a2(:) * a2(:))))
+      dh(1:3) = u2(:) / u2a - u1(:) / u1a
+      dh(4:6) = a2(:) / a2a - a1(:) / a1a
       tol     = ec * max(1.0e-16, sqrt(sum(dh(1:3) * dh(1:3)))                 &
                                 , sqrt(sum(dh(4:6) * dh(4:6))))
       dt      = min(dt * sqrt(maxtol / tol), dtmax)
