@@ -1098,6 +1098,7 @@ module particles
                              , gc12 =    2.84678751731759804956d0              &
                              , gc21 = - 50.84678751731759804956d0              &
                              , gc22 =    9.79422863405994782084d0
+    real(kind=8), parameter :: ec   =    1.73205080756887729353d0
 !
 !-------------------------------------------------------------------------------
 !
@@ -1286,7 +1287,7 @@ module particles
 !
   subroutine estimate(x, p, y, t, dt, ds)
 
-    use params, only : maxeps, maxit
+    use params, only : maxeps, maxtol, maxit, dtmax
 
     implicit none
 
@@ -1294,21 +1295,24 @@ module particles
 !
     real(kind=PREC), dimension(3)  , intent(inout) :: x, p
     real(kind=PREC), dimension(2,6), intent(inout) :: y
-    real(kind=PREC)                , intent(in)    :: t, dt, ds
+    real(kind=PREC)                , intent(inout) :: t, dt, ds
 
 ! local variables
 !
     integer                         :: it
     real(kind=PREC), dimension(2,6) :: yn
+    real(kind=PREC), dimension(6)   :: dh
     real(kind=PREC), dimension(3)   :: x1, p1, u1, a1
     real(kind=PREC), dimension(3)   :: x2, p2, u2, a2
     real(kind=PREC), dimension(3)   :: v, b
-    real(kind=PREC)                 :: g1, g2, eps
+    real(kind=PREC)                 :: g1, g2, eps, tol
+    real(kind=PREC)                 :: u1a, u2a, a1a, a2a
 
 ! local parameter
 !
     real(kind=8), parameter :: a11 = 0.25d0, a12 = -0.03867513459481288225d0   &
                              , a22 = 0.25d0, a21 =  0.53867513459481288225d0
+    real(kind=8), parameter :: ec  = 1.73205080756887729353d0
 !
 !-------------------------------------------------------------------------------
 !
@@ -1339,6 +1343,19 @@ module particles
 !
       call acceleration(t, x1(1:3), u1(1:3), a1(1:3), v, b)
       call acceleration(t, x2(1:3), u2(1:3), a2(1:3), v, b)
+
+! calculate error
+!
+      u1a     = max(1.0e-16, sqrt(sum(u1(:) * u1(:))))
+      u2a     = max(1.0e-16, sqrt(sum(u2(:) * u2(:))))
+      a1a     = max(1.0e-16, sqrt(sum(a1(:) * a1(:))))
+      a2a     = max(1.0e-16, sqrt(sum(a2(:) * a2(:))))
+      dh(1:3) = 2.0d0 * (u2(:) - u1(:)) / (u1a + u2a)
+      dh(4:6) = 2.0d0 * (a2(:) - a1(:)) / (a1a + a2a)
+      tol     = ec * max(1.0e-16, sqrt(sum(dh(1:3) * dh(1:3)))                 &
+                                , sqrt(sum(dh(4:6) * dh(4:6))))
+      dt      = min(dt * sqrt(maxtol / tol), dtmax)
+      ds      = dt * qom
 
 ! update the positions and momenta
 !
