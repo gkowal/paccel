@@ -1057,8 +1057,8 @@ module particles
 ! integrate_trajectory_si4: subroutine integrates particle trajectory using
 !                           the 4th order simplectic method
 !
-! references: Mackey, Marchand & Kabin, 2006, JGR, 111, A06208
-!             Calvo, Laburta & Montijano, 2003, CaMwA, 25, 401
+! references: "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
+!             Chapman & Hall, London, New York, 1994
 !
 !===============================================================================
 !
@@ -1266,6 +1266,12 @@ module particles
 !
 ! estimate: subroutine estimates the solution for the equation of motion using
 !           a simple functional iteration
+!
+! references: "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
+!             Chapman & Hall, London, New York, 1994
+!
+! description: This subroutines find the solution of the equation 5.3 for
+!              the increment Z using the functional iteration
 !
 !===============================================================================
 !
