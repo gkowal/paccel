@@ -387,10 +387,12 @@ module particles
                                  , '|V| [c]', '|Vpar| [c]', '|Vper| [c]'       &
                                  , 'gamma', 'En [MeV]', 'Ek [MeV]'             &
                                  , '<B> [Gs]', 'Omega [1/s]'                   &
-                                 , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'
-    write (10, "(19(1pe18.10))") 0.0, x0(1), x0(2), x0(3), v0(1), v0(2), v0(3) &
+                                 , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'      &
+                                 , 'Tolerance'
+    write (10, "(20(1pe18.10))") 0.0, x0(1), x0(2), x0(3), v0(1), v0(2), v0(3) &
                                     , vv, vpar, vper, gm, en, ek               &
-                                    , bavg * ba, om, tg, rg, tg / fc, rg / ln
+                                    , bavg * ba, om, tg, rg, tg / fc, rg / ln  &
+                                    , 0.0d0
     close (10)
 
 ! prepare dump times
@@ -1079,6 +1081,7 @@ module particles
     real(kind=PREC), dimension(3)   :: v, b
     real(kind=PREC)                 :: gm, t, dt, ds
     real(kind=PREC)                 :: en, ek, ua, ba, up, ur, om, tg, rg
+    real(kind=PREC)                 :: tol
 
 ! local flags
 !
@@ -1099,7 +1102,7 @@ module particles
 ! initialize the iteration number, snapshot number, time, and time steps
 !
     n  = 1
-    m  = 0
+    m  = 1
     t  = 0.0d0
     dt = dtini
     ds = qom * dt
@@ -1168,7 +1171,7 @@ module particles
 !   Z1 = dt * [ a11 * F(y + Z1) + a12 * F(y + Z2) ]
 !   Z2 = dt * [ a21 * F(y + Z1) + a22 * F(y + Z2) ]
 !
-      call estimate(x(:), p(:), z(:,:), t, dt, ds)
+      call estimate(x(:), p(:), z(:,:), t, dt, ds, tol)
 
 ! update the solution
 !
@@ -1220,9 +1223,10 @@ module particles
 ! write results to the output file
 !
         open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-        write (10, "(19(1pe18.10))") t, x(1), x(2), x(3), u(1), u(2), u(3)     &
+        write (10, "(20(1pe18.10))") t, x(1), x(2), x(3), u(1), u(2), u(3)     &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
-                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg
+                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , tol
         close (10)
 
         n = n + 1
@@ -1259,9 +1263,9 @@ module particles
 !
 !===============================================================================
 !
-  subroutine estimate(x, p, z, t, dt, ds)
+  subroutine estimate(x, p, z, t, dt, ds, tol)
 
-    use params, only : maxeps, maxit
+    use params, only : maxit, maxeps
 
     implicit none
 
@@ -1270,12 +1274,13 @@ module particles
     real(kind=PREC), dimension(3)  , intent(in)    :: x, p
     real(kind=PREC), dimension(2,6), intent(inout) :: z
     real(kind=PREC)                , intent(in)    :: t
-    real(kind=PREC)                , intent(inout) :: dt, ds
+    real(kind=PREC)                , intent(inout) :: dt, ds, tol
 
 ! local variables
 !
     integer                         :: it
     real(kind=PREC), dimension(2,6) :: zn
+    real(kind=PREC), dimension(6)   :: dh
     real(kind=PREC), dimension(3)   :: x1, p1, u1, a1
     real(kind=PREC), dimension(3)   :: x2, p2, u2, a2
     real(kind=PREC), dimension(3)   :: v, b
@@ -1287,6 +1292,8 @@ module particles
                              , a12 = 1.0d0 / 4.0d0 - dsqrt(3.0d0) / 6.0d0      &
                              , a21 = 1.0d0 / 4.0d0 + dsqrt(3.0d0) / 6.0d0      &
                              , a22 = 1.0d0 / 4.0d0
+    real(kind=8), parameter :: e1  = 1.0d0 / 2.0d0 + 3.0d0 / dsqrt(3.0d0)      &
+                             , e2  = 1.0d0 / 2.0d0 - 3.0d0 / dsqrt(3.0d0)
 !
 !-------------------------------------------------------------------------------
 !
@@ -1338,6 +1345,14 @@ module particles
       it = it + 1
 
     end do
+
+! estimate the integration error
+!
+    dh(1:3) = dt * (e1 * u1(:) + e2 * u2(:))                                   &
+            / sqrt(sqrt(sum(u1(:) * u1(:))) * sqrt(sum(u2(:) * u2(:))))
+    dh(4:6) = ds * (e1 * a1(:) + e2 * a2(:))                                   &
+            / sqrt(sqrt(sum(a1(:) * a1(:))) * sqrt(sum(a2(:) * a2(:))))
+    tol     = sqrt(sum(dh(:) * dh(:)))
 !
 !-------------------------------------------------------------------------------
 !
