@@ -1277,7 +1277,7 @@ module particles
 !
   subroutine estimate(x, p, y, z, t, dt, ds)
 
-    use params, only : maxeps, maxtol, maxit, dtmax
+    use params, only : maxeps, maxit
 
     implicit none
 
@@ -1293,18 +1293,15 @@ module particles
 !
     integer                         :: it
     real(kind=PREC), dimension(2,6) :: zn
-    real(kind=PREC), dimension(6)   :: dh
     real(kind=PREC), dimension(3)   :: x1, p1, u1, a1
     real(kind=PREC), dimension(3)   :: x2, p2, u2, a2
     real(kind=PREC), dimension(3)   :: v, b
-    real(kind=PREC)                 :: g1, g2, eps, tol
-    real(kind=PREC)                 :: u1a, u2a, a1a, a2a
+    real(kind=PREC)                 :: g1, g2, eps
 
 ! local parameter
 !
     real(kind=8), parameter :: a11 = 0.25d0, a12 = -0.03867513459481288225d0   &
                              , a22 = 0.25d0, a21 =  0.53867513459481288225d0
-    real(kind=8), parameter :: ec  = 1.73205080756887729353d0
 !
 !-------------------------------------------------------------------------------
 !
@@ -1322,7 +1319,7 @@ module particles
 
 ! perform the simple functional iteration until the conditions are met
 !
-    do while ((eps .gt. maxeps .or. abs(maxtol / tol - 1.0d0) .gt. 1.0e-8) .and. it .lt. maxit)
+    do while (eps .gt. maxeps .and. it .lt. maxit)
 
 ! prepare the particle position and momentum for the current iteration
 !
@@ -1342,19 +1339,6 @@ module particles
 !
       call acceleration(t, x1(1:3), u1(1:3), a1(1:3), v(1:3), b(1:3))
       call acceleration(t, x2(1:3), u2(1:3), a2(1:3), v(1:3), b(1:3))
-
-! calculate the error and estimate the new time step
-!
-      u1a    = max(1.0e-16, sqrt(sum(u1(:) * u1(:))))
-      u2a    = max(1.0e-16, sqrt(sum(u2(:) * u2(:))))
-      a1a    = max(1.0e-16, sqrt(sum(a1(:) * a1(:))))
-      a2a    = max(1.0e-16, sqrt(sum(a2(:) * a2(:))))
-      dh(1:3) = u2(:) / u2a - u1(:) / u1a
-      dh(4:6) = a2(:) / a2a - a1(:) / a1a
-      tol     = ec * max(1.0e-16, sqrt(sum(dh(1:3) * dh(1:3)))                 &
-                                , sqrt(sum(dh(4:6) * dh(4:6))))
-      dt      = min(dt * sqrt(maxtol / tol), dtmax)
-      ds      = dt * qom
 
 ! update the increment
 !
