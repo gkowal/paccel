@@ -27,9 +27,10 @@
 program paccel
 
   use fields   , only : init_fields, finit_fields
-  use params   , only : read_params, output
+  use params   , only : read_params, method, output
   use particles, only : init_particle, finit_particle                          &
-                      , integrate_trajectory_rk4, integrate_trajectory_rk4_log
+                      , integrate_trajectory_rk4, integrate_trajectory_rk4_log &
+                      , integrate_trajectory_si4, integrate_trajectory_si4_log
 
   implicit none
 
@@ -68,13 +69,20 @@ program paccel
 
 ! integrate particle trajectories
 !
-  write( *, "('INFO      : ',a)" ) "integrating the particle trajectory"
-#ifdef RK4
-  if (output .eq. 'i') &
-    call integrate_trajectory_rk4()
-  if (output .eq. 'l') &
-    call integrate_trajectory_rk4_log()
-#endif /* RK4 */
+  select case(method)
+  case('rk4')
+    write( *, "('INFO      : ',a)" ) "integrating the particle trajectory (RK4 method)"
+    if (output .eq. 'i') &
+      call integrate_trajectory_rk4()
+    if (output .eq. 'l') &
+      call integrate_trajectory_rk4_log()
+  case('si4')
+    write( *, "('INFO      : ',a)" ) "integrating the particle trajectory (SI4 method)"
+    if (output .eq. 'i') &
+      call integrate_trajectory_si4()
+    if (output .eq. 'l') &
+      call integrate_trajectory_si4_log()
+  end select
 
 ! display performance information
 !

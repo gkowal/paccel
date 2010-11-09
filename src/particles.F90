@@ -387,7 +387,8 @@ module particles
                                  , '|V| [c]', '|Vpar| [c]', '|Vper| [c]'       &
                                  , 'gamma', 'En [MeV]', 'Ek [MeV]'             &
                                  , '<B> [Gs]', 'Omega [1/s]'                   &
-                                 , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'
+                                 , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'      &
+                                 , 'Tolerance'
     write (10, "(19(1pe18.10))") 0.0, x0(1), x0(2), x0(3), v0(1), v0(2), v0(3) &
                                     , vv, vpar, vper, gm, en, ek               &
                                     , bavg * ba, om, tg, rg, tg / fc, rg / ln
@@ -396,10 +397,10 @@ module particles
 ! prepare dump times
 !
     if (output .eq. 'l') then
-      n = ndumps * (alog10(tmax) - alog10(tmin)) + 1
+      n = ndumps * (dlog10(tmax) - dlog10(tmin)) + 1
       allocate(tt(n))
       do p = 1, n
-        tt(p) = 10.0d0**((p - 1.0) / ndumps + alog10(tmin))
+        tt(p) = 10.0d0**((p - 1.0) / ndumps + dlog10(tmin))
       enddo
     endif
 !
@@ -434,7 +435,7 @@ module particles
 !
   subroutine integrate_trajectory_rk4()
 
-    use params, only : c, tmin, tmax, rho, tolerance, dtini, dtmax, ndumps,    &
+    use params, only : c, tmin, tmax, rho, maxtol, dtini, dtmax, ndumps,    &
                        vpar, vper
 
     implicit none
@@ -626,9 +627,9 @@ module particles
 
 ! estimate new timestep
 !
-      dtn   = dt * (rho * tolerance / delta)**0.2
+      dtn   = dt * (rho * maxtol / delta)**0.2
 
-      if (delta .gt. tolerance) then
+      if (delta .gt. maxtol) then
 
 ! repeat integration with this timestep
 !
@@ -681,9 +682,10 @@ module particles
 ! write results to the output file
 !
           open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-          write (10, "(19(1pe18.10))") t, x(1), x(2), x(3), v(1), v(2), v(3)   &
+          write (10, "(20(1pe18.10))") t, x(1), x(2), x(3), v(1), v(2), v(3)   &
                                      , vu / c, vp / c, vr / c, gamma, en, ek   &
-                                     , bavg * ba, om, tg * fc, rg * ln, tg, rg
+                                     , bavg * ba, om, tg * fc, rg * ln, tg, rg &
+                                     , delta
           close (10)
 
           n = n + 1
@@ -724,9 +726,9 @@ module particles
 ! write results to the output file
 !
     open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-    write (10, "(19(1pe18.10))") t, x(1), x(2), x(3), v(1), v(2), v(3)         &
+    write (10, "(20(1pe18.10))") t, x(1), x(2), x(3), v(1), v(2), v(3)         &
                                , vu / c, vp / c, vr / c, gamma, en, ek         &
-                               , bavg * ba, om, tg * fc, rg * ln, tg, rg
+                               , bavg * ba, om, tg * fc, rg * ln, tg, rg, delta
     close (10)
 
 !-------------------------------------------------------------------------------
@@ -743,7 +745,7 @@ module particles
 !
   subroutine integrate_trajectory_rk4_log()
 
-    use params, only : c, tmin, tmax, rho, tolerance, dtini, dtmax, ndumps,    &
+    use params, only : c, tmin, tmax, rho, maxtol, dtini, dtmax, ndumps,    &
                        vpar, vper
 
     implicit none
@@ -934,9 +936,9 @@ module particles
 
 ! estimate new timestep
 !
-      dtn   = dt * (rho * tolerance / delta)**0.2
+      dtn   = dt * (rho * maxtol / delta)**0.2
 
-      if (delta .gt. tolerance) then
+      if (delta .gt. maxtol) then
 
 ! repeat integration with this timestep
 !
@@ -994,9 +996,10 @@ module particles
 ! write results to the output file
 !
           open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-          write (10, "(19(1pe18.10))") tp, xt(1), xt(2), xt(3), vt(1), vt(2), vt(3)  &
+          write (10, "(20(1pe18.10))") tp, xt(1), xt(2), xt(3), vt(1), vt(2), vt(3)  &
                                      , vu / c, vp / c, vr / c, gamma, en, ek   &
-                                     , bavg * ba, om, tg * fc, rg * ln, tg, rg
+                                     , bavg * ba, om, tg * fc, rg * ln, tg, rg &
+                                     , delta
           close (10)
 
           n = n + 1
@@ -1043,14 +1046,561 @@ module particles
 ! write results to the output file
 !
     open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-    write (10, "(19(1pe18.10))") t, x(1), x(2), x(3), v(1), v(2), v(3)         &
+    write (10, "(20(1pe18.10))") t, x(1), x(2), x(3), v(1), v(2), v(3)         &
                                , vu / c, vp / c, vr / c, gamma, en, ek         &
-                               , bavg * ba, om, tg * fc, rg * ln, tg, rg
+                               , bavg * ba, om, tg * fc, rg * ln, tg, rg, delta
     close (10)
 !
 !-------------------------------------------------------------------------------
 !
   end subroutine integrate_trajectory_rk4_log
+!
+!===============================================================================
+!
+! integrate_trajectory_si4: subroutine integrates particle trajectory using
+!                           the 4th order simplectic method
+!
+! references: "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
+!             Chapman & Hall, London, New York, 1994
+!             "High order starting iterates for implicit Runge-Kutta methods:
+!              an improvement for variable-step symplectic integrators", 2002,
+!              IMA J. of Num. Ana., 22, 153
+!
+!===============================================================================
+!
+  subroutine integrate_trajectory_si4()
+
+    use params, only : dtini, tmax, c, ndumps
+
+    implicit none
+
+! local variables
+!
+    integer                         :: n, m
+    real(kind=PREC), dimension(2,6) :: z, zp
+    real(kind=PREC), dimension(3)   :: x , u , p , a
+    real(kind=PREC), dimension(3)   :: v, b
+    real(kind=PREC)                 :: gm, t, dt, ds
+    real(kind=PREC)                 :: en, ek, ua, ba, up, ur, om, tg, rg
+    real(kind=PREC)                 :: tol
+
+! local flags
+!
+    logical :: flag = .true.
+
+! local parameters
+!
+    real(kind=8), parameter :: b1   =   1.0d0 / 2.0d0 - dsqrt(3.0d0) / 6.0d0   &
+                             , b2   =   1.0d0 / 2.0d0 + dsqrt(3.0d0) / 6.0d0
+    real(kind=8), parameter :: b11  =   1.0d0 - 2.0d0 * dsqrt(3.0d0)           &
+                             , b12  = - 6.0d0 + 4.0d0 * dsqrt(3.0d0)           &
+                             , b21  = - 6.0d0 - 4.0d0 * dsqrt(3.0d0)           &
+                             , b22  =   1.0d0 + 2.0d0 * dsqrt(3.0d0)
+    real(kind=8), parameter :: dc   =                   dsqrt(3.0d0)
+!
+!-------------------------------------------------------------------------------
+!
+! initialize the iteration number, snapshot number, time, and time steps
+!
+    n  = 1
+    m  = 1
+    t  = 0.0d0
+    dt = dtini
+    ds = qom * dt
+
+! substitute the initial position, velocity, and momentum
+!
+    x(:) = x0(:)
+    u(:) = v0(:)
+    p(:) = p0(:)
+
+! calculate the acceleration at the starting point
+!
+    call acceleration(t, x(:), u(:), a(:), v(:), b(:))
+
+! separate particle velocity into parallel and perpendicular components
+!
+    call separate_velocity(u(:), b(:), ba, ua, up, ur)
+
+! calculate the Lorentz factor
+!
+    gm = lorentz_factor(p(:))
+
+! calculate the particle energy
+!
+#ifdef RELAT
+    en = gm * mrest
+    ek = en - mrest
+#else /* RELAT */
+    en = 0.5 * ua * ua
+    ek = en
+#endif /* RELAT */
+
+! print the progress information
+!
+    write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP'       &
+            , 'SPEED (c)', 'ENERGY (MeV)'
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
+            , char(13)
+
+!== INTEGRATION LOOP ==
+!
+! iterate until the maximum time is reached
+!
+    do while (t .le. tmax)
+
+! find the initial guess for the vector Z
+!
+      if (flag) then
+
+        z(1,1:3) = b1 * dt * u(1:3)
+        z(2,1:3) = b2 * dt * u(1:3)
+        z(1,4:6) = b1 * ds * a(1:3)
+        z(2,4:6) = b2 * ds * a(1:3)
+
+      else
+        zp(:,:) = z(:,:)
+
+        z(1,1:6) = b11 * zp(1,1:6) + b12 * zp(2,1:6)
+        z(2,1:6) = b21 * zp(1,1:6) + b22 * zp(2,1:6)
+
+        flag = .false.
+      end if
+
+! estimate the vector Z (eq. 5.3)
+!
+!   Z1 = dt * [ a11 * F(y + Z1) + a12 * F(y + Z2) ]
+!   Z2 = dt * [ a21 * F(y + Z1) + a22 * F(y + Z2) ]
+!
+      call estimate(x(:), p(:), z(:,:), t, dt, ds, tol)
+
+! update the solution
+!
+!   y(n+1) = y(n) + [ b1 * Z1 + b2 * Z2 ]
+!
+      x(1:3) = x(1:3) + dc * (- z(1,1:3) + z(2,1:3))
+      p(1:3) = p(1:3) + dc * (- z(1,4:6) + z(2,4:6))
+
+! update the integration time
+!
+      t = t + dt
+
+! store the particle parameters at a given snapshot time
+!
+      if (m .eq. ndumps) then
+
+! calculate the Lorentz factor and particle velocity
+!
+        gm   = lorentz_factor(p(:))
+        u(:) = p(:) / gm
+
+! calculate the acceleration at the locations x1 and x2
+!
+        call acceleration(t, x(:), u(:), a(:), v(:), b(:))
+
+! separate particle velocity into parallel and perpendicular components
+!
+        call separate_velocity(u(:), b(:), ba, ua, up, ur)
+
+! calculate the particle gyroperiod and gyroradius
+!
+        call gyro_parameters(gm, ba, ur, om, tg, rg)
+
+! calculate particle energy
+!
+#ifdef RELAT
+        en = gm * mrest
+        ek = en - mrest
+#else
+        en = 0.5 * ua * ua
+        ek = en
+#endif
+
+! write the progress
+!
+        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c    &
+            , ek, char(13)
+
+! write results to the output file
+!
+        open  (10, file = 'output.dat', form = 'formatted', position = 'append')
+        write (10, "(20(1pe18.10))") t, x(1), x(2), x(3), u(1), u(2), u(3)     &
+                                   , ua / c, up / c, ur / c, gm, en, ek        &
+                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , tol
+        close (10)
+
+        n = n + 1
+        m = 0
+
+      end if
+
+! increase data write counter
+!
+      m = m + 1
+
+! end of iteration
+!
+    end do
+
+! write the progress
+!
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua / c, ek
+!
+!-------------------------------------------------------------------------------
+!
+  end subroutine integrate_trajectory_si4
+!
+!===============================================================================
+!
+! integrate_trajectory_si4_log: subroutine integrates particle trajectory using
+!             the 4th order simplectic method with snapshots equally
+!             distributed in the logarithm of time
+!
+! references: "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
+!             Chapman & Hall, London, New York, 1994
+!             "High order starting iterates for implicit Runge-Kutta methods:
+!              an improvement for variable-step symplectic integrators", 2002,
+!              IMA J. of Num. Ana., 22, 153
+!
+!===============================================================================
+!
+  subroutine integrate_trajectory_si4_log()
+
+    use params, only : dtini, tmin, tmax, c
+
+    implicit none
+
+! local variables
+!
+    integer                         :: n, m
+    real(kind=PREC), dimension(2,6) :: z, zp
+    real(kind=PREC), dimension(3)   :: x , u , p , a
+    real(kind=PREC), dimension(3)   :: xn, pn, xt, ut, pt
+    real(kind=PREC), dimension(3)   :: v, b
+    real(kind=PREC)                 :: gm, t, dt, ds
+    real(kind=PREC)                 :: en, ek, ua, ba, up, ur, om, tg, rg
+    real(kind=PREC)                 :: tol, tp, wl, wr
+
+! local flags
+!
+    logical :: flag = .true.
+
+! local parameters
+!
+    real(kind=8), parameter :: b1   =   1.0d0 / 2.0d0 - dsqrt(3.0d0) / 6.0d0   &
+                             , b2   =   1.0d0 / 2.0d0 + dsqrt(3.0d0) / 6.0d0
+    real(kind=8), parameter :: b11  =   1.0d0 - 2.0d0 * dsqrt(3.0d0)           &
+                             , b12  = - 6.0d0 + 4.0d0 * dsqrt(3.0d0)           &
+                             , b21  = - 6.0d0 - 4.0d0 * dsqrt(3.0d0)           &
+                             , b22  =   1.0d0 + 2.0d0 * dsqrt(3.0d0)
+    real(kind=8), parameter :: dc   =                   dsqrt(3.0d0)
+!
+!-------------------------------------------------------------------------------
+!
+! initialize the iteration number, snapshot number, time, and time steps
+!
+    n  = 1
+    m  = 1
+    t  = 0.0d0
+    dt = dtini
+    ds = qom * dt
+
+! substitute the initial position, velocity, and momentum
+!
+    x(:) = x0(:)
+    u(:) = v0(:)
+    p(:) = p0(:)
+
+! calculate the acceleration at the starting point
+!
+    call acceleration(t, x(:), u(:), a(:), v(:), b(:))
+
+! separate particle velocity into parallel and perpendicular components
+!
+    call separate_velocity(u(:), b(:), ba, ua, up, ur)
+
+! calculate the Lorentz factor
+!
+    gm = lorentz_factor(p(:))
+
+! calculate the particle energy
+!
+#ifdef RELAT
+    en = gm * mrest
+    ek = en - mrest
+#else /* RELAT */
+    en = 0.5 * ua * ua
+    ek = en
+#endif /* RELAT */
+
+! print the progress information
+!
+    write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP'       &
+            , 'SPEED (c)', 'ENERGY (MeV)'
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
+            , char(13)
+
+!== INTEGRATION LOOP ==
+!
+! iterate until the maximum time is reached
+!
+    do while (t .lt. tmax)
+
+! find the initial guess for the vector Z
+!
+      if (flag) then
+
+        z(1,1:3) = b1 * dt * u(1:3)
+        z(2,1:3) = b2 * dt * u(1:3)
+        z(1,4:6) = b1 * ds * a(1:3)
+        z(2,4:6) = b2 * ds * a(1:3)
+
+      else
+        zp(:,:) = z(:,:)
+
+        z(1,1:6) = b11 * zp(1,1:6) + b12 * zp(2,1:6)
+        z(2,1:6) = b21 * zp(1,1:6) + b22 * zp(2,1:6)
+
+        flag = .false.
+      end if
+
+! estimate the vector Z (eq. 5.3)
+!
+!   Z1 = dt * [ a11 * F(y + Z1) + a12 * F(y + Z2) ]
+!   Z2 = dt * [ a21 * F(y + Z1) + a22 * F(y + Z2) ]
+!
+      call estimate(x(:), p(:), z(:,:), t, dt, ds, tol)
+
+! update the solution
+!
+!   y(n+1) = y(n) + [ b1 * Z1 + b2 * Z2 ]
+!
+      xn(1:3) = x(1:3) + dc * (- z(1,1:3) + z(2,1:3))
+      pn(1:3) = p(1:3) + dc * (- z(1,4:6) + z(2,4:6))
+
+! update the integration time
+!
+      t = t + dt
+
+
+! store the intermediate snapshots
+!
+      do while (tt(n) .le. t .and. t .ge. tmin .and. t .lt. tmax)
+
+! calculate the left and right weights
+!
+        wl = (t - tt(n)) / dt
+        wr = 1.0d0 - wl
+
+! interpolate the particle state at the proper time
+!
+        tp    = wl * (t - dt) + wr * t
+        xt(:) = wl * x(:) + wr * xn(:)
+        pt(:) = wl * p(:) + wr * pn(:)
+
+! calculate the Lorentz factor and particle velocity
+!
+        gm    = lorentz_factor(pt(:))
+        ut(:) = pt(:) / gm
+
+! calculate acceleration for the location x4 and velocity v4
+!
+        call acceleration(tp, xt(:), ut(:), a(:), v(:), b(:))
+
+! separate particle velocity into parallel and perpendicular components
+!
+        call separate_velocity(ut(:), b(:), ba, ua, up, ur)
+
+! calculate the particle gyroperiod and gyroradius
+!
+        call gyro_parameters(gm, ba, ur, om, tg, rg)
+
+! calculate particle energy
+!
+#ifdef RELAT
+        en = gm * mrest
+        ek = en - mrest
+#else
+        en = 0.5 * ua * ua
+        ek = en
+#endif
+
+! write the progress
+!
+        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, tp, dt, ua / c   &
+            , ek, char(13)
+
+! write results to the output file
+!
+        open  (10, file = 'output.dat', form = 'formatted', position = 'append')
+        write (10, "(20(1pe18.10))") tp, x(1), x(2), x(3), u(1), u(2), u(3)    &
+                                   , ua / c, up / c, ur / c, gm, en, ek        &
+                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , tol
+        close (10)
+
+! increate the snapshot index
+!
+        n = n + 1
+
+      end do
+
+! substitute the new particle position and momentum
+!
+      x(:) = xn(:)
+      p(:) = pn(:)
+
+! update timestep
+!
+      dt = min(dt, max(1.0e-16, tmax - t))
+      ds = qom * dt
+
+! end of iteration
+!
+    end do
+
+! separate particle velocity into parallel and perpendicular components
+!
+    call separate_velocity(u(:), b(:), ba, ua, up, ur)
+
+! calculate the particle gyroperiod and gyroradius
+!
+    call gyro_parameters(gm, ba, ur, om, tg, rg)
+
+! calculate particle energy
+!
+#ifdef RELAT
+    en = gm * mrest
+    ek = en - mrest
+#else
+    en = 0.5d0 * ua * ua
+    ek = en
+#endif
+
+! print the progress info
+!
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dtini, ua / c, ek
+
+! store the last snapshot
+!
+    open  (10, file = 'output.dat', form = 'formatted', position = 'append')
+    write (10, "(20(1pe18.10))") t, x(1), x(2), x(3), v(1), v(2), v(3)         &
+                               , ua / c, up / c, ur / c, gm, en, ek            &
+                               , bavg * ba, om, tg * fc, rg * ln, tg, rg, tol
+    close (10)
+!
+!-------------------------------------------------------------------------------
+!
+  end subroutine integrate_trajectory_si4_log
+!
+!===============================================================================
+!
+! estimate: subroutine estimates the solution for the equation of motion using
+!           a simple functional iteration
+!
+! references: "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
+!             Chapman & Hall, London, New York, 1994
+!
+! description: This subroutines find the solution of the equation 5.3 for
+!              the increment Z using the functional iteration
+!
+!===============================================================================
+!
+  subroutine estimate(x, p, z, t, dt, ds, tol)
+
+    use params, only : maxit, maxeps
+
+    implicit none
+
+! subroutine arguments
+!
+    real(kind=PREC), dimension(3)  , intent(in)    :: x, p
+    real(kind=PREC), dimension(2,6), intent(inout) :: z
+    real(kind=PREC)                , intent(in)    :: t
+    real(kind=PREC)                , intent(inout) :: dt, ds, tol
+
+! local variables
+!
+    integer                         :: it
+    real(kind=PREC), dimension(2,6) :: zn
+    real(kind=PREC), dimension(6)   :: dh
+    real(kind=PREC), dimension(3)   :: x1, p1, u1, a1
+    real(kind=PREC), dimension(3)   :: x2, p2, u2, a2
+    real(kind=PREC), dimension(3)   :: v, b
+    real(kind=PREC)                 :: g1, g2, eps
+
+! local parameter
+!
+    real(kind=8), parameter :: a11 = 1.0d0 / 4.0d0                             &
+                             , a12 = 1.0d0 / 4.0d0 - dsqrt(3.0d0) / 6.0d0      &
+                             , a21 = 1.0d0 / 4.0d0 + dsqrt(3.0d0) / 6.0d0      &
+                             , a22 = 1.0d0 / 4.0d0
+    real(kind=8), parameter :: e1  = 1.0d0 / 2.0d0 + 3.0d0 / dsqrt(3.0d0)      &
+                             , e2  = 1.0d0 / 2.0d0 - 3.0d0 / dsqrt(3.0d0)
+!
+!-------------------------------------------------------------------------------
+!
+! initiate the iteration control parameters
+!
+    it  = 1
+    eps = 1.0e+16
+
+! perform the simple functional iteration until the conditions are met
+!
+    do while (eps .gt. maxeps .and. it .lt. maxit)
+
+! prepare the particle position and momentum for the current iteration
+!
+      x1(:) = x(:) + z(1,1:3)
+      x2(:) = x(:) + z(2,1:3)
+      p1(:) = p(:) + z(1,4:6)
+      p2(:) = p(:) + z(2,4:6)
+
+! calculate the Lorentz factors and particle velocity
+!
+      g1    = lorentz_factor(p1(:))
+      g2    = lorentz_factor(p2(:))
+      u1(:) = p1(:) / g1
+      u2(:) = p2(:) / g2
+
+! calculate the accelerations
+!
+      call acceleration(t, x1(1:3), u1(1:3), a1(1:3), v(1:3), b(1:3))
+      call acceleration(t, x2(1:3), u2(1:3), a2(1:3), v(1:3), b(1:3))
+
+! update the increment
+!
+      zn(1,1:3) = dt * (a11 * u1(1:3) + a12 * u2(1:3))
+      zn(1,4:6) = ds * (a11 * a1(1:3) + a12 * a2(1:3))
+      zn(2,1:3) = dt * (a21 * u1(1:3) + a22 * u2(1:3))
+      zn(2,4:6) = ds * (a21 * a1(1:3) + a22 * a2(1:3))
+
+! calculate the maximum of residuum of the increment
+!
+      eps = maxval(abs(zn - z))
+
+! substitute the new solution of the increment
+!
+      z = zn
+
+! increase the iteration counter
+!
+      it = it + 1
+
+    end do
+
+! estimate the integration error
+!
+    dh(1:3) = dt * (e1 * u1(:) + e2 * u2(:))                                   &
+            / sqrt(sqrt(sum(u1(:) * u1(:))) * sqrt(sum(u2(:) * u2(:))))
+    dh(4:6) = ds * (e1 * a1(:) + e2 * a2(:))                                   &
+            / sqrt(sqrt(sum(a1(:) * a1(:))) * sqrt(sum(a2(:) * a2(:))))
+    tol     = sqrt(sum(dh(:) * dh(:)))
+!
+!-------------------------------------------------------------------------------
+!
+  end subroutine estimate
 !
 !===============================================================================
 !
@@ -1476,7 +2026,7 @@ module particles
 
     use fields, only : ux, uy, uz, bx, by, bz
 #ifdef TEST
-    use params, only : omega, bini, bamp, vamp, freq, epar
+    use params, only : bini, bamp, vamp, freq, epar
 #endif /* TEST */
 
     implicit none
@@ -1540,8 +2090,6 @@ module particles
 #endif /* WTEST */
 
 #ifdef ITEST
-!         ra   = 1.0 + amp * sin(pi2 * omega * t)
-!         rb   = amp * pi2 * omega * cos(pi2 * omega * t)
         ra   = 1.0 + bamp
 
         rt   = sqrt(x(1) * x(1) + x(2) * x(2))
@@ -1549,13 +2097,6 @@ module particles
         u(1) = - x(1)
         u(2) =   x(2)
         u(3) = 0.0
-!         if (rt .gt. 0.0) then
-!           u(1) = - x(1) * rb / ra**2
-!           u(2) =   x(2) * rb
-!           u(3) = 0.0
-!         else
-!           u(:) = 0.0
-!         end if
 
         xt   = x(1) / ra
         yt   = x(2) * ra
