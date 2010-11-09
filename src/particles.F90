@@ -1072,10 +1072,9 @@ module particles
 !
     integer                         :: n, m
     real(kind=PREC), dimension(2,6) :: y, y0, y1, y2
+    real(kind=PREC), dimension(2,6) :: z
     real(kind=PREC), dimension(3)   :: x , u , p , a
-    real(kind=PREC), dimension(3)   :: x1, u1, p1, a1
-    real(kind=PREC), dimension(3)   :: x2, u2, p2, a2
-    real(kind=PREC)                 :: gm, g1, g2
+    real(kind=PREC)                 :: gm
     real(kind=8   ), dimension(3)   :: v, b
     real(kind=8   )                 :: t, dt, ds
     real(kind=8   )                 :: en, ek, ua, ba, up, ur, om, tg, rg
@@ -1099,6 +1098,7 @@ module particles
                              , gc21 = - 50.84678751731759804956d0              &
                              , gc22 =    9.79422863405994782084d0
     real(kind=8), parameter :: ec   =    1.73205080756887729353d0
+    real(kind=8), parameter :: dc   =    dsqrt(3.0d0)
 !
 !-------------------------------------------------------------------------------
 !
@@ -1185,30 +1185,14 @@ module particles
 !   Y1 = y(n) + h * [ a11 * F(Y1) + a12 * F(Y2) ]
 !   Y2 = y(n) + h * [ a21 * F(Y1) + a22 * F(Y2) ]
 !
-      call estimate(x, p, y, t, dt, ds)
-
-! obtain the positions, momenta, gammas, and velocities for the estimated states
-!
-      x1(:) = y(1,1:3)
-      x2(:) = y(2,1:3)
-      p1(:) = y(1,4:6)
-      p2(:) = y(2,4:6)
-      g1    = lorentz_factor(p1(:))
-      g2    = lorentz_factor(p2(:))
-      u1(:) = p1(:) / g1
-      u2(:) = p2(:) / g2
-
-! calculate the acceleration at the estimated states
-!
-      call acceleration(t, x1(1:3), u1(1:3), a1(1:3), v, b)
-      call acceleration(t, x2(1:3), u2(1:3), a2(1:3), v, b)
+      call estimate(x, p, y, z, t, dt, ds)
 
 ! update the solution
 !
 !   y(n+1) = y(n) + h * [ b1 * F(Y1) + b2 * F(Y2) ]
 !
-      x(:) = x(:) + 0.5d0 * dt * (u1(1:3) + u2(1:3))
-      p(:) = p(:) + 0.5d0 * ds * (a1(1:3) + a2(1:3))
+      x(:) = x(:) + dc * (- z(1,1:3) + z(2,1:3))
+      p(:) = p(:) + dc * (- z(1,4:6) + z(2,4:6))
 
 ! update the integration time
 !
@@ -1285,7 +1269,7 @@ module particles
 !
 !===============================================================================
 !
-  subroutine estimate(x, p, y, t, dt, ds)
+  subroutine estimate(x, p, y, z, t, dt, ds)
 
     use params, only : maxeps, maxtol, maxit, dtmax
 
@@ -1293,14 +1277,16 @@ module particles
 
 ! subroutine arguments
 !
-    real(kind=PREC), dimension(3)  , intent(inout) :: x, p
-    real(kind=PREC), dimension(2,6), intent(inout) :: y
-    real(kind=PREC)                , intent(inout) :: t, dt, ds
+    real(kind=PREC), dimension(3)  , intent(in)    :: x, p
+    real(kind=PREC), dimension(2,6), intent(in)    :: y
+    real(kind=PREC), dimension(2,6), intent(out)   :: z
+    real(kind=PREC)                , intent(in)    :: t
+    real(kind=PREC)                , intent(inout) :: dt, ds
 
 ! local variables
 !
     integer                         :: it
-    real(kind=PREC), dimension(2,6) :: yn
+    real(kind=PREC), dimension(2,6) :: zn
     real(kind=PREC), dimension(6)   :: dh
     real(kind=PREC), dimension(3)   :: x1, p1, u1, a1
     real(kind=PREC), dimension(3)   :: x2, p2, u2, a2
@@ -1321,16 +1307,23 @@ module particles
     it  = 1
     eps = 1.0e+16
 
+! prepare the initial increment vector
+!
+    z(1,1:3) = y(1,1:3) - x(:)
+    z(2,1:3) = y(2,1:3) - x(:)
+    z(1,4:6) = y(1,4:6) - p(:)
+    z(2,4:6) = y(2,4:6) - p(:)
+
 ! perform the simple functional iteration until the conditions are met
 !
     do while ((eps .gt. maxeps .or. abs(maxtol / tol - 1.0d0) .gt. 1.0e-8) .and. it .lt. maxit)
 
-! prepare the initial particle position and momentum
+! prepare the particle position and momentum for the current iteration
 !
-      x1(:) = y(1,1:3)
-      x2(:) = y(2,1:3)
-      p1(:) = y(1,4:6)
-      p2(:) = y(2,4:6)
+      x1(:) = x(:) + z(1,1:3)
+      x2(:) = x(:) + z(2,1:3)
+      p1(:) = p(:) + z(1,4:6)
+      p2(:) = p(:) + z(2,4:6)
 
 ! calculate the Lorentz factors and particle velocity
 !
@@ -1341,8 +1334,8 @@ module particles
 
 ! calculate the accelerations
 !
-      call acceleration(t, x1(1:3), u1(1:3), a1(1:3), v, b)
-      call acceleration(t, x2(1:3), u2(1:3), a2(1:3), v, b)
+      call acceleration(t, x1(1:3), u1(1:3), a1(1:3), v(1:3), b(1:3))
+      call acceleration(t, x2(1:3), u2(1:3), a2(1:3), v(1:3), b(1:3))
 
 ! calculate the error and estimate the new time step
 !
@@ -1357,20 +1350,20 @@ module particles
       dt      = min(dt * sqrt(maxtol / tol), dtmax)
       ds      = dt * qom
 
-! update the positions and momenta
+! update the increment
 !
-      yn(1,1:3) = x(1:3) + dt * (a11 * u1(1:3) + a12 * u2(1:3))
-      yn(1,4:6) = p(1:3) + ds * (a11 * a1(1:3) + a12 * a2(1:3))
-      yn(2,1:3) = x(1:3) + dt * (a21 * u1(1:3) + a22 * u2(1:3))
-      yn(2,4:6) = p(1:3) + ds * (a21 * a1(1:3) + a22 * a2(1:3))
+      zn(1,1:3) = dt * (a11 * u1(1:3) + a12 * u2(1:3))
+      zn(1,4:6) = ds * (a11 * a1(1:3) + a12 * a2(1:3))
+      zn(2,1:3) = dt * (a21 * u1(1:3) + a22 * u2(1:3))
+      zn(2,4:6) = ds * (a21 * a1(1:3) + a22 * a2(1:3))
 
-! calculate the maximum of residuum
+! calculate the maximum of residuum of the increment
 !
-      eps = maxval(abs(yn - y))
+      eps = maxval(abs(zn - z))
 
-! substitute the new solution
+! substitute the new solution of the increment
 !
-      y = yn
+      z = zn
 
 ! increase the iteration counter
 !
