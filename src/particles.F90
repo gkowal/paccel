@@ -1252,6 +1252,249 @@ module particles
 !
 !===============================================================================
 !
+! integrate_trajectory_si4_log: subroutine integrates particle trajectory using
+!             the 4th order simplectic method with snapshots equally
+!             distributed in the logarithm of time
+!
+! references: "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
+!             Chapman & Hall, London, New York, 1994
+!             "High order starting iterates for implicit Runge-Kutta methods:
+!              an improvement for variable-step symplectic integrators", 2002,
+!              IMA J. of Num. Ana., 22, 153
+!
+!===============================================================================
+!
+  subroutine integrate_trajectory_si4_log()
+
+    use params, only : dtini, tmin, tmax, c
+
+    implicit none
+
+! local variables
+!
+    integer                         :: n, m
+    real(kind=PREC), dimension(2,6) :: z, zp
+    real(kind=PREC), dimension(3)   :: x , u , p , a
+    real(kind=PREC), dimension(3)   :: xn, pn, xt, ut, pt
+    real(kind=PREC), dimension(3)   :: v, b
+    real(kind=PREC)                 :: gm, t, dt, ds
+    real(kind=PREC)                 :: en, ek, ua, ba, up, ur, om, tg, rg
+    real(kind=PREC)                 :: tol, tp, wl, wr
+
+! local flags
+!
+    logical :: flag = .true.
+
+! local parameters
+!
+    real(kind=8), parameter :: b1   =   1.0d0 / 2.0d0 - dsqrt(3.0d0) / 6.0d0   &
+                             , b2   =   1.0d0 / 2.0d0 + dsqrt(3.0d0) / 6.0d0
+    real(kind=8), parameter :: b11  =   1.0d0 - 2.0d0 * dsqrt(3.0d0)           &
+                             , b12  = - 6.0d0 + 4.0d0 * dsqrt(3.0d0)           &
+                             , b21  = - 6.0d0 - 4.0d0 * dsqrt(3.0d0)           &
+                             , b22  =   1.0d0 + 2.0d0 * dsqrt(3.0d0)
+    real(kind=8), parameter :: dc   =                   dsqrt(3.0d0)
+!
+!-------------------------------------------------------------------------------
+!
+! initialize the iteration number, snapshot number, time, and time steps
+!
+    n  = 1
+    m  = 1
+    t  = 0.0d0
+    dt = dtini
+    ds = qom * dt
+
+! substitute the initial position, velocity, and momentum
+!
+    x(:) = x0(:)
+    u(:) = v0(:)
+    p(:) = p0(:)
+
+! calculate the acceleration at the starting point
+!
+    call acceleration(t, x(:), u(:), a(:), v(:), b(:))
+
+! separate particle velocity into parallel and perpendicular components
+!
+    call separate_velocity(u(:), b(:), ba, ua, up, ur)
+
+! calculate the Lorentz factor
+!
+    gm = lorentz_factor(p(:))
+
+! calculate the particle energy
+!
+#ifdef RELAT
+    en = gm * mrest
+    ek = en - mrest
+#else /* RELAT */
+    en = 0.5 * ua * ua
+    ek = en
+#endif /* RELAT */
+
+! print the progress information
+!
+    write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP'       &
+            , 'SPEED (c)', 'ENERGY (MeV)'
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
+            , char(13)
+
+!== INTEGRATION LOOP ==
+!
+! iterate until the maximum time is reached
+!
+    do while (t .lt. tmax)
+
+! find the initial guess for the vector Z
+!
+      if (flag) then
+
+        z(1,1:3) = b1 * dt * u(1:3)
+        z(2,1:3) = b2 * dt * u(1:3)
+        z(1,4:6) = b1 * ds * a(1:3)
+        z(2,4:6) = b2 * ds * a(1:3)
+
+      else
+        zp(:,:) = z(:,:)
+
+        z(1,1:6) = b11 * zp(1,1:6) + b12 * zp(2,1:6)
+        z(2,1:6) = b21 * zp(1,1:6) + b22 * zp(2,1:6)
+
+        flag = .false.
+      end if
+
+! estimate the vector Z (eq. 5.3)
+!
+!   Z1 = dt * [ a11 * F(y + Z1) + a12 * F(y + Z2) ]
+!   Z2 = dt * [ a21 * F(y + Z1) + a22 * F(y + Z2) ]
+!
+      call estimate(x(:), p(:), z(:,:), t, dt, ds, tol)
+
+! update the solution
+!
+!   y(n+1) = y(n) + [ b1 * Z1 + b2 * Z2 ]
+!
+      xn(1:3) = x(1:3) + dc * (- z(1,1:3) + z(2,1:3))
+      pn(1:3) = p(1:3) + dc * (- z(1,4:6) + z(2,4:6))
+
+! update the integration time
+!
+      t = t + dt
+
+
+! store the intermediate snapshots
+!
+      do while (tt(n) .le. t .and. t .ge. tmin .and. t .lt. tmax)
+
+! calculate the left and right weights
+!
+        wl = (t - tt(n)) / dt
+        wr = 1.0d0 - wl
+
+! interpolate the particle state at the proper time
+!
+        tp    = wl * (t - dt) + wr * t
+        xt(:) = wl * x(:) + wr * xn(:)
+        pt(:) = wl * p(:) + wr * pn(:)
+
+! calculate the Lorentz factor and particle velocity
+!
+        gm    = lorentz_factor(pt(:))
+        ut(:) = pt(:) / gm
+
+! calculate acceleration for the location x4 and velocity v4
+!
+        call acceleration(tp, xt(:), ut(:), a(:), v(:), b(:))
+
+! separate particle velocity into parallel and perpendicular components
+!
+        call separate_velocity(ut(:), b(:), ba, ua, up, ur)
+
+! calculate the particle gyroperiod and gyroradius
+!
+        call gyro_parameters(gm, ba, ur, om, tg, rg)
+
+! calculate particle energy
+!
+#ifdef RELAT
+        en = gm * mrest
+        ek = en - mrest
+#else
+        en = 0.5 * ua * ua
+        ek = en
+#endif
+
+! write the progress
+!
+        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, tp, dt, ua / c   &
+            , ek, char(13)
+
+! write results to the output file
+!
+        open  (10, file = 'output.dat', form = 'formatted', position = 'append')
+        write (10, "(20(1pe18.10))") tp, x(1), x(2), x(3), u(1), u(2), u(3)    &
+                                   , ua / c, up / c, ur / c, gm, en, ek        &
+                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , tol
+        close (10)
+
+! increate the snapshot index
+!
+        n = n + 1
+
+      end do
+
+! substitute the new particle position and momentum
+!
+      x(:) = xn(:)
+      p(:) = pn(:)
+
+! update timestep
+!
+      dt = min(dt, max(1.0e-16, tmax - t))
+      ds = qom * dt
+
+! end of iteration
+!
+    end do
+
+! separate particle velocity into parallel and perpendicular components
+!
+    call separate_velocity(u(:), b(:), ba, ua, up, ur)
+
+! calculate the particle gyroperiod and gyroradius
+!
+    call gyro_parameters(gm, ba, ur, om, tg, rg)
+
+! calculate particle energy
+!
+#ifdef RELAT
+    en = gm * mrest
+    ek = en - mrest
+#else
+    en = 0.5d0 * ua * ua
+    ek = en
+#endif
+
+! print the progress info
+!
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dtini, ua / c, ek
+
+! store the last snapshot
+!
+    open  (10, file = 'output.dat', form = 'formatted', position = 'append')
+    write (10, "(20(1pe18.10))") t, x(1), x(2), x(3), v(1), v(2), v(3)         &
+                               , ua / c, up / c, ur / c, gm, en, ek            &
+                               , bavg * ba, om, tg * fc, rg * ln, tg, rg, tol
+    close (10)
+!
+!-------------------------------------------------------------------------------
+!
+  end subroutine integrate_trajectory_si4_log
+!
+!===============================================================================
+!
 ! estimate: subroutine estimates the solution for the equation of motion using
 !           a simple functional iteration
 !

@@ -30,7 +30,7 @@ program paccel
   use params   , only : read_params, output
   use particles, only : init_particle, finit_particle                          &
                       , integrate_trajectory_rk4, integrate_trajectory_rk4_log &
-                      , integrate_trajectory_si4
+                      , integrate_trajectory_si4, integrate_trajectory_si4_log
 
   implicit none
 
@@ -77,7 +77,10 @@ program paccel
     call integrate_trajectory_rk4_log()
 #endif /* RK4 */
 #ifdef SI4
-  call integrate_trajectory_si4()
+  if (output .eq. 'i') &
+    call integrate_trajectory_si4()
+  if (output .eq. 'l') &
+    call integrate_trajectory_si4_log()
 #endif /* SI4 */
 
 ! display performance information
