@@ -682,9 +682,10 @@ module particles
 ! write results to the output file
 !
           open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-          write (10, "(19(1pe18.10))") t, x(1), x(2), x(3), v(1), v(2), v(3)   &
+          write (10, "(20(1pe18.10))") t, x(1), x(2), x(3), v(1), v(2), v(3)   &
                                      , vu / c, vp / c, vr / c, gamma, en, ek   &
-                                     , bavg * ba, om, tg * fc, rg * ln, tg, rg
+                                     , bavg * ba, om, tg * fc, rg * ln, tg, rg &
+                                     , delta
           close (10)
 
           n = n + 1
@@ -725,9 +726,9 @@ module particles
 ! write results to the output file
 !
     open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-    write (10, "(19(1pe18.10))") t, x(1), x(2), x(3), v(1), v(2), v(3)         &
+    write (10, "(20(1pe18.10))") t, x(1), x(2), x(3), v(1), v(2), v(3)         &
                                , vu / c, vp / c, vr / c, gamma, en, ek         &
-                               , bavg * ba, om, tg * fc, rg * ln, tg, rg
+                               , bavg * ba, om, tg * fc, rg * ln, tg, rg, delta
     close (10)
 
 !-------------------------------------------------------------------------------
@@ -995,9 +996,10 @@ module particles
 ! write results to the output file
 !
           open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-          write (10, "(19(1pe18.10))") tp, xt(1), xt(2), xt(3), vt(1), vt(2), vt(3)  &
+          write (10, "(20(1pe18.10))") tp, xt(1), xt(2), xt(3), vt(1), vt(2), vt(3)  &
                                      , vu / c, vp / c, vr / c, gamma, en, ek   &
-                                     , bavg * ba, om, tg * fc, rg * ln, tg, rg
+                                     , bavg * ba, om, tg * fc, rg * ln, tg, rg &
+                                     , delta
           close (10)
 
           n = n + 1
@@ -1044,9 +1046,9 @@ module particles
 ! write results to the output file
 !
     open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-    write (10, "(19(1pe18.10))") t, x(1), x(2), x(3), v(1), v(2), v(3)         &
+    write (10, "(20(1pe18.10))") t, x(1), x(2), x(3), v(1), v(2), v(3)         &
                                , vu / c, vp / c, vr / c, gamma, en, ek         &
-                               , bavg * ba, om, tg * fc, rg * ln, tg, rg
+                               , bavg * ba, om, tg * fc, rg * ln, tg, rg, delta
     close (10)
 !
 !-------------------------------------------------------------------------------
