@@ -389,10 +389,9 @@ module particles
                                  , '<B> [Gs]', 'Omega [1/s]'                   &
                                  , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'      &
                                  , 'Tolerance'
-    write (10, "(20(1pe18.10))") 0.0, x0(1), x0(2), x0(3), v0(1), v0(2), v0(3) &
+    write (10, "(19(1pe18.10))") 0.0, x0(1), x0(2), x0(3), v0(1), v0(2), v0(3) &
                                     , vv, vpar, vper, gm, en, ek               &
-                                    , bavg * ba, om, tg, rg, tg / fc, rg / ln  &
-                                    , 0.0d0
+                                    , bavg * ba, om, tg, rg, tg / fc, rg / ln
     close (10)
 
 ! prepare dump times
