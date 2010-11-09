@@ -1059,6 +1059,9 @@ module particles
 !
 ! references: "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
 !             Chapman & Hall, London, New York, 1994
+!             "High order starting iterates for implicit Runge-Kutta methods:
+!              an improvement for variable-step symplectic integrators", 2002,
+!              IMA J. of Num. Ana., 22, 153
 !
 !===============================================================================
 !
@@ -1071,13 +1074,11 @@ module particles
 ! local variables
 !
     integer                         :: n, m
-    real(kind=PREC), dimension(2,6) :: y, y0, y1, y2
-    real(kind=PREC), dimension(2,6) :: z
+    real(kind=PREC), dimension(2,6) :: z, zp
     real(kind=PREC), dimension(3)   :: x , u , p , a
-    real(kind=PREC)                 :: gm
-    real(kind=8   ), dimension(3)   :: v, b
-    real(kind=8   )                 :: t, dt, ds
-    real(kind=8   )                 :: en, ek, ua, ba, up, ur, om, tg, rg
+    real(kind=PREC), dimension(3)   :: v, b
+    real(kind=PREC)                 :: gm, t, dt, ds
+    real(kind=PREC)                 :: en, ek, ua, ba, up, ur, om, tg, rg
 
 ! local flags
 !
@@ -1085,20 +1086,13 @@ module particles
 
 ! local parameters
 !
-    real(kind=8), parameter :: ac1  =    4.82308546376020871664d0              &
-                             , ac2  =   67.17691453623979128336d0
-    real(kind=8), parameter :: bc1  =    0.21132486540518711775d0              &
-                             , bc2  =    0.78867513459481288225d0
-    real(kind=8), parameter :: bc11 = -  8.36344801571300286532d0              &
-                             , bc12 =    7.48780366869514391996d0              &
-                             , bc21 = -115.48780366869514391996d0              &
-                             , bc22 =   90.36344801571300286532d0
-    real(kind=8), parameter :: gc11 = -  5.79422863405994782084d0              &
-                             , gc12 =    2.84678751731759804956d0              &
-                             , gc21 = - 50.84678751731759804956d0              &
-                             , gc22 =    9.79422863405994782084d0
-    real(kind=8), parameter :: ec   =    1.73205080756887729353d0
-    real(kind=8), parameter :: dc   =    dsqrt(3.0d0)
+    real(kind=8), parameter :: b1   =   1.0d0 / 2.0d0 - dsqrt(3.0d0) / 6.0d0   &
+                             , b2   =   1.0d0 / 2.0d0 + dsqrt(3.0d0) / 6.0d0
+    real(kind=8), parameter :: b11  =   1.0d0 - 2.0d0 * dsqrt(3.0d0)           &
+                             , b12  = - 6.0d0 + 4.0d0 * dsqrt(3.0d0)           &
+                             , b21  = - 6.0d0 - 4.0d0 * dsqrt(3.0d0)           &
+                             , b22  =   1.0d0 + 2.0d0 * dsqrt(3.0d0)
+    real(kind=8), parameter :: dc   =                   dsqrt(3.0d0)
 !
 !-------------------------------------------------------------------------------
 !
@@ -1118,15 +1112,15 @@ module particles
 
 ! calculate the acceleration at the starting point
 !
-    call acceleration(t, x, u, a, v, b)
+    call acceleration(t, x(:), u(:), a(:), v(:), b(:))
 
-! calculate the particle speed
+! separate particle velocity into parallel and perpendicular components
 !
-    ua = sqrt(sum(u(:)**2))
+    call separate_velocity(u(:), b(:), ba, ua, up, ur)
 
 ! calculate the Lorentz factor
 !
-    gm = lorentz_factor(p)
+    gm = lorentz_factor(p(:))
 
 ! calculate the particle energy
 !
@@ -1142,7 +1136,7 @@ module particles
 !
     write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP'       &
             , 'SPEED (c)', 'ENERGY (MeV)'
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua, ek        &
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
             , char(13)
 
 !== INTEGRATION LOOP ==
@@ -1151,54 +1145,43 @@ module particles
 !
     do while (t .le. tmax)
 
-! update the previous estimates of Y1 and Y2
-!
-      y2 = y1
-      y1 = y
-
-      y0(1,1:3) = x(:)
-      y0(1,4:6) = p(:)
-      y0(2,1:3) = x(:)
-      y0(2,4:6) = p(:)
-
-! find the initial guess for the states Y1 and Y2
+! find the initial guess for the vector Z
 !
       if (flag) then
 
-        y(1,1:3) = x(:) + bc1 * dt * u(:)
-        y(1,4:6) = p(:) + bc1 * ds * a(:)
-        y(2,1:3) = x(:) + bc2 * dt * u(:)
-        y(2,4:6) = p(:) + bc2 * ds * a(:)
+        z(1,1:3) = b1 * dt * u(1:3)
+        z(2,1:3) = b2 * dt * u(1:3)
+        z(1,4:6) = b1 * ds * a(1:3)
+        z(2,4:6) = b2 * ds * a(1:3)
 
       else
+        zp(:,:) = z(:,:)
 
-        y(1,1:6) = ac1 * y0(1,1:6) + bc11 * y2(1,1:6) + bc12 * y2(2,1:6)       &
-                                   + gc11 * y1(1,1:6) + gc12 * y1(2,1:6)
-        y(2,1:6) = ac2 * y0(2,1:6) + bc21 * y2(1,1:6) + bc22 * y2(2,1:6)       &
-                                   + gc21 * y1(1,1:6) + gc22 * y1(2,1:6)
+        z(1,1:6) = b11 * zp(1,1:6) + b12 * zp(2,1:6)
+        z(2,1:6) = b21 * zp(1,1:6) + b22 * zp(2,1:6)
 
         flag = .false.
       end if
 
-! estimate the states Y1 and Y2 iteratively
+! estimate the vector Z (eq. 5.3)
 !
-!   Y1 = y(n) + h * [ a11 * F(Y1) + a12 * F(Y2) ]
-!   Y2 = y(n) + h * [ a21 * F(Y1) + a22 * F(Y2) ]
+!   Z1 = dt * [ a11 * F(y + Z1) + a12 * F(y + Z2) ]
+!   Z2 = dt * [ a21 * F(y + Z1) + a22 * F(y + Z2) ]
 !
-      call estimate(x, p, y, z, t, dt, ds)
+      call estimate(x(:), p(:), z(:,:), t, dt, ds)
 
 ! update the solution
 !
-!   y(n+1) = y(n) + h * [ b1 * F(Y1) + b2 * F(Y2) ]
+!   y(n+1) = y(n) + [ b1 * Z1 + b2 * Z2 ]
 !
-      x(:) = x(:) + dc * (- z(1,1:3) + z(2,1:3))
-      p(:) = p(:) + dc * (- z(1,4:6) + z(2,4:6))
+      x(1:3) = x(1:3) + dc * (- z(1,1:3) + z(2,1:3))
+      p(1:3) = p(1:3) + dc * (- z(1,4:6) + z(2,4:6))
 
 ! update the integration time
 !
       t = t + dt
 
-! store the particle parameters at a given snapshot
+! store the particle parameters at a given snapshot time
 !
       if (m .eq. ndumps) then
 
@@ -1209,11 +1192,11 @@ module particles
 
 ! calculate the acceleration at the locations x1 and x2
 !
-        call acceleration(t, x(1:3), u(1:3), a(1:3), v, b)
+        call acceleration(t, x(:), u(:), a(:), v(:), b(:))
 
 ! separate particle velocity into parallel and perpendicular components
 !
-        call separate_velocity(u, b, ba, ua, up, ur)
+        call separate_velocity(u(:), b(:), ba, ua, up, ur)
 
 ! calculate the particle gyroperiod and gyroradius
 !
@@ -1231,7 +1214,8 @@ module particles
 
 ! write the progress
 !
-        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek, char(13)
+        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c    &
+            , ek, char(13)
 
 ! write results to the output file
 !
@@ -1275,7 +1259,7 @@ module particles
 !
 !===============================================================================
 !
-  subroutine estimate(x, p, y, z, t, dt, ds)
+  subroutine estimate(x, p, z, t, dt, ds)
 
     use params, only : maxeps, maxit
 
@@ -1284,8 +1268,7 @@ module particles
 ! subroutine arguments
 !
     real(kind=PREC), dimension(3)  , intent(in)    :: x, p
-    real(kind=PREC), dimension(2,6), intent(in)    :: y
-    real(kind=PREC), dimension(2,6), intent(out)   :: z
+    real(kind=PREC), dimension(2,6), intent(inout) :: z
     real(kind=PREC)                , intent(in)    :: t
     real(kind=PREC)                , intent(inout) :: dt, ds
 
@@ -1309,13 +1292,6 @@ module particles
 !
     it  = 1
     eps = 1.0e+16
-
-! prepare the initial increment vector
-!
-    z(1,1:3) = y(1,1:3) - x(:)
-    z(2,1:3) = y(2,1:3) - x(:)
-    z(1,4:6) = y(1,4:6) - p(:)
-    z(2,4:6) = y(2,4:6) - p(:)
 
 ! perform the simple functional iteration until the conditions are met
 !
