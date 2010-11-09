@@ -5,7 +5,6 @@ OS           := $(shell uname)
 
 DEBUG         = N
 RELAT         = Y
-INTEGRATION   = SI4
 INTERPOLATION = C
 TVD           = Y
 BNDRY         = N
@@ -41,7 +40,6 @@ endif
 ifeq ($(RELAT),Y)
 FFLAGS += -DRELAT
 endif
-FFLAGS += -D$(INTEGRATION)
 ifeq ($(INTERPOLATION),L)
 FFLAGS += -DTRILIN
 endif

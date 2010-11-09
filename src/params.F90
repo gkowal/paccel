@@ -66,8 +66,9 @@ module params
   real(kind=PREC)     , save :: c       = 1.0      ! the speed of light in Va
   real(kind=PREC)     , save :: dens    = 1.0      ! density [1 u/cm^3]
 
-! interpolation quality parameters
+! integration quality parameters
 !
+  character(len =   4), save :: method  = 'rk4'    ! the integration method: rk4 or si4
   real(kind=PREC)     , save :: maxtol  = 1.0e-4   ! the maximi integration tolerance
   real(kind=PREC)     , save :: maxeps  = 1.0e-15  ! the maximum iteration error
   real(kind=PREC)     , save :: dtini   = 1.0e-8   ! the initial time step
@@ -131,6 +132,9 @@ module params
       case ('idir')
         l = len_trim(value)
         write(idir   , "(a)" ) value(2:l-1)
+      case ('method')
+        l = len_trim(value)
+        write(method , "(a)" ) value(2:l-1)
       case ('odir')
         l = len_trim(value)
         write(odir   , "(a)" ) value(2:l-1)
