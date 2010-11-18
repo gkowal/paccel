@@ -2025,6 +2025,7 @@ module particles
   subroutine acceleration(t, x, v, a, u, b)
 
     use fields, only : ux, uy, uz, bx, by, bz
+    use params, only : nghost
 #ifdef TEST
     use params, only : bini, bamp, vamp, freq, epar
 #endif /* TEST */
@@ -2055,12 +2056,13 @@ module particles
 
 ! position indices
 !
+    integer                       :: dist
     integer        , dimension(4) :: ii, jj, kk
     real(kind=8   ), dimension(4) :: cx, cy, cz
     real(kind=8   ), dimension(3) :: dr
 #endif /* TEST */
 !
-!------------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 !
 #ifndef TEST
 ! convert position to index
@@ -2068,7 +2070,8 @@ module particles
       call pos2index(x, r)
 
 #ifdef BNDRY
-      if (minval(r) .gt. 4 .or. minval(dm - r) .gt. 4) then
+      dist = min(minval(dm(1:DIMS) - r(1:DIMS)), minval(r(1:DIMS)))
+      if (dist .gt. nghost) then
 #endif /* BNDRY */
 
 ! prepare coefficients for interpolation

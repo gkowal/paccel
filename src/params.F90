@@ -48,6 +48,7 @@ module params
                                                    ! 'w' - week
                                                    ! 'y' - year
   real(kind=PREC)     , save :: tmulti  = 1.0      ! time unit count
+  integer             , save :: nghost  = 8        ! number of ghost pixels near the boundary
 
 ! initial particle state parameters
 !
@@ -154,6 +155,8 @@ module params
         read (value  , "(i9)") maxit
       case ('ndumps')
         read (value  , "(i9)") ndumps
+      case ('nghost')
+        read (value  , "(i6)") nghost
 
       case ('c')
         read (value  , *     ) c
