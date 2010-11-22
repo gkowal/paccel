@@ -1153,10 +1153,10 @@ module particles
 !
       if (flag) then
 
-        z(1,1:3) = b1 * dt * u(1:3)
-        z(2,1:3) = b2 * dt * u(1:3)
-        z(1,4:6) = b1 * ds * a(1:3)
-        z(2,4:6) = b2 * ds * a(1:3)
+        z(1,1:3) = b1 * u(1:3)
+        z(2,1:3) = b2 * u(1:3)
+        z(1,4:6) = b1 * a(1:3)
+        z(2,4:6) = b2 * a(1:3)
 
       else
         zp(:,:) = z(:,:)
@@ -1178,8 +1178,8 @@ module particles
 !
 !   y(n+1) = y(n) + [ b1 * Z1 + b2 * Z2 ]
 !
-      x(1:3) = x(1:3) + dc * (- z(1,1:3) + z(2,1:3))
-      p(1:3) = p(1:3) + dc * (- z(1,4:6) + z(2,4:6))
+      x(1:3) = x(1:3) + dt * dc * (- z(1,1:3) + z(2,1:3))
+      p(1:3) = p(1:3) + ds * dc * (- z(1,4:6) + z(2,4:6))
 
 ! update the integration time
 !
@@ -1351,10 +1351,10 @@ module particles
 !
       if (flag) then
 
-        z(1,1:3) = b1 * dt * u(1:3)
-        z(2,1:3) = b2 * dt * u(1:3)
-        z(1,4:6) = b1 * ds * a(1:3)
-        z(2,4:6) = b2 * ds * a(1:3)
+        z(1,1:3) = b1 * u(1:3)
+        z(2,1:3) = b2 * u(1:3)
+        z(1,4:6) = b1 * a(1:3)
+        z(2,4:6) = b2 * a(1:3)
 
       else
         zp(:,:) = z(:,:)
@@ -1376,8 +1376,8 @@ module particles
 !
 !   y(n+1) = y(n) + [ b1 * Z1 + b2 * Z2 ]
 !
-      xn(1:3) = x(1:3) + dc * (- z(1,1:3) + z(2,1:3))
-      pn(1:3) = p(1:3) + dc * (- z(1,4:6) + z(2,4:6))
+      xn(1:3) = x(1:3) + dt * dc * (- z(1,1:3) + z(2,1:3))
+      pn(1:3) = p(1:3) + ds * dc * (- z(1,4:6) + z(2,4:6))
 
 ! update the integration time
 !
@@ -1552,10 +1552,10 @@ module particles
 
 ! prepare the particle position and momentum for the current iteration
 !
-      x1(:) = x(:) + z(1,1:3)
-      x2(:) = x(:) + z(2,1:3)
-      p1(:) = p(:) + z(1,4:6)
-      p2(:) = p(:) + z(2,4:6)
+      x1(:) = x(:) + dt * z(1,1:3)
+      x2(:) = x(:) + dt * z(2,1:3)
+      p1(:) = p(:) + ds * z(1,4:6)
+      p2(:) = p(:) + ds * z(2,4:6)
 
 ! calculate the Lorentz factors and particle velocity
 !
@@ -1571,10 +1571,10 @@ module particles
 
 ! update the increment
 !
-      zn(1,1:3) = dt * (a11 * u1(1:3) + a12 * u2(1:3))
-      zn(1,4:6) = ds * (a11 * a1(1:3) + a12 * a2(1:3))
-      zn(2,1:3) = dt * (a21 * u1(1:3) + a22 * u2(1:3))
-      zn(2,4:6) = ds * (a21 * a1(1:3) + a22 * a2(1:3))
+      zn(1,1:3) = a11 * u1(1:3) + a12 * u2(1:3)
+      zn(1,4:6) = a11 * a1(1:3) + a12 * a2(1:3)
+      zn(2,1:3) = a21 * u1(1:3) + a22 * u2(1:3)
+      zn(2,4:6) = a21 * a1(1:3) + a22 * a2(1:3)
 
 ! calculate the maximum of residuum of the increment
 !
