@@ -1090,14 +1090,14 @@ module particles
 
 ! local parameters
 !
-    real(kind=8), parameter :: b1   =   1.0d0 / 2.0d0 - dsqrt(3.0d0) / 6.0d0   &
-                             , b2   =   1.0d0 / 2.0d0 + dsqrt(3.0d0) / 6.0d0
+    real(kind=8), parameter :: b1   = - dsqrt(3.0d0)                           &
+                             , b2   =   dsqrt(3.0d0)
+    real(kind=8), parameter :: c1   =   1.0d0 / 2.0d0 - dsqrt(3.0d0) / 6.0d0   &
+                             , c2   =   1.0d0 / 2.0d0 + dsqrt(3.0d0) / 6.0d0
     real(kind=8), parameter :: b11  =   1.0d0 - 2.0d0 * dsqrt(3.0d0)           &
                              , b12  = - 6.0d0 + 4.0d0 * dsqrt(3.0d0)           &
                              , b21  = - 6.0d0 - 4.0d0 * dsqrt(3.0d0)           &
                              , b22  =   1.0d0 + 2.0d0 * dsqrt(3.0d0)
-    real(kind=8), parameter :: d1   = - 3.0d0 / dsqrt(3.0d0)                   &
-                             , d2   =   3.0d0 / dsqrt(3.0d0)
 !
 !-------------------------------------------------------------------------------
 !
@@ -1154,10 +1154,10 @@ module particles
 !
       if (flag) then
 
-        z(1,1:3) = b1 * u(1:3)
-        z(2,1:3) = b2 * u(1:3)
-        z(1,4:6) = b1 * a(1:3)
-        z(2,4:6) = b2 * a(1:3)
+        z(1,1:3) = c1 * u(1:3)
+        z(2,1:3) = c2 * u(1:3)
+        z(1,4:6) = c1 * a(1:3)
+        z(2,4:6) = c2 * a(1:3)
 
       else
         zp(:,:) = z(:,:)
@@ -1179,8 +1179,8 @@ module particles
 !
 !   y(n+1) = y(n) + [ b1 * Z1 + b2 * Z2 ]
 !
-      x(1:3) = x(1:3) + dt * (d1 * z(1,1:3) + d2 * z(2,1:3))
-      p(1:3) = p(1:3) + ds * (d1 * z(1,4:6) + d2 * z(2,4:6))
+      x(1:3) = x(1:3) + dt * (b1 * z(1,1:3) + b2 * z(2,1:3))
+      p(1:3) = p(1:3) + ds * (b1 * z(1,4:6) + b2 * z(2,4:6))
 
 ! update the integration time
 !
@@ -1289,14 +1289,14 @@ module particles
 
 ! local parameters
 !
-    real(kind=8), parameter :: b1   =   1.0d0 / 2.0d0 - dsqrt(3.0d0) / 6.0d0   &
-                             , b2   =   1.0d0 / 2.0d0 + dsqrt(3.0d0) / 6.0d0
+    real(kind=8), parameter :: b1   = - dsqrt(3.0d0)                           &
+                             , b2   =   dsqrt(3.0d0)
+    real(kind=8), parameter :: c1   =   1.0d0 / 2.0d0 - dsqrt(3.0d0) / 6.0d0   &
+                             , c2   =   1.0d0 / 2.0d0 + dsqrt(3.0d0) / 6.0d0
     real(kind=8), parameter :: b11  =   1.0d0 - 2.0d0 * dsqrt(3.0d0)           &
                              , b12  = - 6.0d0 + 4.0d0 * dsqrt(3.0d0)           &
                              , b21  = - 6.0d0 - 4.0d0 * dsqrt(3.0d0)           &
                              , b22  =   1.0d0 + 2.0d0 * dsqrt(3.0d0)
-    real(kind=8), parameter :: d1   = - 3.0d0 / dsqrt(3.0d0)                   &
-                             , d2   =   3.0d0 / dsqrt(3.0d0)
 !
 !-------------------------------------------------------------------------------
 !
@@ -1353,10 +1353,10 @@ module particles
 !
       if (flag) then
 
-        z(1,1:3) = b1 * u(1:3)
-        z(2,1:3) = b2 * u(1:3)
-        z(1,4:6) = b1 * a(1:3)
-        z(2,4:6) = b2 * a(1:3)
+        z(1,1:3) = c1 * u(1:3)
+        z(2,1:3) = c2 * u(1:3)
+        z(1,4:6) = c1 * a(1:3)
+        z(2,4:6) = c2 * a(1:3)
 
       else
         zp(:,:) = z(:,:)
@@ -1378,8 +1378,8 @@ module particles
 !
 !   y(n+1) = y(n) + [ b1 * Z1 + b2 * Z2 ]
 !
-      xn(1:3) = x(1:3) + dt * (d1 * z(1,1:3) + d2 * z(2,1:3))
-      pn(1:3) = p(1:3) + ds * (d1 * z(1,4:6) + d2 * z(2,4:6))
+      xn(1:3) = x(1:3) + dt * (b1 * z(1,1:3) + b2 * z(2,1:3))
+      pn(1:3) = p(1:3) + ds * (b1 * z(1,4:6) + b2 * z(2,4:6))
 
 ! update the integration time
 !
