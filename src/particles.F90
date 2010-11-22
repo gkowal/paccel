@@ -1172,7 +1172,7 @@ module particles
 !   Z1 = dt * [ a11 * F(y + Z1) + a12 * F(y + Z2) ]
 !   Z2 = dt * [ a21 * F(y + Z1) + a22 * F(y + Z2) ]
 !
-      call estimate(x(:), p(:), z(:,:), t, dt, ds, tol)
+      call estimate_si4(x(:), p(:), z(:,:), t, dt, ds, tol)
 
 ! update the solution
 !
@@ -1370,7 +1370,7 @@ module particles
 !   Z1 = dt * [ a11 * F(y + Z1) + a12 * F(y + Z2) ]
 !   Z2 = dt * [ a21 * F(y + Z1) + a22 * F(y + Z2) ]
 !
-      call estimate(x(:), p(:), z(:,:), t, dt, ds, tol)
+      call estimate_si4(x(:), p(:), z(:,:), t, dt, ds, tol)
 
 ! update the solution
 !
@@ -1496,8 +1496,8 @@ module particles
 !
 !===============================================================================
 !
-! estimate: subroutine estimates the solution for the equation of motion using
-!           a simple functional iteration
+! estimate_si4: subroutine estimates the solution for the equation of motion
+!               using a simple functional iteration (SI4 version)
 !
 ! references: "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
 !             Chapman & Hall, London, New York, 1994
@@ -1507,7 +1507,7 @@ module particles
 !
 !===============================================================================
 !
-  subroutine estimate(x, p, z, t, dt, ds, tol)
+  subroutine estimate_si4(x, p, z, t, dt, ds, tol)
 
     use params, only : maxit, maxeps
 
@@ -1598,7 +1598,7 @@ module particles
 !
 !-------------------------------------------------------------------------------
 !
-  end subroutine estimate
+  end subroutine estimate_si4
 !
 !===============================================================================
 !
