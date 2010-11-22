@@ -1592,11 +1592,9 @@ module particles
 
 ! estimate the integration error
 !
-    dh(1:3) = dt * (e1 * u1(:) + e2 * u2(:))                                   &
-            / sqrt(sqrt(sum(u1(:) * u1(:))) * sqrt(sum(u2(:) * u2(:))))
-    dh(4:6) = ds * (e1 * a1(:) + e2 * a2(:))                                   &
-            / sqrt(sqrt(sum(a1(:) * a1(:))) * sqrt(sum(a2(:) * a2(:))))
-    tol     = sqrt(sum(dh(:) * dh(:)))
+    dh(1:3) = dt * (e1 * u1(:) + e2 * u2(:))
+    dh(4:6) = ds * (e1 * a1(:) + e2 * a2(:))
+    tol     = sum(dh(:) * dh(:))
 !
 !-------------------------------------------------------------------------------
 !
