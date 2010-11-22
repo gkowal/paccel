@@ -1096,7 +1096,8 @@ module particles
                              , b12  = - 6.0d0 + 4.0d0 * dsqrt(3.0d0)           &
                              , b21  = - 6.0d0 - 4.0d0 * dsqrt(3.0d0)           &
                              , b22  =   1.0d0 + 2.0d0 * dsqrt(3.0d0)
-    real(kind=8), parameter :: dc   =                   dsqrt(3.0d0)
+    real(kind=8), parameter :: d1   = - 3.0d0 / dsqrt(3.0d0)                   &
+                             , d2   =   3.0d0 / dsqrt(3.0d0)
 !
 !-------------------------------------------------------------------------------
 !
@@ -1178,8 +1179,8 @@ module particles
 !
 !   y(n+1) = y(n) + [ b1 * Z1 + b2 * Z2 ]
 !
-      x(1:3) = x(1:3) + dt * dc * (- z(1,1:3) + z(2,1:3))
-      p(1:3) = p(1:3) + ds * dc * (- z(1,4:6) + z(2,4:6))
+      x(1:3) = x(1:3) + dt * (d1 * z(1,1:3) + d2 * z(2,1:3))
+      p(1:3) = p(1:3) + ds * (d1 * z(1,4:6) + d2 * z(2,4:6))
 
 ! update the integration time
 !
@@ -1294,7 +1295,8 @@ module particles
                              , b12  = - 6.0d0 + 4.0d0 * dsqrt(3.0d0)           &
                              , b21  = - 6.0d0 - 4.0d0 * dsqrt(3.0d0)           &
                              , b22  =   1.0d0 + 2.0d0 * dsqrt(3.0d0)
-    real(kind=8), parameter :: dc   =                   dsqrt(3.0d0)
+    real(kind=8), parameter :: d1   = - 3.0d0 / dsqrt(3.0d0)                   &
+                             , d2   =   3.0d0 / dsqrt(3.0d0)
 !
 !-------------------------------------------------------------------------------
 !
@@ -1376,8 +1378,8 @@ module particles
 !
 !   y(n+1) = y(n) + [ b1 * Z1 + b2 * Z2 ]
 !
-      xn(1:3) = x(1:3) + dt * dc * (- z(1,1:3) + z(2,1:3))
-      pn(1:3) = p(1:3) + ds * dc * (- z(1,4:6) + z(2,4:6))
+      xn(1:3) = x(1:3) + dt * (d1 * z(1,1:3) + d2 * z(2,1:3))
+      pn(1:3) = p(1:3) + ds * (d1 * z(1,4:6) + d2 * z(2,4:6))
 
 ! update the integration time
 !
@@ -1536,8 +1538,8 @@ module particles
                              , a12 = 1.0d0 / 4.0d0 - dsqrt(3.0d0) / 6.0d0      &
                              , a21 = 1.0d0 / 4.0d0 + dsqrt(3.0d0) / 6.0d0      &
                              , a22 = 1.0d0 / 4.0d0
-    real(kind=8), parameter :: e1  = 1.0d0 / 2.0d0 + 3.0d0 / dsqrt(3.0d0)      &
-                             , e2  = 1.0d0 / 2.0d0 - 3.0d0 / dsqrt(3.0d0)
+    real(kind=8), parameter :: e1  = - dsqrt(3.0d0)                            &
+                             , e2  =   dsqrt(3.0d0)
 !
 !-------------------------------------------------------------------------------
 !
