@@ -30,7 +30,8 @@ program paccel
   use params   , only : read_params, method, output
   use particles, only : init_particle, finit_particle                          &
                       , integrate_trajectory_rk4, integrate_trajectory_rk4_log &
-                      , integrate_trajectory_si4, integrate_trajectory_si4_log
+                      , integrate_trajectory_si4, integrate_trajectory_si4_log &
+                      , integrate_trajectory_si6, integrate_trajectory_si6_log
 
   implicit none
 
@@ -82,6 +83,12 @@ program paccel
       call integrate_trajectory_si4()
     if (output .eq. 'l') &
       call integrate_trajectory_si4_log()
+  case('si6')
+    write( *, "('INFO      : ',a)" ) "integrating the particle trajectory (SI6 method)"
+    if (output .eq. 'i') &
+      call integrate_trajectory_si6()
+    if (output .eq. 'l') &
+      call integrate_trajectory_si6_log()
   end select
 
 ! display performance information
