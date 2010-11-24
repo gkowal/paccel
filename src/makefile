@@ -10,7 +10,7 @@ TVD           = Y
 BNDRY         = N
 PREC          = 8
 DIMS          = 3
-TEST          = N
+TEST          = WAVE
 LOSS          = N
 
 # compiler and options

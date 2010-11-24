@@ -445,58 +445,63 @@ module particles
     integer                       :: n, m
     real(kind=PREC)               ::    t1, t2, t3, t4, t5
     real(kind=PREC), dimension(3) :: x, x1, x2, x3, x4, x5
-    real(kind=PREC), dimension(3) :: v, v1, v2, v3, v4, v5
+    real(kind=PREC), dimension(3) :: u, u1, u2, u3, u4, u5
     real(kind=PREC), dimension(3) :: p, p1, p2, p3, p4, p5
     real(kind=PREC), dimension(3) ::    k1, k2, k3, k4, k5
     real(kind=PREC), dimension(3) ::    l1, l2, l3, l4, l5
-    real(kind=PREC), dimension(3) :: a, u, b
-    real(kind=PREC)               :: gamma
-    real(kind=8   )               :: delta
-    real(kind=8   )               :: ba, vu, vp, vr, en, ek, om, tg, rg
-    real(kind=8   )               :: t, dt, dtq, dtn
+    real(kind=PREC), dimension(3) :: a, v, b
+    real(kind=PREC)               :: gm, t, dt, ds, dtn
+    real(kind=PREC)               :: en, ek, ua, ba, up, ur, om, tg, rg
+    real(kind=PREC)               :: tol
 !
 !-------------------------------------------------------------------------------
 !
-! initialize time
+! initialize counters, time and timesteps
 !
-    n   = 0
-    m   = 0
-    t   = 0.0
-    dt  = dtini
-    dtq = qom * dt
+    n  = 0
+    m  = 0
+    t  = 0.0d0
+    dt = dtini
+    ds = qom * dt
 
-! initial position and velocity
+! set the initial position, velocity, and momentum
 !
     x(:) = x0(:)
-    v(:) = v0(:)
+    u(:) = v0(:)
     p(:) = p0(:)
 
-! calculate parameters
+! calculate the acceleration at the initial position
 !
-    vu = sqrt(vpar**2 + vper**2)
+    call acceleration(t, x(:), u(:), a(:), v(:), b(:))
+
+! separate the particle velocity into parallel and perpendicular components
+!
+    call separate_velocity(u(:), b(:), ba, ua, up, ur)
 
 ! calculate the Lorentz factor
 !
-    gamma = lorentz_factor(p)
+    gm = lorentz_factor(p(:))
 
-! calculate particle energy
+! calculate the particle energies
 !
 #ifdef RELAT
-    en = gamma * mrest
+    en = gm * mrest
     ek = en - mrest
-#else
-    en = 0.5 * vu**2
+#else /* RELAT */
+    en = 0.5d0 * ua * ua
     ek = en
-#endif
+#endif /* RELAT */
 
-! print the progress information
+! print the progress
 !
-    write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP', 'SPEED (c)', 'ENERGY (MeV)'
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, vu, ek, char(13)
+    write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP'       &
+            , 'SPEED (c)', 'ENERGY (MeV)'
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
+            , char(13)
 
 !== INTEGRATION LOOP ==
 !
-! integrate particles
+! integrate the trajectory
 !
     do while (t .le. tmax)
 
@@ -510,190 +515,196 @@ module particles
 
 ! calculate the Lorentz factor
 !
-      gamma = lorentz_factor(p1)
+      gm = lorentz_factor(p1(:))
 
-! calculate velocity
+! calculate the velocity
 !
-      v1(:) = p1(:) / gamma
+      u1(:) = p1(:) / gm
 
-! calculate acceleration for the location x1 and velocity v1
+! calculate the acceleration for the location x1 and velocity u1
 !
-      call acceleration(t1, x1, v1, a, u, b)
+      call acceleration(t1, x1(:), u1(:), a(:), v(:), b(:))
 
 ! calculate the first term
 !
-      l1(:) = dt  * v1(:)
-      k1(:) = dtq * a (:)
+      l1(:) = dt * u1(:)
+      k1(:) = ds * a (:)
 
 !! 2nd step of the RK integration
 !!
 ! integrate the position and momentum
 !
-      t2    = t    + 0.5 * dt
-      x2(:) = x(:) + 0.5 * l1(:)
-      p2(:) = p(:) + 0.5 * k1(:)
+      t2    = t    + 0.5d0 * dt
+      x2(:) = x(:) + 0.5d0 * l1(:)
+      p2(:) = p(:) + 0.5d0 * k1(:)
 
 ! calculate the Lorentz factor
 !
-      gamma = lorentz_factor(p2)
+      gm = lorentz_factor(p2(:))
 
 ! calculate the velocity
 !
-      v2(:) = p2(:) / gamma
+      u2(:) = p2(:) / gm
 
-! calculate acceleration for the location x2 and velocity v2
+! calculate the acceleration for the location x2 and velocity u2
 !
-      call acceleration(t2, x2, v2, a, u, b)
+      call acceleration(t2, x2(:), u2(:), a(:), v(:), b(:))
 
 ! calculate the second term
 !
-      l2(:) = dt  * v2(:)
-      k2(:) = dtq * a (:)
+      l2(:) = dt * u2(:)
+      k2(:) = ds * a (:)
 
 !! 3rd step of the RK integration
 !!
 ! integrate the position and momentum
 !
-      t3    = t    + 0.5 * dt
-      x3(:) = x(:) + 0.5 * l2(:)
-      p3(:) = p(:) + 0.5 * k2(:)
+      t3    = t    + 0.5d0 * dt
+      x3(:) = x(:) + 0.5d0 * l2(:)
+      p3(:) = p(:) + 0.5d0 * k2(:)
 
 ! calculate the Lorentz factor
 !
-      gamma = lorentz_factor(p3(:))
+      gm = lorentz_factor(p3(:))
 
 ! calculate the velocity
 !
-      v3(:) = p3(:) / gamma
+      u3(:) = p3(:) / gm
 
-! calculate acceleration for the location x3 and velocity v3
+! calculate the acceleration for the location x3 and velocity u3
 !
-      call acceleration(t3, x3, v3, a, u, b)
+      call acceleration(t3, x3(:), u3(:), a(:), v(:), b(:))
 
 ! calculate the third term
 !
-      l3(:) = dt  * v3(:)
-      k3(:) = dtq * a (:)
+      l3(:) = dt * u3(:)
+      k3(:) = ds * a (:)
 
 !! 4th step of the RK integration
 !!
 ! integrate the position and momentum
 !
-      t4    = t    + 0.5 * dt
+      t4    = t    + 0.5d0 * dt
       x4(:) = x(:) + l3(:)
       p4(:) = p(:) + k3(:)
 
 ! calculate the Lorentz factor
 !
-      gamma = lorentz_factor(p4(:))
+      gm = lorentz_factor(p4(:))
 
 ! calculate the velocity
 !
-      v4(:) = p4(:) / gamma
+      u4(:) = p4(:) / gm
 
-! calculate acceleration for the location x4 and velocity v4
+! calculate the acceleration for the location x4 and velocity u4
 !
-      call acceleration(t4, x4, v4, a, u, b)
+      call acceleration(t4, x4(:), u4(:), a(:), v(:), b(:))
 
 ! calculate the third term
 !
-      l4(:) = dt  * v4(:)
-      k4(:) = dtq * a (:)
+      l4(:) = dt * u4(:)
+      k4(:) = ds * a (:)
 
 !! the final integration of the particle position and momentum
 !!
       t5    = t    + dt
-      x5(:) = x(:) + ( l1(:) + 2.0 * ( l2(:) + l3(:) ) + l4(:) ) / 6.0
-      p5(:) = p(:) + ( k1(:) + 2.0 * ( k2(:) + k3(:) ) + k4(:) ) / 6.0
+      x5(:) = x(:) + ( l1(:) + 2.0d0 * ( l2(:) + l3(:) ) + l4(:) ) / 6.0d0
+      p5(:) = p(:) + ( k1(:) + 2.0d0 * ( k2(:) + k3(:) ) + k4(:) ) / 6.0d0
 
 ! calculate the Lorentz factor
 !
-      gamma = lorentz_factor(p5(:))
+      gm = lorentz_factor(p5(:))
 
 ! calculate the velocity
 !
-      v5(:) = p5(:) / gamma
+      u5(:) = p5(:) / gm
 
-! calculate acceleration at the location x
+! calculate the acceleration at the updated location
 !
-      call acceleration(t5, x5, v5, a, u, b)
+      call acceleration(t5, x5(:), u5(:), a(:), v(:), b(:))
 
-! estimate error
+! estimate the error for timestep control
 !
-      l4(:) = l4(:) - dt  * v5(:)
-      k4(:) = k4(:) - dtq * a (:)
+      l4(:) = l4(:) - dt * u5(:)
+      k4(:) = k4(:) - ds * a (:)
 
-      delta = sqrt(dot_product(l4, l4) + dot_product(k4, k4)) / 6.0
+      tol = sqrt(dot_product(l4(:), l4(:)) + dot_product(k4(:), k4(:))) / 6.0d0
 
-! estimate new timestep
+! estimate the new timestep
 !
-      dtn   = dt * (rho * maxtol / delta)**0.2
+      dtn   = dt * (rho * maxtol / tol)**0.2d0
 
-      if (delta .gt. maxtol) then
-
-! repeat integration with this timestep
+! check if the error is below desired tolerance
 !
-        dt  = dtn
-        dtq = qom * dt
+      if (tol .gt. maxtol) then
+
+! repeat the integration with a new timestep
+!
+        dt = dtn
+        ds = qom * dt
 
       else
 
-! update time
+! update the time
 !
         t   = t + dt
 
-! update new timestep
+! update the new timestep
 !
-        dt  = min(2.0 * dt, dtn, dtmax)
-        dtq = qom * dt
+        dt = min(2.0d0 * dt, dtn, dtmax)
+        ds = qom * dt
 
-! update position, velocity and momentum
+! update the position, velocity and momentum
 !
         x(:) = x5(:)
-        v(:) = v5(:)
+        u(:) = u5(:)
         p(:) = p5(:)
 
-! copy data to array
+! store the current particle state
 !
         if (m .eq. ndumps) then
 
-! separate particle velocity into parallel and perpendicular components
+! separate the particle velocity into the parallel and perpendicular components
 !
-          call separate_velocity(v, b, ba, vu, vp, vr)
+          call separate_velocity(u(:), b(:), ba, ua, up, ur)
 
 ! calculate the particle gyroperiod and gyroradius
 !
-          call gyro_parameters(gamma, ba, vr, om, tg, rg)
+          call gyro_parameters(gm, ba, ur, om, tg, rg)
 
-! calculate particle energy
+! calculate the particle energies
 !
 #ifdef RELAT
-          en = gamma * mrest
+          en = gm * mrest
           ek = en - mrest
-#else
-          en = 0.5 * vu**2
+#else /* RELAT */
+          en = 0.5d0 * ua * ua
           ek = en
-#endif
+#endif /* RELAT */
 
-! write the progress
+! print the progress
 !
-          write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, vu / c, ek, char(13)
+          write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c  &
+                  , ek, char(13)
 
-! write results to the output file
+! store the particle parameters
 !
-          open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-          write (10, "(20(1pe18.10))") t, x(1), x(2), x(3), v(1), v(2), v(3)   &
-                                     , vu / c, vp / c, vr / c, gamma, en, ek   &
+          open  (10, file = 'output.dat', form = 'formatted'                   &
+                   , position = 'append')
+          write (10, "(20(1pe18.10))") t, x(1), x(2), x(3), u(1), u(2), u(3)   &
+                                     , ua / c, up / c, ur / c, gm, en, ek      &
                                      , bavg * ba, om, tg * fc, rg * ln, tg, rg &
-                                     , delta
+                                     , tol
           close (10)
 
+! update the counters
+!
           n = n + 1
           m = 0
 
         end if
 
-! increase data write counter
+! increase the data write counter
 !
         m = m + 1
 
@@ -701,34 +712,34 @@ module particles
 
     end do
 
-! separate particle velocity into parallel and perpendicular components
+! separate the particle velocity into the parallel and perpendicular components
 !
-    call separate_velocity(v, b, ba, vu, vp, vr)
+    call separate_velocity(u(:), b(:), ba, ua, up, ur)
 
 ! calculate the particle gyroperiod and gyroradius
 !
-    call gyro_parameters(gamma, ba, vr, om, tg, rg)
+    call gyro_parameters(gm, ba, ur, om, tg, rg)
 
-! calculate particle energy
+! calculate the particle energies
 !
 #ifdef RELAT
-    en = gamma * mrest
+    en = gm * mrest
     ek = en - mrest
-#else
-    en = 0.5 * vu**2
+#else /* RELAT */
+    en = 0.5d0 * ua * ua
     ek = en
-#endif
+#endif /* RELAT */
 
-! write the progress
+! print the progress
 !
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, vu / c, ek
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua / c, ek
 
-! write results to the output file
+! store the particle parameters
 !
     open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-    write (10, "(20(1pe18.10))") t, x(1), x(2), x(3), v(1), v(2), v(3)         &
-                               , vu / c, vp / c, vr / c, gamma, en, ek         &
-                               , bavg * ba, om, tg * fc, rg * ln, tg, rg, delta
+    write (10, "(20(1pe18.10))") t, x(1), x(2), x(3), u(1), u(2), u(3)         &
+                               , ua / c, up / c, ur / c, gm, en, ek            &
+                               , bavg * ba, om, tg * fc, rg * ln, tg, rg, tol
     close (10)
 
 !-------------------------------------------------------------------------------
