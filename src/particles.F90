@@ -94,9 +94,9 @@ module particles
 ! parameters
 !
     real(kind=PREC) :: pi2 = 6.2831853071795862319959269370884d0
-    real(kind=PREC) :: cc  = 299792457.99999998416751623153687     ! the speed of light [m/s]
-    real(kind=PREC) :: pc  = 3.2407792896656065765177783686188e-17 ! 1 meter [pc]
-    real(kind=PREC) :: sc  = 3.168876464084018437308447107767e-08  ! 1 second [yr]
+    real(kind=PREC) :: cc  = 299792457.99999998416751623153687d0   ! the speed of light [m/s]
+    real(kind=PREC) :: pc  = 3.2407792896656065765177783686188d-17 ! 1 meter [pc]
+    real(kind=PREC) :: sc  = 3.168876464084018437308447107767d-08  ! 1 second [yr]
 !
 !-------------------------------------------------------------------------------
 !
@@ -123,7 +123,7 @@ module particles
 
 ! compute plasma parameters
 !                                                        ! c is expressed in Va
-    dn   = 1.6726215850718025379202284485224e-21 * dens  ! density conversion from
+    dn   = 1.6726215850718025379202284485224d-21 * dens  ! density conversion from
                                                          ! protonmass/cm^3 to kg/m^3
     gm   = 1.0d0 / sqrt(1.0d0 - (1.0 / c)**2)            ! Lorentz factor
     va   = gm * cc  / c                                  ! Alfven speed [m/s]
@@ -137,11 +137,11 @@ module particles
     case ('e')
       mrest =  0.51099890307660134070033564057667        ! rest energy of electron [MeV]
       qom   = -17588201.72265790030360221862793          ! e/m [1 / Gs s]
-      mp    = 9.1093818871545313708798643833606e-31      ! electron mass [kg]
+      mp    = 9.1093818871545313708798643833606d-31      ! electron mass [kg]
     case default
       mrest =  938.27199893682302445085952058434         ! rest energy of proton   [MeV]
       qom   =  9578.8340668294185888953506946564         ! e/m [1 / Gs s]
-      mp    = 1.6726215850718025086476640481627e-27      ! proton mass [kg]
+      mp    = 1.6726215850718025086476640481627d-27      ! proton mass [kg]
     end select
     vp = cc * vpar                                       ! parallel particle speed
     vr = cc * vper                                       ! perpendicular particle speed
@@ -389,9 +389,10 @@ module particles
                                  , '<B> [Gs]', 'Omega [1/s]'                   &
                                  , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'      &
                                  , 'Tolerance'
-    write (10, "(19(1pe18.10))") 0.0, x0(1), x0(2), x0(3), v0(1), v0(2), v0(3) &
+    write (10, "(20(1pe18.10))") 0.0, x0(1), x0(2), x0(3), v0(1), v0(2), v0(3) &
                                     , vv, vpar, vper, gm, en, ek               &
-                                    , bavg * ba, om, tg, rg, tg / fc, rg / ln
+                                    , bavg * ba, om, tg, rg, tg / fc, rg / ln  &
+                                    , 1.0d-16
     close (10)
 
 ! prepare dump times
@@ -1036,7 +1037,7 @@ module particles
 
 ! update the new timestep
 !
-        dt = min(2.0d0 * dt, dtn, dtmax, max(1.0e-16, tmax - t))
+        dt = min(2.0d0 * dt, dtn, dtmax, max(1.0d-16, tmax - t))
         ds = qom * dt
 
       end if
@@ -1477,7 +1478,7 @@ module particles
 
 ! update timestep
 !
-      dt = min(dt, max(1.0e-16, tmax - t))
+      dt = min(dt, max(1.0d-16, tmax - t))
       ds = qom * dt
 
 ! end of iteration
@@ -1568,7 +1569,7 @@ module particles
 ! initiate the iteration control parameters
 !
     it  = 1
-    eps = 1.0e+16
+    eps = 1.0d+16
 
 ! perform the simple functional iteration until the conditions are met
 !
@@ -2000,7 +2001,7 @@ module particles
 
 ! update timestep
 !
-      dt = min(dt, max(1.0e-16, tmax - t))
+      dt = min(dt, max(1.0d-16, tmax - t))
       ds = qom * dt
 
 ! end of iteration
@@ -2098,7 +2099,7 @@ module particles
 ! initiate the iteration control parameters
 !
     it  = 1
-    eps = 1.0e+16
+    eps = 1.0d+16
 
 ! perform the simple functional iteration until the conditions are met
 !
