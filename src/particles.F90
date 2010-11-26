@@ -76,8 +76,8 @@ module particles
 ! local variables
 !
     integer      :: p, n
-    real(kind=8) :: vp, vr, vv, va
-    real(kind=8) :: gm, dn, mu0, om, tg, rg, mu, mp, en, ek, ba
+    real(kind=PREC) :: vp, vr, vv, va
+    real(kind=PREC) :: gm, dn, mu0, om, tg, rg, mu, mp, en, ek, ba
     real(kind=PREC) :: bb, rt
 
 ! arrays
@@ -93,10 +93,10 @@ module particles
 
 ! parameters
 !
-    real(kind=8) :: pi2 = 6.2831853071795862319959269370884d0
-    real(kind=8) :: cc  = 299792457.99999998416751623153687     ! the speed of light [m/s]
-    real(kind=8) :: pc  = 3.2407792896656065765177783686188e-17 ! 1 meter [pc]
-    real(kind=8) :: sc  = 3.168876464084018437308447107767e-08  ! 1 second [yr]
+    real(kind=PREC) :: pi2 = 6.2831853071795862319959269370884d0
+    real(kind=PREC) :: cc  = 299792457.99999998416751623153687     ! the speed of light [m/s]
+    real(kind=PREC) :: pc  = 3.2407792896656065765177783686188e-17 ! 1 meter [pc]
+    real(kind=PREC) :: sc  = 3.168876464084018437308447107767e-08  ! 1 second [yr]
 !
 !-------------------------------------------------------------------------------
 !
@@ -397,10 +397,10 @@ module particles
 ! prepare dump times
 !
     if (output .eq. 'l') then
-      n = ndumps * (dlog10(tmax) - dlog10(tmin)) + 1
+      n = ndumps * (dlog10(real(tmax,kind=8)) - dlog10(real(tmin,kind=8))) + 1
       allocate(tt(n))
       do p = 1, n
-        tt(p) = 10.0d0**((p - 1.0) / ndumps + dlog10(tmin))
+        tt(p) = 10.0d0**((p - 1.0) / ndumps + dlog10(real(tmin,kind=8)))
       enddo
     endif
 !
@@ -1112,14 +1112,14 @@ module particles
 
 ! local parameters
 !
-    real(kind=8), parameter :: b1   = - dsqrt(3.0d0)                           &
-                             , b2   =   dsqrt(3.0d0)
-    real(kind=8), parameter :: c1   =   1.0d0 / 2.0d0 - dsqrt(3.0d0) / 6.0d0   &
-                             , c2   =   1.0d0 / 2.0d0 + dsqrt(3.0d0) / 6.0d0
-    real(kind=8), parameter :: b11  =   1.0d0 - 2.0d0 * dsqrt(3.0d0)           &
-                             , b12  = - 6.0d0 + 4.0d0 * dsqrt(3.0d0)           &
-                             , b21  = - 6.0d0 - 4.0d0 * dsqrt(3.0d0)           &
-                             , b22  =   1.0d0 + 2.0d0 * dsqrt(3.0d0)
+    real(kind=PREC), parameter :: b1   = - dsqrt(3.0d0)                        &
+                                , b2   =   dsqrt(3.0d0)
+    real(kind=PREC), parameter :: c1   =   0.5d0 - dsqrt(3.0d0) / 6.0d0        &
+                                , c2   =   0.5d0 + dsqrt(3.0d0) / 6.0d0
+    real(kind=PREC), parameter :: b11  =   1.0d0 - 2.0d0 * dsqrt(3.0d0)        &
+                                , b12  = - 6.0d0 + 4.0d0 * dsqrt(3.0d0)        &
+                                , b21  = - 6.0d0 - 4.0d0 * dsqrt(3.0d0)        &
+                                , b22  =   1.0d0 + 2.0d0 * dsqrt(3.0d0)
 !
 !-------------------------------------------------------------------------------
 !
@@ -1311,14 +1311,14 @@ module particles
 
 ! local parameters
 !
-    real(kind=8), parameter :: b1   = - dsqrt(3.0d0)                           &
-                             , b2   =   dsqrt(3.0d0)
-    real(kind=8), parameter :: c1   =   1.0d0 / 2.0d0 - dsqrt(3.0d0) / 6.0d0   &
-                             , c2   =   1.0d0 / 2.0d0 + dsqrt(3.0d0) / 6.0d0
-    real(kind=8), parameter :: b11  =   1.0d0 - 2.0d0 * dsqrt(3.0d0)           &
-                             , b12  = - 6.0d0 + 4.0d0 * dsqrt(3.0d0)           &
-                             , b21  = - 6.0d0 - 4.0d0 * dsqrt(3.0d0)           &
-                             , b22  =   1.0d0 + 2.0d0 * dsqrt(3.0d0)
+    real(kind=PREC), parameter :: b1   = - dsqrt(3.0d0)                        &
+                                , b2   =   dsqrt(3.0d0)
+    real(kind=PREC), parameter :: c1   =   0.5d0 - dsqrt(3.0d0) / 6.0d0        &
+                                , c2   =   0.5d0 + dsqrt(3.0d0) / 6.0d0
+    real(kind=PREC), parameter :: b11  =   1.0d0 - 2.0d0 * dsqrt(3.0d0)        &
+                                , b12  = - 6.0d0 + 4.0d0 * dsqrt(3.0d0)        &
+                                , b21  = - 6.0d0 - 4.0d0 * dsqrt(3.0d0)        &
+                                , b22  =   1.0d0 + 2.0d0 * dsqrt(3.0d0)
 !
 !-------------------------------------------------------------------------------
 !
@@ -1556,12 +1556,12 @@ module particles
 
 ! local parameter
 !
-    real(kind=8), parameter :: a11 = 1.0d0 / 4.0d0                             &
-                             , a12 = 1.0d0 / 4.0d0 - dsqrt(3.0d0) / 6.0d0      &
-                             , a21 = 1.0d0 / 4.0d0 + dsqrt(3.0d0) / 6.0d0      &
-                             , a22 = 1.0d0 / 4.0d0
-    real(kind=8), parameter :: e1  = - dsqrt(3.0d0)                            &
-                             , e2  =   dsqrt(3.0d0)
+    real(kind=PREC), parameter :: a11 = 1.0d0 / 4.0d0                          &
+                                , a12 = 1.0d0 / 4.0d0 - dsqrt(3.0d0) / 6.0d0   &
+                                , a21 = 1.0d0 / 4.0d0 + dsqrt(3.0d0) / 6.0d0   &
+                                , a22 = 1.0d0 / 4.0d0
+    real(kind=PREC), parameter :: e1  = - dsqrt(3.0d0)                         &
+                                , e2  =   dsqrt(3.0d0)
 !
 !-------------------------------------------------------------------------------
 !
@@ -1655,12 +1655,12 @@ module particles
 
 ! local parameters
 !
-    real(kind=8), parameter :: b1   =   5.0d0 / 3.0d0                          &
-                             , b2   = - 4.0d0 / 3.0d0                          &
-                             , b3   =   5.0d0 / 3.0d0
-    real(kind=8), parameter :: c1   =   1.0d0 / 2.0d0 - 0.1d0 * dsqrt(15.0d0)  &
-                             , c2   =   1.0d0 / 2.0d0                          &
-                             , c3   =   1.0d0 / 2.0d0 + 0.1d0 * dsqrt(15.0d0)
+    real(kind=PREC), parameter :: b1   =   5.0d0 / 3.0d0                       &
+                                , b2   = - 4.0d0 / 3.0d0                       &
+                                , b3   =   5.0d0 / 3.0d0
+    real(kind=PREC), parameter :: c1   =   0.5d0 - 0.1d0 * dsqrt(15.0d0)       &
+                                , c2   =   0.5d0                               &
+                                , c3   =   0.5d0 + 0.1d0 * dsqrt(15.0d0)
 !
 !-------------------------------------------------------------------------------
 !
@@ -1844,12 +1844,12 @@ module particles
 
 ! local parameters
 !
-    real(kind=8), parameter :: b1   =   5.0d0 / 3.0d0                          &
-                             , b2   = - 4.0d0 / 3.0d0                          &
-                             , b3   =   5.0d0 / 3.0d0
-    real(kind=8), parameter :: c1   =   1.0d0 / 2.0d0 - 0.1d0 * dsqrt(15.0d0)  &
-                             , c2   =   1.0d0 / 2.0d0                          &
-                             , c3   =   1.0d0 / 2.0d0 + 0.1d0 * dsqrt(15.0d0)
+    real(kind=PREC), parameter :: b1   =   5.0d0 / 3.0d0                       &
+                                , b2   = - 4.0d0 / 3.0d0                       &
+                                , b3   =   5.0d0 / 3.0d0
+    real(kind=PREC), parameter :: c1   =   0.5d0 - 0.1d0 * dsqrt(15.0d0)       &
+                                , c2   =   0.5d0                               &
+                                , c3   =   0.5d0 + 0.1d0 * dsqrt(15.0d0)
 !
 !-------------------------------------------------------------------------------
 !
@@ -2080,18 +2080,18 @@ module particles
 
 ! local parameter
 !
-    real(kind=8), parameter :: a11 = 5.0d0 / 36.0d0                            &
-                             , a12 = 2.0d0 /  9.0d0 - dsqrt(15.0d0) / 15.0d0   &
-                             , a13 = 5.0d0 / 36.0d0 - dsqrt(15.0d0) / 30.0d0   &
-                             , a21 = 5.0d0 / 36.0d0 + dsqrt(15.0d0) / 24.0d0   &
-                             , a22 = 2.0d0 /  9.0d0                            &
-                             , a23 = 5.0d0 / 36.0d0 - dsqrt(15.0d0) / 24.0d0   &
-                             , a31 = 5.0d0 / 36.0d0 + dsqrt(15.0d0) / 30.0d0   &
-                             , a32 = 2.0d0 /  9.0d0 + dsqrt(15.0d0) / 15.0d0   &
-                             , a33 = 5.0d0 / 36.0d0
-    real(kind=8), parameter :: e1  =   1.0d1 / 3.0d0                           &
-                             , e2  = - 2.0d1 / 3.0d0                           &
-                             , e3  =   1.0d1 / 3.0d0
+    real(kind=PREC), parameter :: a11 = 5.0d0 / 36.0d0                         &
+                                , a12 = 2.0d0 /  9.0d0 - dsqrt(15.0d0) / 15.0d0&
+                                , a13 = 5.0d0 / 36.0d0 - dsqrt(15.0d0) / 30.0d0&
+                                , a21 = 5.0d0 / 36.0d0 + dsqrt(15.0d0) / 24.0d0&
+                                , a22 = 2.0d0 /  9.0d0                         &
+                                , a23 = 5.0d0 / 36.0d0 - dsqrt(15.0d0) / 24.0d0&
+                                , a31 = 5.0d0 / 36.0d0 + dsqrt(15.0d0) / 30.0d0&
+                                , a32 = 2.0d0 /  9.0d0 + dsqrt(15.0d0) / 15.0d0&
+                                , a33 = 5.0d0 / 36.0d0
+    real(kind=PREC), parameter :: e1  =   1.0d1 / 3.0d0                        &
+                                , e2  = - 2.0d1 / 3.0d0                        &
+                                , e3  =   1.0d1 / 3.0d0
 !
 !-------------------------------------------------------------------------------
 !
@@ -2209,8 +2209,8 @@ module particles
 !
     real(kind=PREC), dimension(3), intent(in)  :: x
     integer        , dimension(4), intent(out) :: ii, jj, kk
-    real(kind=8   ), dimension(3), intent(out) :: dr
-    real(kind=8   ), dimension(4), intent(out) :: cx, cy, cz
+    real(kind=8)   , dimension(3), intent(out) :: dr
+    real(kind=8)   , dimension(4), intent(out) :: cx, cy, cz
 !
 !------------------------------------------------------------------------------
 !
@@ -2720,12 +2720,12 @@ module particles
 ! input and output arguments
 !
     real(kind=PREC), dimension(3), intent(in)  :: v, b
-    real(kind=8   )              , intent(out) :: ba, vu, vp, vr
+    real(kind=PREC)              , intent(out) :: ba, vu, vp, vr
 
 ! local variables
 !
-    real(kind=8   ), dimension(3) :: p
-    real(kind=8   )               :: pp, vv
+    real(kind=PREC), dimension(3) :: p
+    real(kind=PREC)               :: pp, vv
 !
 !------------------------------------------------------------------------------
 !
@@ -2773,12 +2773,12 @@ module particles
 ! input and output arguments
 !
     real(kind=PREC), intent(in)  :: gm
-    real(kind=8   ), intent(in)  :: ba, vr
-    real(kind=8   ), intent(out) :: om, tg, rg
+    real(kind=PREC), intent(in)  :: ba, vr
+    real(kind=PREC), intent(out) :: om, tg, rg
 
 ! parameters
 !
-    real(kind=8   ) :: pi2 = 6.2831853071795862319959269370884d0
+    real(kind=PREC) :: pi2 = 6.2831853071795862319959269370884d0
 !
 !------------------------------------------------------------------------------
 !
