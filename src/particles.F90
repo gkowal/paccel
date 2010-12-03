@@ -78,7 +78,10 @@ module particles
     integer      :: p, n
     real(kind=PREC) :: vp, vr, vv, va
     real(kind=PREC) :: gm, dn, mu0, om, tg, rg, mu, mp, en, ek, ba
-    real(kind=PREC) :: bb, rt
+    real(kind=PREC) :: bb
+#ifdef ITEST
+    real(kind=PREC) :: xt, yt, rt, ra, rr
+#endif /* ITEST */
 
 ! arrays
 !
@@ -284,15 +287,25 @@ module particles
 #endif /* WTEST */
 
 #ifdef ITEST
-    rt   = sqrt(xc * xc + yc * yc)
+    ra   = 1.0 + bamp
+
+    xt   = xc / ra
+    yt   = yc * ra
+
+    rr   = sqrt(xc * xc + yc * yc)
+    rt   = sqrt(xt * xt + yt * yt)
 
     if (rt .gt. 0.0) then
-      b(1) = - bini * yc / rt
-      b(2) =   bini * xc / rt
+      b(1) = - yt / rt
+      b(2) =   xt / rt
       b(3) = 0.0
     else
       b(:) = 0.0
     end if
+
+    u(1) = 0.0
+    u(2) = 0.0
+    u(3) = 1.0
 #endif /* ITEST */
 #else /* TEST */
 ! convert position to index
@@ -2603,7 +2616,7 @@ module particles
 !
     real(kind=PREC), dimension(3) :: w
 #ifdef ITEST
-    real(kind=PREC)               :: ra, rb, xt, yt, rt
+    real(kind=PREC)               :: ra, rb, xt, yt, rt, rr
 #endif /* ITEST */
 
 ! parameters
@@ -2653,17 +2666,16 @@ module particles
 #endif /* WTEST */
 
 #ifdef ITEST
-        ra   = 1.0 + bamp
-
-        rt   = sqrt(x(1) * x(1) + x(2) * x(2))
-
-        u(1) = - x(1)
-        u(2) =   x(2)
+        u(1) = - vamp * x(1)
+        u(2) =   vamp * x(2)
         u(3) = 0.0
+
+        ra   = 1.0 + bamp
 
         xt   = x(1) / ra
         yt   = x(2) * ra
 
+        rr   = sqrt(x(1) * x(1) + x(2) * x(2))
         rt   = sqrt(xt * xt + yt * yt)
 
         if (rt .gt. 0.0) then
