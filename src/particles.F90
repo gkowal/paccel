@@ -68,7 +68,7 @@ module particles
     use params, only : ptype, vpar, vper, c, dens, tunit, tmulti, xc, yc, zc
     use params, only : output, tmin, tmax, ndumps
 #ifdef TEST
-    use params, only : bini, bamp, vamp, freq
+    use params, only : bini, bamp, freq
 #endif /* TEST */
 
     implicit none
@@ -80,7 +80,7 @@ module particles
     real(kind=PREC) :: gm, dn, mu0, om, tg, rg, mu, mp, en, ek, ba
     real(kind=PREC) :: bb
 #ifdef ITEST
-    real(kind=PREC) :: xt, yt, rt, ra, rr
+    real(kind=PREC) :: xt, yt, rt, ra
 #endif /* ITEST */
 
 ! arrays
@@ -292,12 +292,11 @@ module particles
     xt   = xc / ra
     yt   = yc * ra
 
-    rr   = sqrt(xc * xc + yc * yc)
     rt   = sqrt(xt * xt + yt * yt)
 
     if (rt .gt. 0.0) then
-      b(1) = - yt / rt
-      b(2) =   xt / rt
+      b(1) =   yt * ra / rt
+      b(2) = - xt / ra / rt
       b(3) = 0.0
     else
       b(:) = 0.0
@@ -2600,7 +2599,7 @@ module particles
     use fields, only : ux, uy, uz, bx, by, bz
     use params, only : nghost
 #ifdef TEST
-    use params, only : bini, bamp, vamp, freq, epar
+    use params, only : bini, bamp, vamp, vrat, freq, epar
 #endif /* TEST */
 
     implicit none
@@ -2616,7 +2615,7 @@ module particles
 !
     real(kind=PREC), dimension(3) :: w
 #ifdef ITEST
-    real(kind=PREC)               :: ra, rb, xt, yt, rt, rr
+    real(kind=PREC)               :: ra, rb, xt, yt, rt
 #endif /* ITEST */
 
 ! parameters
@@ -2666,8 +2665,8 @@ module particles
 #endif /* WTEST */
 
 #ifdef ITEST
-        u(1) = - vamp * x(1)
-        u(2) =   vamp * x(2)
+        u(1) =      - vamp * x(1)
+        u(2) = vrat * vamp * x(2)
         u(3) = 0.0
 
         ra   = 1.0 + bamp
@@ -2675,12 +2674,11 @@ module particles
         xt   = x(1) / ra
         yt   = x(2) * ra
 
-        rr   = sqrt(x(1) * x(1) + x(2) * x(2))
         rt   = sqrt(xt * xt + yt * yt)
 
         if (rt .gt. 0.0) then
-          b(1) = - yt / rt
-          b(2) =   xt / rt
+          b(1) =   yt * ra / rt
+          b(2) = - xt / ra / rt
           b(3) = 0.0
         else
           b(:) = 0.0

@@ -10,7 +10,7 @@ TVD           = Y
 BNDRY         = N
 PREC          = 8
 DIMS          = 3
-TEST          = WAVE
+TEST          = ISLAND
 LOSS          = N
 
 # compiler and options
