@@ -1754,7 +1754,7 @@ module particles
 
 ! update the integration time
 !
-      t = s + n * dt
+      t = s + m * dt
 
 ! store the particle parameters at a given snapshot time
 !
@@ -1789,7 +1789,7 @@ module particles
 
 ! update the integration time
 !
-        s = s + ds
+        s = n * ds
 
 ! write the progress
 !
