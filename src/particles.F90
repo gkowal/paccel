@@ -395,13 +395,13 @@ module particles
 ! print headers and the initial values
 !
     open  (10, file = 'output.dat', form = 'formatted', status = 'replace')
-    write (10, "('#',1a16,19a18)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz'     &
+    write (10, "('#',1a20,19a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz'     &
                                  , '|V| [c]', '|Vpar| [c]', '|Vper| [c]'       &
                                  , 'gamma', 'En [MeV]', 'Ek [MeV]'             &
                                  , '<B> [Gs]', 'Omega [1/s]'                   &
                                  , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'      &
                                  , 'Tolerance'
-    write (10, "(20(1pe18.10))") 0.0, x0(1), x0(2), x0(3), v0(1), v0(2), v0(3) &
+    write (10, "(20(1pe22.14))") 0.0, x0(1), x0(2), x0(3), v0(1), v0(2), v0(3) &
                                     , vv, vpar, vper, gm, en, ek               &
                                     , bavg * ba, om, tg, rg, tg / fc, rg / ln  &
                                     , 1.0d-16
@@ -704,7 +704,7 @@ module particles
 !
           open  (10, file = 'output.dat', form = 'formatted'                   &
                    , position = 'append')
-          write (10, "(20(1pe18.10))") t, x(1), x(2), x(3), u(1), u(2), u(3)   &
+          write (10, "(20(1pe22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3)   &
                                      , ua / c, up / c, ur / c, gm, en, ek      &
                                      , bavg * ba, om, tg * fc, rg * ln, tg, rg &
                                      , tol
@@ -750,7 +750,7 @@ module particles
 ! store the particle parameters
 !
     open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-    write (10, "(20(1pe18.10))") t, x(1), x(2), x(3), u(1), u(2), u(3)         &
+    write (10, "(20(1pe22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3)         &
                                , ua / c, up / c, ur / c, gm, en, ek            &
                                , bavg * ba, om, tg * fc, rg * ln, tg, rg, tol
     close (10)
@@ -1029,7 +1029,7 @@ module particles
 !
           open  (10, file = 'output.dat', form = 'formatted'                   &
                    , position = 'append')
-          write (10, "(20(1pe18.10))") t, x(1), x(2), x(3), u(1), u(2), u(3)   &
+          write (10, "(20(1pe22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3)   &
                                      , ua / c, up / c, ur / c, gm, en, ek      &
                                      , bavg * ba, om, tg * fc, rg * ln, tg, rg &
                                      , tol
@@ -1081,7 +1081,7 @@ module particles
 ! store the particle parameters
 !
     open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-    write (10, "(20(1pe18.10))") t, x(1), x(2), x(3), u(1), u(2), u(3)         &
+    write (10, "(20(1pe22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3)         &
                                , ua / c, up / c, ur / c, gm, en, ek            &
                                , bavg * ba, om, tg * fc, rg * ln, tg, rg, tol
     close (10)
@@ -1260,7 +1260,7 @@ module particles
 ! write results to the output file
 !
         open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-        write (10, "(20(1pe18.10))") t, x(1), x(2), x(3), u(1), u(2), u(3)     &
+        write (10, "(20(1pe22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3)     &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
                                    , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
                                    , tol
@@ -1471,7 +1471,7 @@ module particles
 ! write results to the output file
 !
         open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-        write (10, "(20(1pe18.10))") tp, x(1), x(2), x(3), u(1), u(2), u(3)    &
+        write (10, "(20(1pe22.14))") tp, x(1), x(2), x(3), u(1), u(2), u(3)    &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
                                    , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
                                    , tol
@@ -1522,7 +1522,7 @@ module particles
 ! store the last snapshot
 !
     open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-    write (10, "(20(1pe18.10))") t, x(1), x(2), x(3), v(1), v(2), v(3)         &
+    write (10, "(20(1pe22.14))") t, x(1), x(2), x(3), v(1), v(2), v(3)         &
                                , ua / c, up / c, ur / c, gm, en, ek            &
                                , bavg * ba, om, tg * fc, rg * ln, tg, rg, tol
     close (10)
@@ -1793,7 +1793,7 @@ module particles
 ! write results to the output file
 !
         open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-        write (10, "(20(1pe18.10))") t, x(1), x(2), x(3), u(1), u(2), u(3)     &
+        write (10, "(20(1pe22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3)     &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
                                    , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
                                    , tol
@@ -1994,7 +1994,7 @@ module particles
 ! write results to the output file
 !
         open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-        write (10, "(20(1pe18.10))") tp, x(1), x(2), x(3), u(1), u(2), u(3)    &
+        write (10, "(20(1pe22.14))") tp, x(1), x(2), x(3), u(1), u(2), u(3)    &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
                                    , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
                                    , tol
@@ -2045,7 +2045,7 @@ module particles
 ! store the last snapshot
 !
     open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-    write (10, "(20(1pe18.10))") t, x(1), x(2), x(3), v(1), v(2), v(3)         &
+    write (10, "(20(1pe22.14))") t, x(1), x(2), x(3), v(1), v(2), v(3)         &
                                , ua / c, up / c, ur / c, gm, en, ek            &
                                , bavg * ba, om, tg * fc, rg * ln, tg, rg, tol
     close (10)
