@@ -1662,7 +1662,7 @@ module particles
     real(kind=PREC), dimension(3,6) :: z, zp
     real(kind=PREC), dimension(3)   :: x , u , p , a
     real(kind=PREC), dimension(3)   :: v, b
-    real(kind=PREC)                 :: gm, t, dt, ds
+    real(kind=PREC)                 :: gm, t, dt, dq, s, ds
     real(kind=PREC)                 :: en, ek, ua, ba, up, ur, om, tg, rg
     real(kind=PREC)                 :: tol
 
@@ -1681,9 +1681,11 @@ module particles
 !
     n  = 1
     m  = 1
+    s  = 0.0d0
     t  = 0.0d0
     dt = dtini
-    ds = qom * dt
+    dq = qom * dt
+    ds = dt * ndumps
 
 ! substitute the initial position, velocity, and momentum
 !
@@ -1741,18 +1743,18 @@ module particles
 !   Z2 = [ a21 * F(y + Z1) + a22 * F(y + Z2) + a23 * F(y + Z3) ]
 !   Z3 = [ a31 * F(y + Z1) + a32 * F(y + Z2) + a33 * F(y + Z3) ]
 !
-      call estimate_si6(x(:), p(:), z(:,:), t, dt, ds, tol)
+      call estimate_si6(x(:), p(:), z(:,:), t, dt, dq, tol)
 
 ! update the solution
 !
 !   y(n+1) = y(n) + [ d1 * Z1 + d2 * Z2 + d3 * Z3 ]
 !
       x(1:3) = x(1:3) + dt * (b1 * z(1,1:3) + b2 * z(2,1:3) + b3 * z(3,1:3))
-      p(1:3) = p(1:3) + ds * (b1 * z(1,4:6) + b2 * z(2,4:6) + b3 * z(3,4:6))
+      p(1:3) = p(1:3) + dq * (b1 * z(1,4:6) + b2 * z(2,4:6) + b3 * z(3,4:6))
 
 ! update the integration time
 !
-      t = t + dt
+      t = s + n * dt
 
 ! store the particle parameters at a given snapshot time
 !
@@ -1785,15 +1787,19 @@ module particles
         ek = en
 #endif
 
+! update the integration time
+!
+        s = s + ds
+
 ! write the progress
 !
-        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c    &
+        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, s, dt, ua / c    &
             , ek, char(13)
 
 ! write results to the output file
 !
         open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-        write (10, "(20(1pe22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3)     &
+        write (10, "(20(1pe22.14))") s, x(1), x(2), x(3), u(1), u(2), u(3)     &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
                                    , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
                                    , tol
