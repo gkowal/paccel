@@ -1668,7 +1668,7 @@ module particles
     real(kind=PREC), dimension(3,6) :: z, zp
     real(kind=PREC), dimension(3)   :: x , u , p , a
     real(kind=PREC), dimension(3)   :: v, b
-    real(kind=PREC)                 :: gm, t, dt, dq, s, ds
+    real(kind=PREC)                 :: gm, t, dt, s, ds, dq
     real(kind=PREC)                 :: en, ek, ua, ba, up, ur, om, tg, rg
     real(kind=PREC)                 :: tol
 
@@ -1687,11 +1687,11 @@ module particles
 !
     n  = 1
     m  = 1
-    s  = 0.0d0
     t  = 0.0d0
+    s  = 0.0d0
     dt = dtini
-    dq = qom * dt
     ds = dt * ndumps
+    dq = qom * dt
 
 ! substitute the initial position, velocity, and momentum
 !
