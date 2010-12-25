@@ -1115,7 +1115,7 @@ module particles
     real(kind=PREC), dimension(2,6) :: z, zp
     real(kind=PREC), dimension(3)   :: x , u , p , a
     real(kind=PREC), dimension(3)   :: v, b
-    real(kind=PREC)                 :: gm, t, dt, ds
+    real(kind=PREC)                 :: gm, t, dt, ds, s, dq
     real(kind=PREC)                 :: en, ek, ua, ba, up, ur, om, tg, rg
     real(kind=PREC)                 :: tol
 
@@ -1141,8 +1141,10 @@ module particles
     n  = 1
     m  = 1
     t  = 0.0d0
+    s  = 0.0d0
     dt = dtini
-    ds = qom * dt
+    ds = dt * ndumps
+    dq = qom * dt
 
 ! substitute the initial position, velocity, and momentum
 !
@@ -1208,18 +1210,18 @@ module particles
 !   Z1 = dt * [ a11 * F(y + Z1) + a12 * F(y + Z2) ]
 !   Z2 = dt * [ a21 * F(y + Z1) + a22 * F(y + Z2) ]
 !
-      call estimate_si4(x(:), p(:), z(:,:), t, dt, ds, tol)
+      call estimate_si4(x(:), p(:), z(:,:), t, dt, dq, tol)
 
 ! update the solution
 !
 !   y(n+1) = y(n) + [ b1 * Z1 + b2 * Z2 ]
 !
       x(1:3) = x(1:3) + dt * (b1 * z(1,1:3) + b2 * z(2,1:3))
-      p(1:3) = p(1:3) + ds * (b1 * z(1,4:6) + b2 * z(2,4:6))
+      p(1:3) = p(1:3) + dq * (b1 * z(1,4:6) + b2 * z(2,4:6))
 
 ! update the integration time
 !
-      t = t + dt
+      t = s + m * dt
 
 ! store the particle parameters at a given snapshot time
 !
@@ -1251,6 +1253,10 @@ module particles
         en = 0.5 * ua * ua
         ek = en
 #endif
+
+! update the integration time
+!
+        s = n * ds
 
 ! write the progress
 !
