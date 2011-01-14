@@ -90,6 +90,7 @@ module params
 ! test problem parameters
 !
   real(kind=PREC)     , save :: bini    = 1.0      ! the mean magnetic field
+  real(kind=PREC)     , save :: bshr    = 0.0      ! the guilde field
   real(kind=PREC)     , save :: bamp    = 0.1      ! the amplitude of the magnetic field fluctuations
   real(kind=PREC)     , save :: vamp    = 0.1      ! the amplitude of the velocity field fluctuations
   real(kind=PREC)     , save :: vrat    = 1.0      ! the ratio between velocity fluctuations amplitudes in different directions
@@ -193,6 +194,8 @@ module params
 #ifdef TEST
       case ('bini')
         read (value  , *     ) bini
+      case ('bshr')
+        read (value  , *     ) bshr
       case ('bamp')
         read (value  , *     ) bamp
       case ('vamp')

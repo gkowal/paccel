@@ -68,7 +68,7 @@ module particles
     use params, only : ptype, vpar, vper, c, dens, tunit, tmulti, xc, yc, zc
     use params, only : output, tmin, tmax, ndumps
 #ifdef TEST
-    use params, only : bini, bamp, freq
+    use params, only : bini, bshr, bamp, freq
 #endif /* TEST */
 
     implicit none
@@ -78,7 +78,7 @@ module particles
     integer      :: p, n
     real(kind=PREC) :: vp, vr, vv, va
     real(kind=PREC) :: gm, dn, mu0, om, tg, rg, mu, mp, en, ek, ba
-    real(kind=PREC) :: bb
+    real(kind=PREC) :: bb, ub
 #ifdef ITEST
     real(kind=PREC) :: xt, yt, rt, ra
 #endif /* ITEST */
@@ -295,16 +295,39 @@ module particles
     rt   = sqrt(xt * xt + yt * yt)
 
     if (rt .gt. 0.0) then
+
       b(1) =   yt * ra / rt
       b(2) = - xt / ra / rt
-      b(3) = 0.0
-    else
-      b(:) = 0.0
-    end if
+      b(3) = bshr
 
-    u(1) = 0.0
-    u(2) = 0.0
-    u(3) = 1.0
+      bb = sqrt(dot_product(b(:), b(:)))
+
+      if (bb .gt. 0.0) then
+        b(:) = b(:) / bb
+      else
+        b(1) = 0.0
+        b(2) = 0.0
+        b(3) = 1.0
+      end if
+
+      u(1) = 0.0
+      u(2) = 0.0
+      u(3) = 1.0
+
+      ub   = dot_product(u(:), b(:))
+
+      u(1) = u(1) - b(1) * ub
+      u(2) = u(2) - b(2) * ub
+      u(3) = u(3) - b(3) * ub
+    else
+      b(1) = 0.0
+      b(2) = 0.0
+      b(3) = 1.0
+
+      u(1) = 0.0
+      u(2) = 1.0
+      u(3) = 0.0
+    end if
 #endif /* ITEST */
 #else /* TEST */
 ! convert position to index
@@ -2611,7 +2634,7 @@ module particles
     use fields, only : ux, uy, uz, bx, by, bz
     use params, only : nghost
 #ifdef TEST
-    use params, only : bini, bamp, vamp, vrat, freq, epar
+    use params, only : bini, bshr, bamp, vamp, vrat, freq, epar
 #endif /* TEST */
 
     implicit none
@@ -2691,9 +2714,11 @@ module particles
         if (rt .gt. 0.0) then
           b(1) =   yt * ra / rt
           b(2) = - xt / ra / rt
-          b(3) = 0.0
+          b(3) = bshr
         else
-          b(:) = 0.0
+          b(1) = 0.0
+          b(2) = 0.0
+          b(3) = bshr
         end if
 #endif /* ITEST */
 #else /* TEST */
