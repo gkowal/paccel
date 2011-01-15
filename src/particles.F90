@@ -2711,22 +2711,22 @@ module particles
 #ifdef ITEST
         u(1) =      - vamp * x(1)
         u(2) = vrat * vamp * x(2)
-        u(3) = 0.0
+        u(3) = 0.0d0
 
-        ra   = 1.0 + bamp
+        ra   = 1.0d0 + bamp
 
         xt   = x(1) / ra
         yt   = x(2) * ra
 
         rt   = sqrt(xt * xt + yt * yt)
 
-        if (rt .gt. 0.0) then
+        if (rt .gt. 0.0d0) then
           b(1) =   yt * ra / rt
           b(2) = - xt / ra / rt
           b(3) = bshr
         else
-          b(1) = 0.0
-          b(2) = 0.0
+          b(1) = 0.0d0
+          b(2) = 0.0d0
           b(3) = bshr
         end if
 #endif /* ITEST */
