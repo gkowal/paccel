@@ -78,7 +78,7 @@ module particles
     integer      :: p, n
     real(kind=PREC) :: vp, vr, vv, va
     real(kind=PREC) :: gm, dn, mu0, om, tg, rg, mu, mp, en, ek, ba
-    real(kind=PREC) :: bb, ub
+    real(kind=PREC) :: bb, ub, uu
 #ifdef ITEST
     real(kind=PREC) :: xt, yt, rt, ra
 #endif /* ITEST */
@@ -285,48 +285,57 @@ module particles
     u(2) = 0.0
     u(3) = 1.0
 #endif /* WTEST */
-
 #ifdef ITEST
-    ra   = 1.0 + bamp
+    ra   = 1.0d0 + bamp
 
     xt   = xc / ra
     yt   = yc * ra
 
-    rt   = sqrt(xt * xt + yt * yt)
+    rt   = dsqrt(xt * xt + yt * yt)
 
-    if (rt .gt. 0.0) then
+    if (rt .gt. 0.0d0) then
 
       b(1) =   yt * ra / rt
       b(2) = - xt / ra / rt
       b(3) = bshr
 
-      bb = sqrt(dot_product(b(:), b(:)))
+      bb = dsqrt(dot_product(b(:), b(:)))
 
-      if (bb .gt. 0.0) then
+      if (bb .gt. 0.0d0) then
         b(:) = b(:) / bb
       else
-        b(1) = 0.0
-        b(2) = 0.0
-        b(3) = 1.0
+        b(1) = 0.0d0
+        b(2) = 0.0d0
+        b(3) = 1.0d0
       end if
 
-      u(1) = 0.0
-      u(2) = 0.0
-      u(3) = 1.0
+      u(1) = 0.0d0
+      u(2) = 0.0d0
+      u(3) = 1.0d0
 
       ub   = dot_product(u(:), b(:))
 
       u(1) = u(1) - b(1) * ub
       u(2) = u(2) - b(2) * ub
       u(3) = u(3) - b(3) * ub
-    else
-      b(1) = 0.0
-      b(2) = 0.0
-      b(3) = 1.0
 
-      u(1) = 0.0
-      u(2) = 1.0
-      u(3) = 0.0
+      uu   = dsqrt(dot_product(u(:), u(:)))
+
+      if (uu .gt. 0.0d0) then
+        u(:) = u(:) / uu
+      else
+        u(1) = 0.0d0
+        u(2) = 0.0d0
+        u(3) = 1.0d0
+      end if
+    else
+      b(1) = 0.0d0
+      b(2) = 0.0d0
+      b(3) = 1.0d0
+
+      u(1) = 0.0d0
+      u(2) = 1.0d0
+      u(3) = 0.0d0
     end if
 #endif /* ITEST */
 #else /* TEST */
