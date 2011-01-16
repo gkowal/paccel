@@ -68,7 +68,7 @@ module particles
     use params, only : ptype, vpar, vper, c, dens, tunit, tmulti, xc, yc, zc
     use params, only : output, tmin, tmax, ndumps
 #ifdef TEST
-    use params, only : bini, bshr, bamp, freq
+    use params, only : bini, bshr, bamp, vamp, vrat, freq
 #endif /* TEST */
 
     implicit none
@@ -80,7 +80,7 @@ module particles
     real(kind=PREC) :: gm, dn, mu0, om, tg, rg, mu, mp, en, ek, ba
     real(kind=PREC) :: bb, ub, uu
 #ifdef ITEST
-    real(kind=PREC) :: xt, yt, rt, ra
+    real(kind=PREC) :: xt, yt, rt, dl, ra, rb, ec
 #endif /* ITEST */
 
 ! arrays
@@ -286,16 +286,53 @@ module particles
     u(3) = 1.0
 #endif /* WTEST */
 #ifdef ITEST
-    ra   = 1.0d0 + bamp
+! print infor about the island problem
+!
+    write( *, "('PROBLEM   : motion in the contracting magnetic island:')" )
 
+! check if the initial field is non zero
+!
+    if (bini .eq. 0.0d0) then
+      write (*, "('ERROR     : bini must be not zero!')" )
+      stop
+    end if
+
+! prepare parameters for the magnetic field topology
+!
+    dl = bamp / bini
+
+    if (abs(dl) .ge. 1.0) then
+      write (*, "('ERROR     : parameter bamp must be smaller than bini!')" )
+      stop
+    end if
+
+    ra = 1.0d0 + dl
+    rb = 1.0d0 - dl
+
+! calculate the eccentricity
+!
+    ec = dsqrt(1.0d0 - (rb / ra)**2)
+
+! print info about the problem
+!
+    write (*, "('INFO      : magnetic field strength          =',1pe15.8)") bini
+    write (*, "('INFO      : guide field strength             =',1pe15.8)") bshr
+    write (*, "('INFO      : magnetic field perturbation      =',1pe15.8)") bamp
+    write (*, "('INFO      : magnetic island eccentricity     =',1pe15.8)") ec
+    write (*, "('INFO      : horizontal velocity perturbation =',1pe15.8)") vamp
+    write (*, "('INFO      : vertical velocity perturbation   =',1pe15.8)") vamp * vrat
+
+! calculate the parallel and perpendicular directions with respect to the
+! local magnetic field at the initial particle position
+!
     xt   = xc / ra
-    yt   = yc * ra
+    yt   = yc / rb
 
     rt   = dsqrt(xt * xt + yt * yt)
 
     if (rt .gt. 0.0d0) then
 
-      b(1) =   yt * ra / rt
+      b(1) =   yt / rb / rt
       b(2) = - xt / ra / rt
       b(3) = bshr
 
@@ -304,9 +341,8 @@ module particles
       if (bb .gt. 0.0d0) then
         b(:) = b(:) / bb
       else
-        b(1) = 0.0d0
-        b(2) = 0.0d0
-        b(3) = 1.0d0
+        write (*, "('ERROR     : zero magnetic field at the initial position!')" )
+        stop
       end if
 
       u(1) = 0.0d0
@@ -324,19 +360,25 @@ module particles
       if (uu .gt. 0.0d0) then
         u(:) = u(:) / uu
       else
-        u(1) = 0.0d0
-        u(2) = 0.0d0
-        u(3) = 1.0d0
+        write (*, "('ERROR     : cannot determine perpendicular direction!')" )
+        stop
       end if
     else
-      b(1) = 0.0d0
-      b(2) = 0.0d0
-      b(3) = 1.0d0
-
-      u(1) = 0.0d0
-      u(2) = 1.0d0
-      u(3) = 0.0d0
+      write (*, "('ERROR     : initial position cannot be located in the origin!')" )
+      stop
     end if
+
+! store the parameters in the info file
+!
+    open (10, file = 'info.txt', form = 'formatted', position = 'append')
+    write(10, "('PROBLEM   : motion in the contracting magnetic island:')" )
+    write(10, "('INFO      : magnetic field strength          =',1pe15.8)") bini
+    write(10, "('INFO      : guide field strength             =',1pe15.8)") bshr
+    write(10, "('INFO      : magnetic field perturbation      =',1pe15.8)") bamp
+    write(10, "('INFO      : magnetic island eccentricity     =',1pe15.8)") ec
+    write(10, "('INFO      : horizontal velocity perturbation =',1pe15.8)") vamp
+    write(10, "('INFO      : vertical velocity perturbation   =',1pe15.8)") vamp * vrat
+    close(10)
 #endif /* ITEST */
 #else /* TEST */
 ! convert position to index
@@ -2659,7 +2701,7 @@ module particles
 !
     real(kind=PREC), dimension(3) :: w
 #ifdef ITEST
-    real(kind=PREC)               :: ra, rb, xt, yt, rt
+    real(kind=PREC)               :: dl, ra, rb, xt, yt, rt
 #endif /* ITEST */
 
 ! parameters
@@ -2707,22 +2749,27 @@ module particles
         b(2) = bamp * cos(pi2 * freq * x(1))
         b(3) = bamp * sin(pi2 * freq * x(1))
 #endif /* WTEST */
-
 #ifdef ITEST
+! calculate the local velocity
+!
         u(1) =      - vamp * x(1)
         u(2) = vrat * vamp * x(2)
         u(3) = 0.0d0
 
-        ra   = 1.0d0 + bamp
+! calculate the local magnetic field
+!
+        dl   = bamp / bini
+        ra   = 1.0d0 + dl
+        rb   = 1.0d0 - dl
 
         xt   = x(1) / ra
-        yt   = x(2) * ra
+        yt   = x(2) / rb
 
         rt   = sqrt(xt * xt + yt * yt)
 
         if (rt .gt. 0.0d0) then
-          b(1) =   yt * ra / rt
-          b(2) = - xt / ra / rt
+          b(1) =   yt / rb / rt * bini
+          b(2) = - xt / ra / rt * bini
           b(3) = bshr
         else
           b(1) = 0.0d0
