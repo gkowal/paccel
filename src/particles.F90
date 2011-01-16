@@ -46,7 +46,7 @@ module particles
 
 ! arrays containing the initial positions and velocities of particle
 !
-  real(kind=PREC), dimension(3), save :: x0, v0, p0
+  real(kind=PREC), dimension(3), save :: x0, u0, p0
 
 ! array to store the dump times
 !
@@ -442,19 +442,19 @@ module particles
 
 ! calculate the initial velocity
 !
-    v0(:) = (vpar * b(:) + vper * u(:)) * c
+    u0(:) = (vpar * b(:) + vper * u(:)) * c
 
 ! calculate the Lorentz factor of the initial state
 !
 #ifdef RELAT
-    gm = 1.0 / sqrt(1.0d0 - dot_product(v0, v0) / c2)
+    gm = 1.0 / sqrt(1.0d0 - dot_product(u0, u0) / c2)
 #else
     gm = 1.0
 #endif
 
 ! calculate the initial particle momentuum
 !
-    p0(:) = gm * v0(:)
+    p0(:) = gm * u0(:)
 
 ! calculate particle energy
 !
@@ -475,7 +475,7 @@ module particles
                                  , '<B> [Gs]', 'Omega [1/s]'                   &
                                  , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'      &
                                  , 'Tolerance'
-    write (10, "(20(1pe22.14))") 0.0, x0(1), x0(2), x0(3), v0(1), v0(2), v0(3) &
+    write (10, "(20(1pe22.14))") 0.0, x0(1), x0(2), x0(3), u0(1), u0(2), u0(3) &
                                     , vv, vpar, vper, gm, en, ek               &
                                     , bavg * ba, om, tg, rg, tg / fc, rg / ln  &
                                     , 1.0d-16
@@ -554,7 +554,7 @@ module particles
 ! set the initial position, velocity, and momentum
 !
     x(:) = x0(:)
-    u(:) = v0(:)
+    u(:) = u0(:)
     p(:) = p0(:)
 
 ! calculate the acceleration at the initial position
@@ -874,7 +874,7 @@ module particles
 ! set the initial position, velocity, and momentum
 !
     x(:) = x0(:)
-    u(:) = v0(:)
+    u(:) = u0(:)
     p(:) = p0(:)
 
 ! calculate the acceleration at the initial position
@@ -1223,7 +1223,7 @@ module particles
 ! substitute the initial position, velocity, and momentum
 !
     x(:) = x0(:)
-    u(:) = v0(:)
+    u(:) = u0(:)
     p(:) = p0(:)
 
 ! calculate the acceleration at the starting point
@@ -1426,7 +1426,7 @@ module particles
 ! substitute the initial position, velocity, and momentum
 !
     x(:) = x0(:)
-    u(:) = v0(:)
+    u(:) = u0(:)
     p(:) = p0(:)
 
 ! calculate the acceleration at the starting point
@@ -1770,7 +1770,7 @@ module particles
 ! substitute the initial position, velocity, and momentum
 !
     x(:) = x0(:)
-    u(:) = v0(:)
+    u(:) = u0(:)
     p(:) = p0(:)
 
 ! calculate the acceleration at the starting point
@@ -1963,7 +1963,7 @@ module particles
 ! substitute the initial position, velocity, and momentum
 !
     x(:) = x0(:)
-    u(:) = v0(:)
+    u(:) = u0(:)
     p(:) = p0(:)
 
 ! calculate the acceleration at the starting point
