@@ -1185,7 +1185,8 @@ module particles
 
 ! local variables
 !
-    integer                         :: n, m
+    character(len=32)               :: str
+    integer                         :: n, m, i, mi, ti
     real(kind=PREC), dimension(2,6) :: z, zp
     real(kind=PREC), dimension(3)   :: x , u , p , a
     real(kind=PREC), dimension(3)   :: v, b
@@ -1214,6 +1215,8 @@ module particles
 !
     n  = 1
     m  = 1
+    mi = 0
+    ti = 0
     t  = 0.0d0
     s  = 0.0d0
     dt = dtini
@@ -1259,7 +1262,7 @@ module particles
 !
 ! iterate until the maximum time is reached
 !
-    do while (t .le. tmax)
+    do while (t .lt. tmax)
 
 ! find the initial guess for the vector Z
 !
@@ -1283,7 +1286,7 @@ module particles
 !   Z1 = dt * [ a11 * F(y + Z1) + a12 * F(y + Z2) ]
 !   Z2 = dt * [ a21 * F(y + Z1) + a22 * F(y + Z2) ]
 !
-      call estimate_si4(x(:), p(:), z(:,:), t, dt, dq, tol)
+      call estimate_si4(x(:), p(:), z(:,:), t, dt, dq, tol, i)
 
 ! update the solution
 !
@@ -1295,6 +1298,12 @@ module particles
 ! update the integration time
 !
       t = s + m * dt
+
+! find the maximum number of iteration in the estimator and update the counter
+! of the total number of iterations
+!
+      mi = max(mi, i)
+      ti = ti + i
 
 ! store the particle parameters at a given snapshot time
 !
@@ -1339,10 +1348,11 @@ module particles
 ! write results to the output file
 !
         open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-        write (10, "(20(1pe22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3)     &
+        write (10, "(20(1pe22.14),i10)") t                                     &
+                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
                                    , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
-                                   , tol
+                                   , tol, i
         close (10)
 
         n = n + 1
@@ -1361,6 +1371,14 @@ module particles
 ! write the progress
 !
     write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua / c, ek
+
+! write info about the estimator
+!
+    write (str,"(i12)") mi
+    write (*,"('INFO      : maximum iterations per step = ',a)"      )         &
+          trim(adjustl(str))
+    write (*,"('INFO      : average iterations per step = ',1pe12.6)")         &
+          real(ti, kind=8) / ((n - 1) * ndumps)
 !
 !-------------------------------------------------------------------------------
 !
@@ -1388,7 +1406,7 @@ module particles
 
 ! local variables
 !
-    integer                         :: n, m
+    integer                         :: n, m, i, mi
     real(kind=PREC), dimension(2,6) :: z, zp
     real(kind=PREC), dimension(3)   :: x , u , p , a
     real(kind=PREC), dimension(3)   :: xn, pn, xt, ut, pt
@@ -1485,7 +1503,7 @@ module particles
 !   Z1 = dt * [ a11 * F(y + Z1) + a12 * F(y + Z2) ]
 !   Z2 = dt * [ a21 * F(y + Z1) + a22 * F(y + Z2) ]
 !
-      call estimate_si4(x(:), p(:), z(:,:), t, dt, ds, tol)
+      call estimate_si4(x(:), p(:), z(:,:), t, dt, ds, tol, i)
 
 ! update the solution
 !
@@ -1622,7 +1640,7 @@ module particles
 !
 !===============================================================================
 !
-  subroutine estimate_si4(x, p, z, t, dt, dq, tol)
+  subroutine estimate_si4(x, p, z, t, dt, dq, tol, it)
 
     use params, only : maxit, maxeps
 
@@ -1634,10 +1652,10 @@ module particles
     real(kind=PREC), dimension(2,6), intent(inout) :: z
     real(kind=PREC)                , intent(in)    :: t
     real(kind=PREC)                , intent(inout) :: dt, dq, tol
+    integer                        , intent(inout) :: it
 
 ! local variables
 !
-    integer                         :: it
     real(kind=PREC), dimension(2,6) :: zn
     real(kind=PREC), dimension(6)   :: dh
     real(kind=PREC), dimension(3)   :: x1, p1, u1, a1
@@ -1658,7 +1676,7 @@ module particles
 !
 ! initiate the iteration control parameters
 !
-    it  = 1
+    it  = 0
     eps = 1.0d+16
 
 ! perform the simple functional iteration until the conditions are met
