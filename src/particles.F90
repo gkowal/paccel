@@ -1189,7 +1189,7 @@ module particles
     real(kind=PREC), dimension(2,6) :: z, zp
     real(kind=PREC), dimension(3)   :: x , u , p , a
     real(kind=PREC), dimension(3)   :: v, b
-    real(kind=PREC)                 :: gm, t, dt, ds, s, dq
+    real(kind=PREC)                 :: gm, t, dt, dq, s, ds
     real(kind=PREC)                 :: en, ek, ua, ba, up, ur, om, tg, rg
     real(kind=PREC)                 :: tol
 
@@ -1217,8 +1217,8 @@ module particles
     t  = 0.0d0
     s  = 0.0d0
     dt = dtini
-    ds = dt * ndumps
     dq = qom * dt
+    ds = dt * ndumps
 
 ! substitute the initial position, velocity, and momentum
 !
@@ -1244,7 +1244,7 @@ module particles
     en = gm * mrest
     ek = en - mrest
 #else /* RELAT */
-    en = 0.5 * ua * ua
+    en = 0.5d0 * ua * ua
     ek = en
 #endif /* RELAT */
 
@@ -1322,10 +1322,10 @@ module particles
 #ifdef RELAT
         en = gm * mrest
         ek = en - mrest
-#else
-        en = 0.5 * ua * ua
+#else /* RELAT */
+        en = 0.5d0 * ua * ua
         ek = en
-#endif
+#endif /* RELAT */
 
 ! update the integration time
 !
