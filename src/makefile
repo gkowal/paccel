@@ -116,7 +116,7 @@ clean-modules:
 clean-objects:
 	rm -rf *.o
 
-clean: clean-bak clean-exec clean-modules clean-objects
+clean: clean-bak clean-modules clean-objects
 
 clean-all: clean-bak clean-data clean-exec clean-modules clean-objects
 
