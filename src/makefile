@@ -101,11 +101,24 @@ $(name).x: $(objects)
 dist: $(files)
 	tar czvf $(name).tar.gz $(files)
 
-clean:
-	rm -rf *.x *.o *.mod *.il
+clean-bak:
+	rm -rf *.bak *~
 
-clean-all:
-	rm -rf *.x *.o *.mod *.il *.dat *.bin *~
+clean-data:
+	rm -rf *.dat info.txt
+
+clean-exec:
+	rm -rf *.x
+
+clean-modules:
+	rm -rf *.mod
+
+clean-objects:
+	rm -rf *.o
+
+clean: clean-bak clean-exec clean-modules clean-objects
+
+clean-all: clean-bak clean-data clean-exec clean-modules clean-objects
 
 #-------------------------------------------------------------------------------
 
