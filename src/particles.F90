@@ -1270,13 +1270,12 @@ module particles
         z(1,4:6) = c1 * a(1:3)
         z(2,4:6) = c2 * a(1:3)
 
+        flag = .false.
       else
         zp(:,:) = z(:,:)
 
         z(1,1:6) = b11 * zp(1,1:6) + b12 * zp(2,1:6)
         z(2,1:6) = b21 * zp(1,1:6) + b22 * zp(2,1:6)
-
-        flag = .false.
       end if
 
 ! estimate the vector Z (eq. 5.3)
@@ -1473,13 +1472,12 @@ module particles
         z(1,4:6) = c1 * a(1:3)
         z(2,4:6) = c2 * a(1:3)
 
+        flag = .false.
       else
         zp(:,:) = z(:,:)
 
         z(1,1:6) = b11 * zp(1,1:6) + b12 * zp(2,1:6)
         z(2,1:6) = b21 * zp(1,1:6) + b22 * zp(2,1:6)
-
-        flag = .false.
       end if
 
 ! estimate the vector Z (eq. 5.3)
