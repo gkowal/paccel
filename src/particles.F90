@@ -1622,7 +1622,7 @@ module particles
 !
 !===============================================================================
 !
-  subroutine estimate_si4(x, p, z, t, dt, ds, tol)
+  subroutine estimate_si4(x, p, z, t, dt, dq, tol)
 
     use params, only : maxit, maxeps
 
@@ -1633,7 +1633,7 @@ module particles
     real(kind=PREC), dimension(3)  , intent(in)    :: x, p
     real(kind=PREC), dimension(2,6), intent(inout) :: z
     real(kind=PREC)                , intent(in)    :: t
-    real(kind=PREC)                , intent(inout) :: dt, ds, tol
+    real(kind=PREC)                , intent(inout) :: dt, dq, tol
 
 ! local variables
 !
@@ -1669,8 +1669,8 @@ module particles
 !
       x1(:) = x(:) + dt * z(1,1:3)
       x2(:) = x(:) + dt * z(2,1:3)
-      p1(:) = p(:) + ds * z(1,4:6)
-      p2(:) = p(:) + ds * z(2,4:6)
+      p1(:) = p(:) + dq * z(1,4:6)
+      p2(:) = p(:) + dq * z(2,4:6)
 
 ! calculate the Lorentz factors and particle velocity
 !
@@ -1708,7 +1708,7 @@ module particles
 ! estimate the integration error
 !
     dh(1:3) = dt * (e1 * u1(:) + e2 * u2(:))
-    dh(4:6) = ds * (e1 * a1(:) + e2 * a2(:))
+    dh(4:6) = dq * (e1 * a1(:) + e2 * a2(:))
     tol     = sqrt(sum(dh(:) * dh(:)))
 !
 !-------------------------------------------------------------------------------
