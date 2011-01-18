@@ -1754,7 +1754,8 @@ module particles
 
 ! local variables
 !
-    integer                         :: n, m
+    character(len=32)               :: str
+    integer                         :: n, m, i, mi, ti
     real(kind=PREC), dimension(3,6) :: z, zp
     real(kind=PREC), dimension(3)   :: x , u , p , a
     real(kind=PREC), dimension(3)   :: v, b
@@ -1777,11 +1778,13 @@ module particles
 !
     n  = 1
     m  = 1
+    mi = 0
+    ti = 0
     t  = 0.0d0
     s  = 0.0d0
     dt = dtini
-    ds = dt * ndumps
     dq = qom * dt
+    ds = dt * ndumps
 
 ! substitute the initial position, velocity, and momentum
 !
@@ -1807,7 +1810,7 @@ module particles
     en = gm * mrest
     ek = en - mrest
 #else /* RELAT */
-    en = 0.5 * ua * ua
+    en = 0.5d0 * ua * ua
     ek = en
 #endif /* RELAT */
 
@@ -1822,10 +1825,17 @@ module particles
 !
 ! iterate until the maximum time is reached
 !
-    do while (t .le. tmax)
+    do while (t .lt. tmax)
+
+! obtain velocity and acceleration for the initial Z guess
+!
+      gm   = lorentz_factor(p(:))
+      u(:) = p(:) / gm
+      call acceleration(t, x(:), u(:), a(:), v(:), b(:))
 
 ! find the initial guess for the vector Z (linear estimation)
 !
+
       z(1,1:3) = c1 * u(1:3)
       z(2,1:3) = c2 * u(1:3)
       z(3,1:3) = c3 * u(1:3)
@@ -1839,7 +1849,7 @@ module particles
 !   Z2 = [ a21 * F(y + Z1) + a22 * F(y + Z2) + a23 * F(y + Z3) ]
 !   Z3 = [ a31 * F(y + Z1) + a32 * F(y + Z2) + a33 * F(y + Z3) ]
 !
-      call estimate_si6(x(:), p(:), z(:,:), t, dt, dq, tol)
+      call estimate_si6(x(:), p(:), z(:,:), t, dt, dq, tol, i)
 
 ! update the solution
 !
@@ -1851,6 +1861,12 @@ module particles
 ! update the integration time
 !
       t = s + m * dt
+
+! find the maximum number of iteration in the estimator and update the counter
+! of the total number of iterations
+!
+      mi = max(mi, i)
+      ti = ti + i
 
 ! store the particle parameters at a given snapshot time
 !
@@ -1878,10 +1894,10 @@ module particles
 #ifdef RELAT
         en = gm * mrest
         ek = en - mrest
-#else
-        en = 0.5 * ua * ua
+#else /* RELAT */
+        en = 0.5d0 * ua * ua
         ek = en
-#endif
+#endif /* RELAT */
 
 ! update the integration time
 !
@@ -1889,16 +1905,17 @@ module particles
 
 ! write the progress
 !
-        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, s, dt, ua / c    &
+        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c    &
             , ek, char(13)
 
 ! write results to the output file
 !
         open  (10, file = 'output.dat', form = 'formatted', position = 'append')
-        write (10, "(20(1pe22.14))") s, x(1), x(2), x(3), u(1), u(2), u(3)     &
+        write (10, "(20(1pe22.14),i10)") t                                     &
+                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
                                    , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
-                                   , tol
+                                   , tol, i
         close (10)
 
         n = n + 1
@@ -1917,6 +1934,14 @@ module particles
 ! write the progress
 !
     write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua / c, ek
+
+! write info about the estimator
+!
+    write (str,"(i12)") mi
+    write (*,"('INFO      : maximum iterations per step = ',a)"      )         &
+          trim(adjustl(str))
+    write (*,"('INFO      : average iterations per step = ',1pe12.6)")         &
+          real(ti, kind=8) / ((n - 1) * ndumps)
 !
 !-------------------------------------------------------------------------------
 !
@@ -1944,7 +1969,7 @@ module particles
 
 ! local variables
 !
-    integer                         :: n, m
+    integer                         :: n, m, i, mi, ti
     real(kind=PREC), dimension(3,6) :: z, zp
     real(kind=PREC), dimension(3)   :: x , u , p , a
     real(kind=PREC), dimension(3)   :: xn, pn, xt, ut, pt
@@ -2032,7 +2057,7 @@ module particles
 !   Z2 = [ a21 * F(y + Z1) + a22 * F(y + Z2) + a23 * F(y + Z3) ]
 !   Z3 = [ a31 * F(y + Z1) + a32 * F(y + Z2) + a33 * F(y + Z3) ]
 !
-      call estimate_si6(x(:), p(:), z(:,:), t, dt, ds, tol)
+      call estimate_si6(x(:), p(:), z(:,:), t, dt, ds, tol, i)
 
 ! update the solution
 !
@@ -2169,7 +2194,7 @@ module particles
 !
 !===============================================================================
 !
-  subroutine estimate_si6(x, p, z, t, dt, ds, tol)
+  subroutine estimate_si6(x, p, z, t, dt, dq, tol, it)
 
     use params, only : maxit, maxeps
 
@@ -2180,11 +2205,11 @@ module particles
     real(kind=PREC), dimension(3)  , intent(in)    :: x, p
     real(kind=PREC), dimension(3,6), intent(inout) :: z
     real(kind=PREC)                , intent(in)    :: t
-    real(kind=PREC)                , intent(inout) :: dt, ds, tol
+    real(kind=PREC)                , intent(inout) :: dt, dq, tol
+    integer                        , intent(inout) :: it
 
 ! local variables
 !
-    integer                         :: it
     real(kind=PREC), dimension(3,6) :: zn
     real(kind=PREC), dimension(6)   :: dh
     real(kind=PREC), dimension(3)   :: x1, p1, u1, a1
@@ -2212,7 +2237,7 @@ module particles
 !
 ! initiate the iteration control parameters
 !
-    it  = 1
+    it  = 0
     eps = 1.0d+16
 
 ! perform the simple functional iteration until the conditions are met
@@ -2224,9 +2249,9 @@ module particles
       x1(:) = x(:) + dt * z(1,1:3)
       x2(:) = x(:) + dt * z(2,1:3)
       x3(:) = x(:) + dt * z(3,1:3)
-      p1(:) = p(:) + ds * z(1,4:6)
-      p2(:) = p(:) + ds * z(2,4:6)
-      p3(:) = p(:) + ds * z(3,4:6)
+      p1(:) = p(:) + dq * z(1,4:6)
+      p2(:) = p(:) + dq * z(2,4:6)
+      p3(:) = p(:) + dq * z(3,4:6)
 
 ! calculate the Lorentz factors and particle velocity
 !
@@ -2269,7 +2294,7 @@ module particles
 ! estimate the integration error
 !
     dh(1:3) = dt * (e1 * u1(:) + e2 * u2(:) + e3 * u3(:))
-    dh(4:6) = ds * (e1 * a1(:) + e2 * a2(:) + e3 * a3(:))
+    dh(4:6) = dq * (e1 * a1(:) + e2 * a2(:) + e3 * a3(:))
     tol     = sqrt(sum(dh(:) * dh(:)))
 !
 !-------------------------------------------------------------------------------
