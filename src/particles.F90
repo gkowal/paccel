@@ -2771,7 +2771,7 @@ module particles
     use fields, only : ux, uy, uz, bx, by, bz
     use params, only : nghost
 #ifdef TEST
-    use params, only : bini, bshr, bamp, vamp, vrat, freq, epar
+    use params, only : bini, bshr, bamp, vamp, vrat, freq
 #endif /* TEST */
 
     implicit none
@@ -2851,7 +2851,7 @@ module particles
         xt   = x(1) / ra
         yt   = x(2) / rb
 
-        rt   = sqrt(xt * xt + yt * yt)
+        rt   = dsqrt(xt * xt + yt * yt)
 
         if (rt .gt. 0.0d0) then
           b(1) =   yt / rb / rt * bini
@@ -2881,16 +2881,11 @@ module particles
         a(1) = w(2) * b(3) - w(3) * b(2)
         a(2) = w(3) * b(1) - w(1) * b(3)
         a(3) = w(1) * b(2) - w(2) * b(1)
-#ifdef TEST
-        a(1) = a(1) + epar
-#endif /* TEST */
-#ifndef TEST
-#ifdef BNDRY
+#if !defined TEST && defined BNDRY
       else
         a(:) = 0.0
       endif
-#endif /* BNDRY */
-#endif /* !TEST */
+#endif /* !TEST & BNDRY */
 !
 !-------------------------------------------------------------------------------
 !
