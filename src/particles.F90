@@ -2358,10 +2358,8 @@ module particles
 !
     if (it .ge. maxit) then
       open (11, file = 'info.txt', form = 'formatted', position = 'append')
-      open (11, file = 'info.txt', form = 'formatted', position = 'append')
       write(11,"('WARNING   : convergence not reached at t =',1pe12.5," //     &
                "' eps =',1pe12.5,' tol =',1pe12.5)") t, eps, tol
-      close(11)
       close(11)
     end if
 !
