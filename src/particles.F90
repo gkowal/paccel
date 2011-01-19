@@ -2264,7 +2264,7 @@ module particles
     real(kind=PREC), dimension(3)   :: x2, p2, u2, a2
     real(kind=PREC), dimension(3)   :: x3, p3, u3, a3
     real(kind=PREC), dimension(3)   :: v, b
-    real(kind=PREC)                 :: g1, g2, g3, eps
+    real(kind=PREC)                 :: g1, g2, g3, eps, epp
 
 ! local parameter
 !
@@ -2327,7 +2327,9 @@ module particles
 
 ! calculate the maximum of residuum of the increment
 !
+      epp = eps
       eps = maxval(abs(zn - z))
+      if ((epp - eps) .eq. 0.0d0) eps = maxeps
 
 ! substitute the new solution of the increment
 !
