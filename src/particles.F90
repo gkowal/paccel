@@ -586,6 +586,10 @@ module particles
     write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
             , char(13)
 
+! open the output file
+!
+    open  (10, file = 'output.dat', form = 'formatted', position = 'append')
+
 !== INTEGRATION LOOP ==
 !
 ! integrate the trajectory
@@ -776,13 +780,11 @@ module particles
 
 ! store the particle parameters
 !
-          open  (10, file = 'output.dat', form = 'formatted'                   &
-                   , position = 'append')
           write (10, "(20(1pe22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3)   &
                                      , ua / c, up / c, ur / c, gm, en, ek      &
                                      , bavg * ba, om, tg * fc, rg * ln, tg, rg &
                                      , tol
-          close (10)
+!           close (10)
 
 ! update the counters
 !
@@ -823,10 +825,12 @@ module particles
 
 ! store the particle parameters
 !
-    open  (10, file = 'output.dat', form = 'formatted', position = 'append')
     write (10, "(20(1pe22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3)         &
                                , ua / c, up / c, ur / c, gm, en, ek            &
                                , bavg * ba, om, tg * fc, rg * ln, tg, rg, tol
+
+! close the output file
+!
     close (10)
 
 !-------------------------------------------------------------------------------
@@ -1258,6 +1262,10 @@ module particles
     write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
             , char(13)
 
+! open the output file
+!
+    open  (10, file = 'output.dat', form = 'formatted', position = 'append')
+
 !== INTEGRATION LOOP ==
 !
 ! iterate until the maximum time is reached
@@ -1347,13 +1355,11 @@ module particles
 
 ! write results to the output file
 !
-        open  (10, file = 'output.dat', form = 'formatted', position = 'append')
         write (10, "(20(1pe22.14),i10)") t                                     &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
                                    , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
                                    , tol, i
-        close (10)
 
         n = n + 1
         m = 0
@@ -1368,17 +1374,36 @@ module particles
 !
     end do
 
+! close the output file
+!
+    close(10)
+
 ! write the progress
 !
     write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua / c, ek
 
 ! write info about the estimator
 !
-    write (str,"(i12)") mi
-    write (*,"('INFO      : maximum iterations per step = ',a)"      )         &
+    write(str,"(i12)") mi
+    write(*,"('INFO      : maximum iterations per step = ',a)"      )          &
           trim(adjustl(str))
-    write (*,"('INFO      : average iterations per step = ',1pe12.6)")         &
+    write(*,"('INFO      : average iterations per step = ',1pe12.6)")          &
           real(ti, kind=8) / ((n - 1) * ndumps)
+
+! open the info file
+!
+    open  (11, file = 'info.txt', form = 'formatted', position = 'append')
+
+! write info about the estimator
+!
+    write(11,"('INFO      : maximum iterations per step = ',a)"      )         &
+          trim(adjustl(str))
+    write(11,"('INFO      : average iterations per step = ',1pe12.6)")         &
+          real(ti, kind=8) / ((n - 1) * ndumps)
+
+! close the info file
+!
+    close(11)
 !
 !-------------------------------------------------------------------------------
 !
@@ -1821,6 +1846,10 @@ module particles
     write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
             , char(13)
 
+! open the output file
+!
+    open  (10, file = 'output.dat', form = 'formatted', position = 'append')
+
 !== INTEGRATION LOOP ==
 !
 ! iterate until the maximum time is reached
@@ -1835,7 +1864,6 @@ module particles
 
 ! find the initial guess for the vector Z (linear estimation)
 !
-
       z(1,1:3) = c1 * u(1:3)
       z(2,1:3) = c2 * u(1:3)
       z(3,1:3) = c3 * u(1:3)
@@ -1910,13 +1938,11 @@ module particles
 
 ! write results to the output file
 !
-        open  (10, file = 'output.dat', form = 'formatted', position = 'append')
         write (10, "(20(1pe22.14),i10)") t                                     &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
                                    , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
                                    , tol, i
-        close (10)
 
         n = n + 1
         m = 0
@@ -1931,17 +1957,36 @@ module particles
 !
     end do
 
+! close the output file
+!
+    close(10)
+
 ! write the progress
 !
     write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua / c, ek
 
 ! write info about the estimator
 !
-    write (str,"(i12)") mi
-    write (*,"('INFO      : maximum iterations per step = ',a)"      )         &
+    write(str,"(i12)") mi
+    write(*,"('INFO      : maximum iterations per step = ',a)"      )          &
           trim(adjustl(str))
-    write (*,"('INFO      : average iterations per step = ',1pe12.6)")         &
+    write(*,"('INFO      : average iterations per step = ',1pe12.6)")          &
           real(ti, kind=8) / ((n - 1) * ndumps)
+
+! open the info file
+!
+    open  (11, file = 'info.txt', form = 'formatted', position = 'append')
+
+! write info about the estimator
+!
+    write(11,"('INFO      : maximum iterations per step = ',a)"      )         &
+          trim(adjustl(str))
+    write(11,"('INFO      : average iterations per step = ',1pe12.6)")         &
+          real(ti, kind=8) / ((n - 1) * ndumps)
+
+! close the info file
+!
+    close(11)
 !
 !-------------------------------------------------------------------------------
 !
