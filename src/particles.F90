@@ -1756,6 +1756,15 @@ module particles
     dh(1:3) = dt * (e1 * u1(:) + e2 * u2(:))
     dh(4:6) = dq * (e1 * a1(:) + e2 * a2(:))
     tol     = sqrt(sum(dh(:) * dh(:)))
+
+! if the convergence was not reached write the warning about it
+!
+    if (it .ge. maxit) then
+      open (11, file = 'info.txt', form = 'formatted', position = 'append')
+      write(11,"('WARNING   : convergence not reached at t =',1pe12.5," //     &
+               "' eps =',1pe12.5,' tol =',1pe12.5)") t, eps, tol
+      close(11)
+    end if
 !
 !-------------------------------------------------------------------------------
 !
@@ -2344,6 +2353,17 @@ module particles
     dh(1:3) = dt * (e1 * u1(:) + e2 * u2(:) + e3 * u3(:))
     dh(4:6) = dq * (e1 * a1(:) + e2 * a2(:) + e3 * a3(:))
     tol     = sqrt(sum(dh(:) * dh(:)))
+
+! if the convergence was not reached write the warning about it
+!
+    if (it .ge. maxit) then
+      open (11, file = 'info.txt', form = 'formatted', position = 'append')
+      open (11, file = 'info.txt', form = 'formatted', position = 'append')
+      write(11,"('WARNING   : convergence not reached at t =',1pe12.5," //     &
+               "' eps =',1pe12.5,' tol =',1pe12.5)") t, eps, tol
+      close(11)
+      close(11)
+    end if
 !
 !-------------------------------------------------------------------------------
 !
