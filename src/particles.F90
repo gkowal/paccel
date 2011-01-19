@@ -51,6 +51,10 @@ module particles
 ! array to store the dump times
 !
   real(kind=8), dimension(:), save, allocatable :: tt
+
+! global parameters
+!
+    real(kind=PREC) :: pi2 = 6.2831853071795862319959269370884d0
 !
 !-------------------------------------------------------------------------------
 !
@@ -96,7 +100,6 @@ module particles
 
 ! parameters
 !
-    real(kind=PREC) :: pi2 = 6.2831853071795862319959269370884d0
     real(kind=PREC) :: cc  = 299792457.99999998416751623153687d0   ! the speed of light [m/s]
     real(kind=PREC) :: pc  = 3.2407792896656065765177783686188d-17 ! 1 meter [pc]
     real(kind=PREC) :: sc  = 3.168876464084018437308447107767d-08  ! 1 second [yr]
@@ -2789,10 +2792,6 @@ module particles
 #ifdef ITEST
     real(kind=PREC)               :: dl, ra, rb, xt, yt, rt
 #endif /* ITEST */
-
-! parameters
-!
-    real(kind=8   ) :: pi2 = 6.2831853071795862319959269370884d0
 #else /* TEST */
 ! local variables
 !
@@ -2960,10 +2959,6 @@ module particles
     real(kind=PREC), intent(in)  :: gm
     real(kind=PREC), intent(in)  :: ba, vr
     real(kind=PREC), intent(out) :: om, tg, rg
-
-! parameters
-!
-    real(kind=PREC) :: pi2 = 6.2831853071795862319959269370884d0
 !
 !------------------------------------------------------------------------------
 !
