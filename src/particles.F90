@@ -1793,7 +1793,7 @@ module particles
 !
     character(len=32)               :: str
     integer                         :: n, m, i, mi, ti
-    real(kind=PREC), dimension(3,6) :: z, zp
+    real(kind=PREC), dimension(3,6) :: z
     real(kind=PREC), dimension(3)   :: x , u , p , a
     real(kind=PREC), dimension(3)   :: v, b
     real(kind=PREC)                 :: gm, t, dt, s, ds, dq
@@ -1868,7 +1868,7 @@ module particles
 !
     do while (t .lt. tmax)
 
-! obtain velocity and acceleration for the initial Z guess
+! obtain velocity and acceleration for the initial guess of Z
 !
       gm   = lorentz_factor(p(:))
       u(:) = p(:) / gm
