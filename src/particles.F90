@@ -42,7 +42,7 @@ module particles
 
 ! particle mass and the speed of light
 !
-  real(kind=8)           , save :: mrest, qom, c2, om0, fc, ln, bavg, bpar
+  real(kind=8)           , save :: mrest, qom, cdbl, om0, fc, ln, bavg, bpar
 
 ! arrays containing the initial positions and velocities of particle
 !
@@ -135,7 +135,7 @@ module particles
     va   = gm * cc  / c                                  ! Alfven speed [m/s]
     mu0  = 125.66370614359171042906382353976             ! magnetic permeability [Gs^2 m s^2 / kg]
     bavg = va * sqrt(mu0 * dn)                           ! magnetic field strength [Gs]
-    c2    = c * c                                        ! square of the speed of light
+    cdbl = c * c                                        ! square of the speed of light
 
 ! initialize particle parameters
 !
@@ -450,7 +450,7 @@ module particles
 ! calculate the Lorentz factor of the initial state
 !
 #ifdef RELAT
-    gm = 1.0 / sqrt(1.0d0 - dot_product(u0, u0) / c2)
+    gm = 1.0 / sqrt(1.0d0 - dot_product(u0, u0) / cdbl)
 #else
     gm = 1.0
 #endif
@@ -465,7 +465,7 @@ module particles
     en = gm * mrest
     ek = en - mrest
 #else
-    en = 0.5 * (vpar**2 + vper**2) * c2
+    en = 0.5 * (vpar**2 + vper**2) * cdbl
     ek = en
 #endif
 
@@ -2772,7 +2772,7 @@ module particles
 !------------------------------------------------------------------------------
 !
 #ifdef RELAT
-    gm = sqrt(1.0d0 + dot_product(p, p) / c2)
+    gm = sqrt(1.0d0 + dot_product(p, p) / cdbl)
 #else
     gm = 1.0
 #endif
