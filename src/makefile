@@ -1,20 +1,43 @@
 #-------------------------------------------------------------------------------
+#
+# Makefile for the GAccel code
+#
+#-------------------------------------------------------------------------------
 
-HOST         := $(shell hostname -s)
-OS           := $(shell uname)
+HOST    := $(shell hostname -s)
+OS      := $(shell uname)
+
+#-------------------------------------------------------------------------------
+#
+# Default compilation time options
+#
+#-------------------------------------------------------------------------------
 
 DEBUG         = N
-RELAT         = Y
-INTERPOLATION = C
-TVD           = Y
+RELAT         = N
+INTERPOLATION = N
+TVD           = N
 BNDRY         = N
 PREC          = 8
 DIMS          = 3
 TEST          = ISLAND
 LOSS          = N
 
-# compiler and options
+# include compilation time options
 #
+ifeq ($(wildcard make.config),make.config)
+$(info Using compilation time options from "$(wildcard make.config)".)
+include make.config
+else
+$(info Using default compilation time options.)
+endif
+
+#-------------------------------------------------------------------------------
+#
+# Default host compiler options
+#
+#-------------------------------------------------------------------------------
+
 FC            = gfortran
 FFLAGS        = -O2
 LD            = $(FC)
@@ -24,15 +47,17 @@ LIBS          =
 # include the host compilation options
 #
 ifeq ($(wildcard make.$(HOST)),make.$(HOST))
-$(info )
-$(info Using host compilation options from "$(wildcard make.$(HOST))".)
-$(info )
+$(info Using host compiler options from "$(wildcard make.$(HOST))".)
 include make.$(HOST)
 else
-$(info )
-$(info Using default compilation options.)
-$(info )
+$(info Using default host compiler options.)
 endif
+
+#-------------------------------------------------------------------------------
+#
+# Parse compilation options
+#
+#-------------------------------------------------------------------------------
 
 ifeq ($(DEBUG),Y)
 FFLAGS += -g -DDEBUG
