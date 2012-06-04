@@ -141,13 +141,13 @@ module particles
 !
     select case(ptype)
     case ('e')
-      mrest =  0.51099890307660134070033564057667        ! rest energy of electron [MeV]
-      qom   = -17588201.72265790030360221862793          ! e/m [1 / Gs s]
-      mp    = 9.1093818871545313708798643833606d-31      ! electron mass [kg]
+      mrest =  0.51099890307660134070033564057667d+00    ! rest energy of electron [MeV]
+      qom   = -1.75882017226579003036022186279300d+07    ! e/m [1 / Gs s]
+      mp    =  9.10938188715453137087986438336060d-31    ! electron mass [kg]
     case default
-      mrest =  938.27199893682302445085952058434         ! rest energy of proton   [MeV]
-      qom   =  9578.8340668294185888953506946564         ! e/m [1 / Gs s]
-      mp    = 1.6726215850718025086476640481627d-27      ! proton mass [kg]
+      mrest =  0.93827199893682302445085952058434d+03    ! rest energy of proton   [MeV]
+      qom   =  0.95788340668294185888953506946564d+04    ! e/m [1 / Gs s]
+      mp    =  1.67262158507180250864766404816270d-27    ! proton mass [kg]
     end select
     vp = cc * vpar                                       ! parallel particle speed
     vr = cc * vper                                       ! perpendicular particle speed
