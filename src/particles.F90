@@ -69,7 +69,7 @@ module particles
   subroutine init_particle()
 
     use fields, only : get_dimensions, get_domain_bounds, bx, by, bz
-    use params, only : ptype, vpar, vper, c, dens, tunit, tmulti, xc, yc, zc
+    use params, only : ptype, vpar, vper, c, dens, tunit, tmulti, bunit, xc, yc, zc
     use params, only : output, tmin, tmax, ndumps
 #ifdef TEST
     use params, only : bini, bshr, bamp, vamp, vrat, freq
@@ -131,10 +131,16 @@ module particles
 !                                                        ! c is expressed in Va
     dn   = 1.6726215850718025379202284485224d-21 * dens  ! density conversion from
                                                          ! protonmass/cm^3 to kg/m^3
-    gm   = 1.0d0 / sqrt(1.0d0 - (1.0 / c)**2)            ! Lorentz factor
-    va   = gm * cc  / c                                  ! Alfven speed [m/s]
     mu0  = 125.66370614359171042906382353976             ! magnetic permeability [Gs^2 m s^2 / kg]
-    bavg = va * sqrt(mu0 * dn)                           ! magnetic field strength [Gs]
+    if (c .le. 1.0d0) then
+      gm   = 1.0d0
+      va   = 1.0d0 * cc
+      bavg = bunit
+    else
+      gm   = 1.0d0 / sqrt(1.0d0 - (1.0 / c)**2)          ! Lorentz factor
+      va   = gm * cc  / c                                ! Alfven speed [m/s]
+      bavg = va * sqrt(mu0 * dn)                         ! magnetic field strength [Gs]
+    end if
     csq  = c * c                                         ! square of the speed of light
 
 ! initialize particle parameters
@@ -152,6 +158,7 @@ module particles
     vp = cc * vpar                                       ! parallel particle speed
     vr = cc * vper                                       ! perpendicular particle speed
     vv = sqrt(vpar**2 + vper**2)                         ! absolute velocity
+    gm = 1.0d0 / sqrt(1.0d0 - vv * vv)
     mu = 0.5d0 * mp * vr**2 / bavg                       ! magnetic moment [kg m^2 / s^2 Gs]
     om0   = abs(qom * bavg)                              ! classical gyrofrequency
     om = om0 / gm                                        ! relativistic gyrofrequency

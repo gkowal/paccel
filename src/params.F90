@@ -48,6 +48,7 @@ module params
                                                    ! 'w' - week
                                                    ! 'y' - year
   real(kind=PREC)     , save :: tmulti  = 1.0      ! time unit count
+  real(kind=PREC)     , save :: bunit   = 1.0      ! magnetic field unit in Gs
   integer             , save :: nghost  = 8        ! number of ghost pixels near the boundary
 
 ! initial particle state parameters
