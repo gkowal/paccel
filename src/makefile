@@ -89,6 +89,14 @@ ifeq ($(LOSS),Y)
 FFLAGS += -DLOSS
 endif
 
+ifndef $(HDF5DIR)
+HDF5DIR = /usr
+endif
+
+ifndef $(FITSDIR)
+HDF5DIR = /usr
+endif
+
 ifeq ($(TEST),N)
 # HDF5 include and library paths
 #
