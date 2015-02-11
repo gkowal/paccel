@@ -64,6 +64,7 @@ module hdf5io
 ! HDF5 variables
 !
     integer(hid_t)                 :: fid, gid, aid
+    integer(hsize_t)               :: aln = 32
     integer(hsize_t), dimension(1) :: am = (/1/), cm = (/3/)
 #endif /* !TEST */
 !
@@ -134,7 +135,7 @@ module hdf5io
 !
       do i = 0, nattr - 1
         call h5aopen_idx_f(gid, i, aid, err)
-        call h5aget_name_f(aid, 32, nm, err)
+        call h5aget_name_f(aid, aln, nm, err)
 
 
         select case(nm)
@@ -351,6 +352,7 @@ module hdf5io
 ! HDF5 variables
 !
     integer(hid_t)                 :: fid, gid, aid
+    integer(hsize_t)               :: aln = 32
     integer(hsize_t), dimension(1) :: am = (/1/)
 #endif /* !TEST */
 !
@@ -400,7 +402,7 @@ module hdf5io
 !
       do i = 0, nattr - 1
         call h5aopen_idx_f(gid, i, aid, err)
-        call h5aget_name_f(aid, 32, at, err)
+        call h5aget_name_f(aid, aln, at, err)
         select case(trim(at))
         case('pcoords')
           am(1) = 3
