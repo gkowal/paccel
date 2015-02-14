@@ -18,6 +18,7 @@ RELAT         = N
 INTERPOLATION = N
 TVD           = N
 BNDRY         = N
+PERIODIC      = N
 PREC          = 8
 DIMS          = 3
 TEST          = ISLAND
@@ -76,6 +77,9 @@ endif
 endif
 ifeq ($(BNDRY),Y)
 FFLAGS += -DBNDRY
+endif
+ifeq ($(PERIODIC),Y)
+FFLAGS += -DPERIODIC
 endif
 FFLAGS += -DPREC=$(PREC)
 FFLAGS += -DDIMS=$(DIMS)

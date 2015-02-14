@@ -539,6 +539,7 @@ module particles
 
 ! local variables
 !
+    logical                       :: keepon = .true.
     integer                       :: n, m
     real(kind=PREC)               ::    t1, t2, t3, t4, t5
     real(kind=PREC), dimension(3) :: x, x1, x2, x3, x4, x5
@@ -604,7 +605,7 @@ module particles
 !
 ! integrate the trajectory
 !
-    do while (t .le. tmax)
+    do while (keepon)
 
 !! 1st step of the RK integration
 !!
@@ -750,6 +751,10 @@ module particles
 !
         t   = t + dt
 
+! check if time exceeded the maximum time
+!
+        if (t >= tmax) keepon = .false.
+
 ! update the new timestep
 !
         dt = min(2.0d0 * dt, dtn, dtmax)
@@ -760,6 +765,17 @@ module particles
         x(:) = x5(:)
         u(:) = u5(:)
         p(:) = p5(:)
+
+#ifndef PERIODIC
+! if the boundaries are not periodic and particle is out of the box, stop
+! the integration
+        if (x(1) < bnds(1,1)) keepon = .false.
+        if (x(1) > bnds(1,2)) keepon = .false.
+        if (x(2) < bnds(2,1)) keepon = .false.
+        if (x(2) > bnds(2,2)) keepon = .false.
+        if (x(3) < bnds(3,1)) keepon = .false.
+        if (x(3) > bnds(3,2)) keepon = .false.
+#endif /* PERIODIC */
 
 ! store the current particle state
 !
@@ -864,6 +880,7 @@ module particles
 
 ! local variables
 !
+    logical                       :: keepon = .true.
     integer                       :: n
     real(kind=PREC)               ::    t1, t2, t3, t4, t5, tp
     real(kind=PREC), dimension(3) :: x, x1, x2, x3, x4, x5, xt
@@ -924,7 +941,7 @@ module particles
 !
 ! integrate the trajectory
 !
-    do while (t .lt. tmax)
+    do while (keepon)
 
 !! 1st step of the RK integration
 !!
@@ -1070,6 +1087,10 @@ module particles
 !
         t   = t + dt
 
+! check if time exceeded the maximum time
+!
+        if (t >= tmax) keepon = .false.
+
 ! store the intermidiate particle states
 !
         do while (tt(n) .le. t .and. t .ge. tmin .and. t .lt. tmax)
@@ -1134,6 +1155,17 @@ module particles
         x(:) = x5(:)
         u(:) = u5(:)
         p(:) = p5(:)
+
+#ifndef PERIODIC
+! if the boundaries are not periodic and particle is out of the box, stop
+! the integration
+        if (x(1) < bnds(1,1)) keepon = .false.
+        if (x(1) > bnds(1,2)) keepon = .false.
+        if (x(2) < bnds(2,1)) keepon = .false.
+        if (x(2) > bnds(2,2)) keepon = .false.
+        if (x(3) < bnds(3,1)) keepon = .false.
+        if (x(3) > bnds(3,2)) keepon = .false.
+#endif /* PERIODIC */
 
 ! update the new timestep
 !
@@ -1210,7 +1242,8 @@ module particles
 
 ! local flags
 !
-    logical :: flag = .true.
+    logical                         :: flag   = .true.
+    logical                         :: keepon = .true.
 
 ! local parameters
 !
@@ -1280,7 +1313,7 @@ module particles
 !
 ! iterate until the maximum time is reached
 !
-    do while (t .lt. tmax)
+    do while (keepon)
 
 ! find the initial guess for the vector Z
 !
@@ -1313,9 +1346,24 @@ module particles
       x(1:3) = x(1:3) + dt * (b1 * z(1,1:3) + b2 * z(2,1:3))
       p(1:3) = p(1:3) + dq * (b1 * z(1,4:6) + b2 * z(2,4:6))
 
+#ifndef PERIODIC
+! if the boundaries are not periodic and particle is out of the box, stop
+! the integration
+      if (x(1) < bnds(1,1)) keepon = .false.
+      if (x(1) > bnds(1,2)) keepon = .false.
+      if (x(2) < bnds(2,1)) keepon = .false.
+      if (x(2) > bnds(2,2)) keepon = .false.
+      if (x(3) < bnds(3,1)) keepon = .false.
+      if (x(3) > bnds(3,2)) keepon = .false.
+#endif /* PERIODIC */
+
 ! update the integration time
 !
       t = s + m * dt
+
+! check if time exceeded the maximum time
+!
+      if (t >= tmax) keepon = .false.
 
 ! find the maximum number of iteration in the estimator and update the counter
 ! of the total number of iterations
@@ -1452,7 +1500,8 @@ module particles
 
 ! local flags
 !
-    logical :: flag = .true.
+    logical                         :: flag   = .true.
+    logical                         :: keepon = .true.
 
 ! local parameters
 !
@@ -1514,7 +1563,7 @@ module particles
 !
 ! iterate until the maximum time is reached
 !
-    do while (t .lt. tmax)
+    do while (keepon)
 
 ! find the initial guess for the vector Z
 !
@@ -1551,6 +1600,9 @@ module particles
 !
       t = t + dt
 
+! check if time exceeded the maximum time
+!
+      if (t >= tmax) keepon = .false.
 
 ! store the intermediate snapshots
 !
@@ -1618,6 +1670,17 @@ module particles
 !
       x(:) = xn(:)
       p(:) = pn(:)
+
+#ifndef PERIODIC
+! if the boundaries are not periodic and particle is out of the box, stop
+! the integration
+      if (x(1) < bnds(1,1)) keepon = .false.
+      if (x(1) > bnds(1,2)) keepon = .false.
+      if (x(2) < bnds(2,1)) keepon = .false.
+      if (x(2) > bnds(2,2)) keepon = .false.
+      if (x(3) < bnds(3,1)) keepon = .false.
+      if (x(3) > bnds(3,2)) keepon = .false.
+#endif /* PERIODIC */
 
 ! update timestep
 !
@@ -1798,6 +1861,7 @@ module particles
 
 ! local variables
 !
+    logical                         :: keepon = .true.
     character(len=32)               :: str
     integer                         :: n, m, i, mi, ti
     real(kind=PREC), dimension(3,6) :: z
@@ -1873,7 +1937,7 @@ module particles
 !
 ! iterate until the maximum time is reached
 !
-    do while (t .lt. tmax)
+    do while (keepon)
 
 ! obtain velocity and acceleration for the initial guess of Z
 !
@@ -1905,9 +1969,24 @@ module particles
       x(1:3) = x(1:3) + dt * (b1 * z(1,1:3) + b2 * z(2,1:3) + b3 * z(3,1:3))
       p(1:3) = p(1:3) + dq * (b1 * z(1,4:6) + b2 * z(2,4:6) + b3 * z(3,4:6))
 
+#ifndef PERIODIC
+! if the boundaries are not periodic and particle is out of the box, stop
+! the integration
+      if (x(1) < bnds(1,1)) keepon = .false.
+      if (x(1) > bnds(1,2)) keepon = .false.
+      if (x(2) < bnds(2,1)) keepon = .false.
+      if (x(2) > bnds(2,2)) keepon = .false.
+      if (x(3) < bnds(3,1)) keepon = .false.
+      if (x(3) > bnds(3,2)) keepon = .false.
+#endif /* PERIODIC */
+
 ! update the integration time
 !
       t = s + m * dt
+
+! check if time exceeded the maximum time
+!
+      if (t >= tmax) keepon = .false.
 
 ! find the maximum number of iteration in the estimator and update the counter
 ! of the total number of iterations
@@ -2044,7 +2123,8 @@ module particles
 
 ! local flags
 !
-    logical :: flag = .true.
+    logical                         :: flag   = .true.
+    logical                         :: keepon = .true.
 
 ! local parameters
 !
@@ -2104,7 +2184,7 @@ module particles
 !
 ! iterate until the maximum time is reached
 !
-    do while (t .lt. tmax)
+    do while (keepon)
 
 ! find the initial guess for the vector Z
 !
@@ -2134,6 +2214,9 @@ module particles
 !
       t = t + dt
 
+! check if time exceeded the maximum time
+!
+      if (t >= tmax) keepon = .false.
 
 ! store the intermediate snapshots
 !
@@ -2201,6 +2284,17 @@ module particles
 !
       x(:) = xn(:)
       p(:) = pn(:)
+
+#ifndef PERIODIC
+! if the boundaries are not periodic and particle is out of the box, stop
+! the integration
+      if (x(1) < bnds(1,1)) keepon = .false.
+      if (x(1) > bnds(1,2)) keepon = .false.
+      if (x(2) < bnds(2,1)) keepon = .false.
+      if (x(2) > bnds(2,2)) keepon = .false.
+      if (x(3) < bnds(3,1)) keepon = .false.
+      if (x(3) > bnds(3,2)) keepon = .false.
+#endif /* PERIODIC */
 
 ! update timestep
 !
