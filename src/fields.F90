@@ -72,7 +72,9 @@ module fields
 
     use params, only : fformat
     use fitsio, only : fits_init, fits_get_dims, fits_get_bounds, fits_read_var
+#ifdef HDF5
     use hdf5io, only : hdf5_init, hdf5_get_dims, hdf5_get_bounds, hdf5_read_var
+#endif /* HDF5 */
 
     implicit none
 
@@ -93,10 +95,12 @@ module fields
       call fits_init('magx')
       call fits_get_dims(dm)
       call fits_get_bounds(xmin, xmax, ymin, ymax, zmin, zmax)
+#ifdef HDF5
     case('hdf5')
       call hdf5_init()
       call hdf5_get_dims(dm)
       call hdf5_get_bounds(xmin, xmax, ymin, ymax, zmin, zmax)
+#endif /* HDF5 */
     case default
       write( *, "('ERROR     : ',a,1x,a)" ) "unsupported data format:", fformat
       stop
@@ -166,6 +170,7 @@ module fields
       call expand_array(tt, by)
       call fits_read_var('magz', tt)
       call expand_array(tt, bz)
+#ifdef HDF5
     case('hdf5')
       call hdf5_read_var('velx', tt)
       call expand_array(tt, ux)
@@ -179,6 +184,7 @@ module fields
       call expand_array(tt, by)
       call hdf5_read_var('magz', tt)
       call expand_array(tt, bz)
+#endif /* HDF5 */
     end select
 
 ! deallocate the temporary local array

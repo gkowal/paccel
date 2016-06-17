@@ -14,6 +14,7 @@ OS      := $(shell uname)
 #-------------------------------------------------------------------------------
 
 DEBUG         = N
+HDF5          = N
 RELAT         = N
 INTERPOLATION = N
 TVD           = N
@@ -63,6 +64,9 @@ endif
 ifeq ($(DEBUG),Y)
 FFLAGS += -g -DDEBUG
 endif
+ifeq ($(HDF5),Y)
+FFLAGS += -DHDF5
+endif
 ifeq ($(RELAT),Y)
 FFLAGS += -DRELAT
 endif
@@ -93,8 +97,10 @@ ifeq ($(LOSS),Y)
 FFLAGS += -DLOSS
 endif
 
+ifeq ($(HDF5),Y)
 ifndef $(HDF5DIR)
 HDF5DIR = /usr
+endif
 endif
 
 ifndef $(FITSDIR)
@@ -102,11 +108,13 @@ HDF5DIR = /usr
 endif
 
 ifeq ($(TEST),N)
+ifeq ($(HDF5),Y)
 # HDF5 include and library paths
 #
 FFLAGS += -I$(HDF5DIR)/include
 LIBS   += -L$(HDF5DIR)/lib
 LIBS   += -lhdf5_fortran -lhdf5
+endif
 
 # FITS library path
 #
