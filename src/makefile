@@ -104,7 +104,7 @@ endif
 endif
 
 ifndef $(FITSDIR)
-HDF5DIR = /usr
+FITSDIR = /usr
 endif
 
 ifeq ($(TEST),N)
