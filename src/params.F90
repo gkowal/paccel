@@ -92,8 +92,8 @@ module params
 !
   real(kind=PREC)     , save :: bini    = 1.0      ! the mean magnetic field
   real(kind=PREC)     , save :: bshr    = 0.0      ! the guilde field
-  real(kind=PREC)     , save :: bamp    = 0.1      ! the amplitude of the magnetic field fluctuations
-  real(kind=PREC)     , save :: vamp    = 0.1      ! the amplitude of the velocity field fluctuations
+  real(kind=PREC)     , save :: bamp    = 0.0      ! the amplitude of the magnetic field fluctuations
+  real(kind=PREC)     , save :: vamp    = 0.0      ! the amplitude of the velocity field fluctuations
   real(kind=PREC)     , save :: vrat    = 1.0      ! the ratio between velocity fluctuations amplitudes in different directions
   real(kind=PREC)     , save :: freq    = 1.0      ! the frequency of the field fluctuations
   real(kind=PREC)     , save :: epar    = 0.0      ! the constant electric field along the parallel direction
