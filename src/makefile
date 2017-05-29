@@ -23,7 +23,6 @@ PERIODIC      = N
 PREC          = 8
 DIMS          = 3
 TEST          = ISLAND
-LOSS          = N
 
 # include compilation time options
 #
@@ -92,9 +91,6 @@ FFLAGS += -DTEST -DWTEST
 endif
 ifeq ($(TEST),ISLAND)
 FFLAGS += -DTEST -DITEST
-endif
-ifeq ($(LOSS),Y)
-FFLAGS += -DLOSS
 endif
 
 ifeq ($(HDF5),Y)
