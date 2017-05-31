@@ -46,7 +46,7 @@ module particles
 
 ! arrays containing the initial positions and velocities of particle
 !
-  real(kind=PREC), dimension(3), save :: x0, u0, p0
+  real(kind=8), dimension(3), save :: x0, u0, p0
 
 ! array to store the dump times
 !
@@ -54,7 +54,7 @@ module particles
 
 ! global parameters
 !
-    real(kind=PREC), parameter :: pi2 = 6.2831853071795862319959269370884d0
+  real(kind=8), parameter :: pi2 = 6.2831853071795862319959269370884d+00
 !
 !-------------------------------------------------------------------------------
 !
@@ -80,29 +80,29 @@ module particles
 ! local variables
 !
     integer      :: p, n
-    real(kind=PREC) :: vp, vr, vv, va
-    real(kind=PREC) :: gm, dn, mu0, om, tg, rg, mu, mp, en, ek, ba
-    real(kind=PREC) :: bb, ub, uu
+    real(kind=8) :: vp, vr, vv, va
+    real(kind=8) :: gm, dn, mu0, om, tg, rg, mu, mp, en, ek, ba
+    real(kind=8) :: bb, ub, uu
 #ifdef ITEST
-    real(kind=PREC) :: xt, yt, rt, dl, ra, rb, ec
+    real(kind=8) :: xt, yt, rt, dl, ra, rb, ec
 #endif /* ITEST */
 
 ! arrays
 !
-    real(kind=PREC), dimension(3) :: r0
-    real(kind=PREC), dimension(3) :: b, u, w
+    real(kind=8), dimension(3) :: r0
+    real(kind=8), dimension(3) :: b, u, w
 
 ! position indices
 !
-    integer        , dimension(4) :: ii, jj, kk
-    real(kind=8   ), dimension(4) :: cx, cy, cz
-    real(kind=8   ), dimension(3) :: dr
+    integer     , dimension(4) :: ii, jj, kk
+    real(kind=8), dimension(4) :: cx, cy, cz
+    real(kind=8), dimension(3) :: dr
 
 ! parameters
 !
-    real(kind=PREC) :: cc = 2.99792458d+08 ! the speed of light [m/s]
-    real(kind=PREC) :: pc = 1.0d+00 / 3.0856775814671916d+16 ! 1 meter [pc]
-    real(kind=PREC) :: sc = 3.168876464084018437308447107767d-08 ! 1 second [yr]
+    real(kind=8) :: cc = 2.99792458d+08 ! the speed of light [m/s]
+    real(kind=8) :: pc = 1.0d+00 / 3.0856775814671916d+16 ! 1 meter [pc]
+    real(kind=8) :: sc = 3.168876464084018437308447107767d-08 ! 1 second [yr]
 !
 !-------------------------------------------------------------------------------
 !
@@ -539,18 +539,18 @@ module particles
 
 ! local variables
 !
-    logical                       :: keepon = .true.
-    integer                       :: n, m
-    real(kind=PREC)               ::    t1, t2, t3, t4, t5
-    real(kind=PREC), dimension(3) :: x, x1, x2, x3, x4, x5
-    real(kind=PREC), dimension(3) :: u, u1, u2, u3, u4, u5
-    real(kind=PREC), dimension(3) :: p, p1, p2, p3, p4, p5
-    real(kind=PREC), dimension(3) ::    k1, k2, k3, k4, k5
-    real(kind=PREC), dimension(3) ::    l1, l2, l3, l4, l5
-    real(kind=PREC), dimension(3) :: a, v, b
-    real(kind=PREC)               :: gm, t, dt, ds, dtn
-    real(kind=PREC)               :: en, ek, ua, ba, up, ur, om, tg, rg
-    real(kind=PREC)               :: tol
+    logical                    :: keepon = .true.
+    integer                    :: n, m
+    real(kind=8)               ::    t1, t2, t3, t4, t5
+    real(kind=8), dimension(3) :: x, x1, x2, x3, x4, x5
+    real(kind=8), dimension(3) :: u, u1, u2, u3, u4, u5
+    real(kind=8), dimension(3) :: p, p1, p2, p3, p4, p5
+    real(kind=8), dimension(3) ::    k1, k2, k3, k4, k5
+    real(kind=8), dimension(3) ::    l1, l2, l3, l4, l5
+    real(kind=8), dimension(3) :: a, v, b
+    real(kind=8)               :: gm, t, dt, ds, dtn
+    real(kind=8)               :: en, ek, ua, ba, up, ur, om, tg, rg
+    real(kind=8)               :: tol
 !
 !-------------------------------------------------------------------------------
 !
@@ -880,18 +880,18 @@ module particles
 
 ! local variables
 !
-    logical                       :: keepon = .true.
-    integer                       :: n
-    real(kind=PREC)               ::    t1, t2, t3, t4, t5, tp
-    real(kind=PREC), dimension(3) :: x, x1, x2, x3, x4, x5, xt
-    real(kind=PREC), dimension(3) :: u, u1, u2, u3, u4, u5, ut
-    real(kind=PREC), dimension(3) :: p, p1, p2, p3, p4, p5, pt
-    real(kind=PREC), dimension(3) ::    k1, k2, k3, k4, k5
-    real(kind=PREC), dimension(3) ::    l1, l2, l3, l4, l5
-    real(kind=PREC), dimension(3) :: a, v, b
-    real(kind=PREC)               :: gm, t, dt, ds, dtn
-    real(kind=PREC)               :: en, ek, ua, ba, up, ur, om, tg, rg
-    real(kind=PREC)               :: tol, wl, wr
+    logical                    :: keepon = .true.
+    integer                    :: n
+    real(kind=8)               ::    t1, t2, t3, t4, t5, tp
+    real(kind=8), dimension(3) :: x, x1, x2, x3, x4, x5, xt
+    real(kind=8), dimension(3) :: u, u1, u2, u3, u4, u5, ut
+    real(kind=8), dimension(3) :: p, p1, p2, p3, p4, p5, pt
+    real(kind=8), dimension(3) ::    k1, k2, k3, k4, k5
+    real(kind=8), dimension(3) ::    l1, l2, l3, l4, l5
+    real(kind=8), dimension(3) :: a, v, b
+    real(kind=8)               :: gm, t, dt, ds, dtn
+    real(kind=8)               :: en, ek, ua, ba, up, ur, om, tg, rg
+    real(kind=8)               :: tol, wl, wr
 !
 !-------------------------------------------------------------------------------
 !
@@ -1231,30 +1231,30 @@ module particles
 
 ! local variables
 !
-    character(len=32)               :: str
-    integer                         :: n, m, i, mi, ti
-    real(kind=PREC), dimension(2,6) :: z, zp
-    real(kind=PREC), dimension(3)   :: x , u , p , a
-    real(kind=PREC), dimension(3)   :: v, b
-    real(kind=PREC)                 :: gm, t, dt, dq, s, ds
-    real(kind=PREC)                 :: en, ek, ua, ba, up, ur, om, tg, rg
-    real(kind=PREC)                 :: tol
+    character(len=32)            :: str
+    integer                      :: n, m, i, mi, ti
+    real(kind=8), dimension(2,6) :: z, zp
+    real(kind=8), dimension(3)   :: x , u , p , a
+    real(kind=8), dimension(3)   :: v, b
+    real(kind=8)                 :: gm, t, dt, dq, s, ds
+    real(kind=8)                 :: en, ek, ua, ba, up, ur, om, tg, rg
+    real(kind=8)                 :: tol
 
 ! local flags
 !
-    logical                         :: flag   = .true.
-    logical                         :: keepon = .true.
+    logical                      :: flag   = .true.
+    logical                      :: keepon = .true.
 
 ! local parameters
 !
-    real(kind=PREC), parameter :: b1   = - dsqrt(3.0d0)                        &
-                                , b2   =   dsqrt(3.0d0)
-    real(kind=PREC), parameter :: c1   =   0.5d0 - dsqrt(3.0d0) / 6.0d0        &
-                                , c2   =   0.5d0 + dsqrt(3.0d0) / 6.0d0
-    real(kind=PREC), parameter :: b11  =   1.0d0 - 2.0d0 * dsqrt(3.0d0)        &
-                                , b12  = - 6.0d0 + 4.0d0 * dsqrt(3.0d0)        &
-                                , b21  = - 6.0d0 - 4.0d0 * dsqrt(3.0d0)        &
-                                , b22  =   1.0d0 + 2.0d0 * dsqrt(3.0d0)
+    real(kind=8), parameter :: b1   = - dsqrt(3.0d0)                        &
+                             , b2   =   dsqrt(3.0d0)
+    real(kind=8), parameter :: c1   =   0.5d0 - dsqrt(3.0d0) / 6.0d0        &
+                             , c2   =   0.5d0 + dsqrt(3.0d0) / 6.0d0
+    real(kind=8), parameter :: b11  =   1.0d0 - 2.0d0 * dsqrt(3.0d0)        &
+                             , b12  = - 6.0d0 + 4.0d0 * dsqrt(3.0d0)        &
+                             , b21  = - 6.0d0 - 4.0d0 * dsqrt(3.0d0)        &
+                             , b22  =   1.0d0 + 2.0d0 * dsqrt(3.0d0)
 !
 !-------------------------------------------------------------------------------
 !
@@ -1489,30 +1489,30 @@ module particles
 
 ! local variables
 !
-    integer                         :: n, m, i, mi
-    real(kind=PREC), dimension(2,6) :: z, zp
-    real(kind=PREC), dimension(3)   :: x , u , p , a
-    real(kind=PREC), dimension(3)   :: xn, pn, xt, ut, pt
-    real(kind=PREC), dimension(3)   :: v, b
-    real(kind=PREC)                 :: gm, t, dt, ds
-    real(kind=PREC)                 :: en, ek, ua, ba, up, ur, om, tg, rg
-    real(kind=PREC)                 :: tol, tp, wl, wr
+    integer                      :: n, m, i, mi
+    real(kind=8), dimension(2,6) :: z, zp
+    real(kind=8), dimension(3)   :: x , u , p , a
+    real(kind=8), dimension(3)   :: xn, pn, xt, ut, pt
+    real(kind=8), dimension(3)   :: v, b
+    real(kind=8)                 :: gm, t, dt, ds
+    real(kind=8)                 :: en, ek, ua, ba, up, ur, om, tg, rg
+    real(kind=8)                 :: tol, tp, wl, wr
 
 ! local flags
 !
-    logical                         :: flag   = .true.
-    logical                         :: keepon = .true.
+    logical                      :: flag   = .true.
+    logical                      :: keepon = .true.
 
 ! local parameters
 !
-    real(kind=PREC), parameter :: b1   = - dsqrt(3.0d0)                        &
-                                , b2   =   dsqrt(3.0d0)
-    real(kind=PREC), parameter :: c1   =   0.5d0 - dsqrt(3.0d0) / 6.0d0        &
-                                , c2   =   0.5d0 + dsqrt(3.0d0) / 6.0d0
-    real(kind=PREC), parameter :: b11  =   1.0d0 - 2.0d0 * dsqrt(3.0d0)        &
-                                , b12  = - 6.0d0 + 4.0d0 * dsqrt(3.0d0)        &
-                                , b21  = - 6.0d0 - 4.0d0 * dsqrt(3.0d0)        &
-                                , b22  =   1.0d0 + 2.0d0 * dsqrt(3.0d0)
+    real(kind=8), parameter :: b1   = - dsqrt(3.0d0)                        &
+                             , b2   =   dsqrt(3.0d0)
+    real(kind=8), parameter :: c1   =   0.5d0 - dsqrt(3.0d0) / 6.0d0        &
+                             , c2   =   0.5d0 + dsqrt(3.0d0) / 6.0d0
+    real(kind=8), parameter :: b11  =   1.0d0 - 2.0d0 * dsqrt(3.0d0)        &
+                             , b12  = - 6.0d0 + 4.0d0 * dsqrt(3.0d0)        &
+                             , b21  = - 6.0d0 - 4.0d0 * dsqrt(3.0d0)        &
+                             , b22  =   1.0d0 + 2.0d0 * dsqrt(3.0d0)
 !
 !-------------------------------------------------------------------------------
 !
@@ -1746,29 +1746,29 @@ module particles
 
 ! subroutine arguments
 !
-    real(kind=PREC), dimension(3)  , intent(in)    :: x, p
-    real(kind=PREC), dimension(2,6), intent(inout) :: z
-    real(kind=PREC)                , intent(in)    :: t
-    real(kind=PREC)                , intent(inout) :: dt, dq, tol
-    integer                        , intent(inout) :: it
+    real(kind=8), dimension(3)  , intent(in)    :: x, p
+    real(kind=8), dimension(2,6), intent(inout) :: z
+    real(kind=8)                , intent(in)    :: t
+    real(kind=8)                , intent(inout) :: dt, dq, tol
+    integer                     , intent(inout) :: it
 
 ! local variables
 !
-    real(kind=PREC), dimension(2,6) :: zn
-    real(kind=PREC), dimension(6)   :: dh
-    real(kind=PREC), dimension(3)   :: x1, p1, u1, a1
-    real(kind=PREC), dimension(3)   :: x2, p2, u2, a2
-    real(kind=PREC), dimension(3)   :: v, b
-    real(kind=PREC)                 :: g1, g2, eps
+    real(kind=8), dimension(2,6) :: zn
+    real(kind=8), dimension(6)   :: dh
+    real(kind=8), dimension(3)   :: x1, p1, u1, a1
+    real(kind=8), dimension(3)   :: x2, p2, u2, a2
+    real(kind=8), dimension(3)   :: v, b
+    real(kind=8)                 :: g1, g2, eps
 
 ! local parameter
 !
-    real(kind=PREC), parameter :: a11 = 1.0d0 / 4.0d0                          &
-                                , a12 = 1.0d0 / 4.0d0 - dsqrt(3.0d0) / 6.0d0   &
-                                , a21 = 1.0d0 / 4.0d0 + dsqrt(3.0d0) / 6.0d0   &
-                                , a22 = 1.0d0 / 4.0d0
-    real(kind=PREC), parameter :: e1  = - dsqrt(3.0d0)                         &
-                                , e2  =   dsqrt(3.0d0)
+    real(kind=8), parameter :: a11 = 1.0d0 / 4.0d0                          &
+                             , a12 = 1.0d0 / 4.0d0 - dsqrt(3.0d0) / 6.0d0   &
+                             , a21 = 1.0d0 / 4.0d0 + dsqrt(3.0d0) / 6.0d0   &
+                             , a22 = 1.0d0 / 4.0d0
+    real(kind=8), parameter :: e1  = - dsqrt(3.0d0)                         &
+                             , e2  =   dsqrt(3.0d0)
 !
 !-------------------------------------------------------------------------------
 !
@@ -1861,24 +1861,24 @@ module particles
 
 ! local variables
 !
-    logical                         :: keepon = .true.
-    character(len=32)               :: str
-    integer                         :: n, m, i, mi, ti
-    real(kind=PREC), dimension(3,6) :: z
-    real(kind=PREC), dimension(3)   :: x , u , p , a
-    real(kind=PREC), dimension(3)   :: v, b
-    real(kind=PREC)                 :: gm, t, dt, s, ds, dq
-    real(kind=PREC)                 :: en, ek, ua, ba, up, ur, om, tg, rg
-    real(kind=PREC)                 :: tol
+    logical                      :: keepon = .true.
+    character(len=32)            :: str
+    integer                      :: n, m, i, mi, ti
+    real(kind=8), dimension(3,6) :: z
+    real(kind=8), dimension(3)   :: x , u , p , a
+    real(kind=8), dimension(3)   :: v, b
+    real(kind=8)                 :: gm, t, dt, s, ds, dq
+    real(kind=8)                 :: en, ek, ua, ba, up, ur, om, tg, rg
+    real(kind=8)                 :: tol
 
 ! local parameters
 !
-    real(kind=PREC), parameter :: b1   =   5.0d0 / 3.0d0                       &
-                                , b2   = - 4.0d0 / 3.0d0                       &
-                                , b3   =   5.0d0 / 3.0d0
-    real(kind=PREC), parameter :: c1   =   0.5d0 - 0.1d0 * dsqrt(15.0d0)       &
-                                , c2   =   0.5d0                               &
-                                , c3   =   0.5d0 + 0.1d0 * dsqrt(15.0d0)
+    real(kind=8), parameter :: b1   =   5.0d0 / 3.0d0                       &
+                             , b2   = - 4.0d0 / 3.0d0                       &
+                             , b3   =   5.0d0 / 3.0d0
+    real(kind=8), parameter :: c1   =   0.5d0 - 0.1d0 * dsqrt(15.0d0)       &
+                             , c2   =   0.5d0                               &
+                             , c3   =   0.5d0 + 0.1d0 * dsqrt(15.0d0)
 !
 !-------------------------------------------------------------------------------
 !
@@ -2112,28 +2112,28 @@ module particles
 
 ! local variables
 !
-    integer                         :: n, m, i, mi, ti
-    real(kind=PREC), dimension(3,6) :: z, zp
-    real(kind=PREC), dimension(3)   :: x , u , p , a
-    real(kind=PREC), dimension(3)   :: xn, pn, xt, ut, pt
-    real(kind=PREC), dimension(3)   :: v, b
-    real(kind=PREC)                 :: gm, t, dt, ds
-    real(kind=PREC)                 :: en, ek, ua, ba, up, ur, om, tg, rg
-    real(kind=PREC)                 :: tol, tp, wl, wr
+    integer                      :: n, m, i, mi, ti
+    real(kind=8), dimension(3,6) :: z, zp
+    real(kind=8), dimension(3)   :: x , u , p , a
+    real(kind=8), dimension(3)   :: xn, pn, xt, ut, pt
+    real(kind=8), dimension(3)   :: v, b
+    real(kind=8)                 :: gm, t, dt, ds
+    real(kind=8)                 :: en, ek, ua, ba, up, ur, om, tg, rg
+    real(kind=8)                 :: tol, tp, wl, wr
 
 ! local flags
 !
-    logical                         :: flag   = .true.
-    logical                         :: keepon = .true.
+    logical                      :: flag   = .true.
+    logical                      :: keepon = .true.
 
 ! local parameters
 !
-    real(kind=PREC), parameter :: b1   =   5.0d0 / 3.0d0                       &
-                                , b2   = - 4.0d0 / 3.0d0                       &
-                                , b3   =   5.0d0 / 3.0d0
-    real(kind=PREC), parameter :: c1   =   0.5d0 - 0.1d0 * dsqrt(15.0d0)       &
-                                , c2   =   0.5d0                               &
-                                , c3   =   0.5d0 + 0.1d0 * dsqrt(15.0d0)
+    real(kind=8), parameter :: b1   =   5.0d0 / 3.0d0                       &
+                             , b2   = - 4.0d0 / 3.0d0                       &
+                             , b3   =   5.0d0 / 3.0d0
+    real(kind=8), parameter :: c1   =   0.5d0 - 0.1d0 * dsqrt(15.0d0)       &
+                             , c2   =   0.5d0                               &
+                             , c3   =   0.5d0 + 0.1d0 * dsqrt(15.0d0)
 !
 !-------------------------------------------------------------------------------
 !
@@ -2360,36 +2360,36 @@ module particles
 
 ! subroutine arguments
 !
-    real(kind=PREC), dimension(3)  , intent(in)    :: x, p
-    real(kind=PREC), dimension(3,6), intent(inout) :: z
-    real(kind=PREC)                , intent(in)    :: t
-    real(kind=PREC)                , intent(inout) :: dt, dq, tol
-    integer                        , intent(inout) :: it
+    real(kind=8), dimension(3)  , intent(in)    :: x, p
+    real(kind=8), dimension(3,6), intent(inout) :: z
+    real(kind=8)                , intent(in)    :: t
+    real(kind=8)                , intent(inout) :: dt, dq, tol
+    integer                     , intent(inout) :: it
 
 ! local variables
 !
-    real(kind=PREC), dimension(3,6) :: zn
-    real(kind=PREC), dimension(6)   :: dh
-    real(kind=PREC), dimension(3)   :: x1, p1, u1, a1
-    real(kind=PREC), dimension(3)   :: x2, p2, u2, a2
-    real(kind=PREC), dimension(3)   :: x3, p3, u3, a3
-    real(kind=PREC), dimension(3)   :: v, b
-    real(kind=PREC)                 :: g1, g2, g3, eps
+    real(kind=8), dimension(3,6) :: zn
+    real(kind=8), dimension(6)   :: dh
+    real(kind=8), dimension(3)   :: x1, p1, u1, a1
+    real(kind=8), dimension(3)   :: x2, p2, u2, a2
+    real(kind=8), dimension(3)   :: x3, p3, u3, a3
+    real(kind=8), dimension(3)   :: v, b
+    real(kind=8)                 :: g1, g2, g3, eps
 
 ! local parameter
 !
-    real(kind=PREC), parameter :: a11 = 5.0d0 / 36.0d0                         &
-                                , a12 = 2.0d0 /  9.0d0 - dsqrt(15.0d0) / 15.0d0&
-                                , a13 = 5.0d0 / 36.0d0 - dsqrt(15.0d0) / 30.0d0&
-                                , a21 = 5.0d0 / 36.0d0 + dsqrt(15.0d0) / 24.0d0&
-                                , a22 = 2.0d0 /  9.0d0                         &
-                                , a23 = 5.0d0 / 36.0d0 - dsqrt(15.0d0) / 24.0d0&
-                                , a31 = 5.0d0 / 36.0d0 + dsqrt(15.0d0) / 30.0d0&
-                                , a32 = 2.0d0 /  9.0d0 + dsqrt(15.0d0) / 15.0d0&
-                                , a33 = 5.0d0 / 36.0d0
-    real(kind=PREC), parameter :: e1  =   1.0d1 / 3.0d0                        &
-                                , e2  = - 2.0d1 / 3.0d0                        &
-                                , e3  =   1.0d1 / 3.0d0
+    real(kind=8), parameter :: a11 = 5.0d0 / 36.0d0                         &
+                             , a12 = 2.0d0 /  9.0d0 - dsqrt(15.0d0) / 15.0d0&
+                             , a13 = 5.0d0 / 36.0d0 - dsqrt(15.0d0) / 30.0d0&
+                             , a21 = 5.0d0 / 36.0d0 + dsqrt(15.0d0) / 24.0d0&
+                             , a22 = 2.0d0 /  9.0d0                         &
+                             , a23 = 5.0d0 / 36.0d0 - dsqrt(15.0d0) / 24.0d0&
+                             , a31 = 5.0d0 / 36.0d0 + dsqrt(15.0d0) / 30.0d0&
+                             , a32 = 2.0d0 /  9.0d0 + dsqrt(15.0d0) / 15.0d0&
+                             , a33 = 5.0d0 / 36.0d0
+    real(kind=8), parameter :: e1  =   1.0d1 / 3.0d0                        &
+                             , e2  = - 2.0d1 / 3.0d0                        &
+                             , e3  =   1.0d1 / 3.0d0
 !
 !-------------------------------------------------------------------------------
 !
@@ -2482,13 +2482,13 @@ module particles
 
 ! input and output arguments
 !
-    real(kind=PREC), dimension(3), intent(in)  :: x
-    real(kind=PREC), dimension(3), intent(out) :: r
+    real(kind=8), dimension(3), intent(in)  :: x
+    real(kind=8), dimension(3), intent(out) :: r
 
 ! local variables
 !
-    integer         :: i
-    real(kind=PREC) :: t
+    integer      :: i
+    real(kind=8) :: t
 !
 !------------------------------------------------------------------------------
 !
@@ -2514,10 +2514,10 @@ module particles
 
 ! input and output arguments
 !
-    real(kind=PREC), dimension(3), intent(in)  :: x
-    integer        , dimension(4), intent(out) :: ii, jj, kk
-    real(kind=8)   , dimension(3), intent(out) :: dr
-    real(kind=8)   , dimension(4), intent(out) :: cx, cy, cz
+    real(kind=8), dimension(3), intent(in)  :: x
+    integer     , dimension(4), intent(out) :: ii, jj, kk
+    real(kind=8), dimension(3), intent(out) :: dr
+    real(kind=8), dimension(4), intent(out) :: cx, cy, cz
 !
 !------------------------------------------------------------------------------
 !
@@ -2862,13 +2862,13 @@ module particles
 !
 !===============================================================================
 !
-  real(kind=PREC) function lorentz_factor(p) result(gm)
+  real(kind=8) function lorentz_factor(p) result(gm)
 
     implicit none
 
 ! input and output arguments
 !
-    real(kind=PREC), dimension(3), intent(in)  :: p
+    real(kind=8), dimension(3), intent(in)  :: p
 !
 !------------------------------------------------------------------------------
 !
@@ -2900,28 +2900,28 @@ module particles
 
 ! input and output arguments
 !
-    real(kind=PREC)              , intent(in)  :: t
-    real(kind=PREC), dimension(3), intent(in)  :: x, v
-    real(kind=PREC), dimension(3), intent(out) :: a, u, b
+    real(kind=8)              , intent(in)  :: t
+    real(kind=8), dimension(3), intent(in)  :: x, v
+    real(kind=8), dimension(3), intent(out) :: a, u, b
 
 #ifdef TEST
 ! local variables
 !
-    real(kind=PREC), dimension(3) :: w
+    real(kind=8), dimension(3) :: w
 #ifdef ITEST
-    real(kind=PREC)               :: dl, ra, rb, xt, yt, rt
+    real(kind=8)               :: dl, ra, rb, xt, yt, rt
 #endif /* ITEST */
 #else /* TEST */
 ! local variables
 !
-    real(kind=PREC), dimension(3) :: r, w
+    real(kind=8), dimension(3) :: r, w
 
 ! position indices
 !
-    integer                       :: dist
-    integer        , dimension(4) :: ii, jj, kk
-    real(kind=8   ), dimension(4) :: cx, cy, cz
-    real(kind=8   ), dimension(3) :: dr
+    integer                    :: dist
+    integer     , dimension(4) :: ii, jj, kk
+    real(kind=8), dimension(4) :: cx, cy, cz
+    real(kind=8), dimension(3) :: dr
 #endif /* TEST */
 !
 !-------------------------------------------------------------------------------
@@ -3022,13 +3022,13 @@ module particles
 
 ! input and output arguments
 !
-    real(kind=PREC), dimension(3), intent(in)  :: v, b
-    real(kind=PREC)              , intent(out) :: ba, vu, vp, vr
+    real(kind=8), dimension(3), intent(in)  :: v, b
+    real(kind=8)              , intent(out) :: ba, vu, vp, vr
 
 ! local variables
 !
-    real(kind=PREC), dimension(3) :: p
-    real(kind=PREC)               :: pp, vv
+    real(kind=8), dimension(3) :: p
+    real(kind=8)               :: pp, vv
 !
 !------------------------------------------------------------------------------
 !
@@ -3075,9 +3075,9 @@ module particles
 
 ! input and output arguments
 !
-    real(kind=PREC), intent(in)  :: gm
-    real(kind=PREC), intent(in)  :: ba, vr
-    real(kind=PREC), intent(out) :: om, tg, rg
+    real(kind=8), intent(in)  :: gm
+    real(kind=8), intent(in)  :: ba, vr
+    real(kind=8), intent(out) :: om, tg, rg
 !
 !------------------------------------------------------------------------------
 !

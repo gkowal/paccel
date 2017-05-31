@@ -47,8 +47,8 @@ module params
                                                    ! 'd' - day
                                                    ! 'w' - week
                                                    ! 'y' - year
-  real(kind=PREC)     , save :: tmulti  = 1.0      ! time unit count
-  real(kind=PREC)     , save :: bunit   = 1.0      ! magnetic field unit in Gs
+  real(kind=8)        , save :: tmulti  = 1.0      ! time unit count
+  real(kind=8)        , save :: bunit   = 1.0      ! magnetic field unit in Gs
   integer             , save :: nghost  = 8        ! number of ghost pixels near the boundary
 
 ! initial particle state parameters
@@ -56,25 +56,25 @@ module params
   character(len =   1), save :: ptype   = 'p'      ! particle type:
                                                    ! 'p' - proton
                                                    ! 'e' - electron
-  real(kind=PREC)     , save :: xc      = 0.0      ! initial position
-  real(kind=PREC)     , save :: yc      = 0.0
-  real(kind=PREC)     , save :: zc      = 0.0
-  real(kind=PREC)     , save :: vpar    = 0.0      ! initial parallel speed [in c]
-  real(kind=PREC)     , save :: vper    = 0.1      ! initial perpendicular speed [in c]
-  real(kind=PREC)     , save :: rho     = 0.5      ! safety coefficient
+  real(kind=8)        , save :: xc      = 0.0      ! initial position
+  real(kind=8)        , save :: yc      = 0.0
+  real(kind=8)        , save :: zc      = 0.0
+  real(kind=8)        , save :: vpar    = 0.0      ! initial parallel speed [in c]
+  real(kind=8)        , save :: vper    = 0.1      ! initial perpendicular speed [in c]
+  real(kind=8)        , save :: rho     = 0.5      ! safety coefficient
 
 ! plasma parameters
 !
-  real(kind=PREC)     , save :: c       = 1.0      ! the speed of light in Va
-  real(kind=PREC)     , save :: dens    = 1.0      ! density [1 u/cm^3]
+  real(kind=8)        , save :: c       = 1.0      ! the speed of light in Va
+  real(kind=8)        , save :: dens    = 1.0      ! density [1 u/cm^3]
 
 ! integration quality parameters
 !
   character(len =   4), save :: method  = 'rk4'    ! the integration method: rk4 or si4
-  real(kind=PREC)     , save :: maxtol  = 1.0e-4   ! the maximi integration tolerance
-  real(kind=PREC)     , save :: maxeps  = 1.0e-15  ! the maximum iteration error
-  real(kind=PREC)     , save :: dtini   = 1.0e-8   ! the initial time step
-  real(kind=PREC)     , save :: dtmax   = 1.0      ! maximum allowed step size
+  real(kind=8)        , save :: maxtol  = 1.0e-4   ! the maximi integration tolerance
+  real(kind=8)        , save :: maxeps  = 1.0e-15  ! the maximum iteration error
+  real(kind=8)        , save :: dtini   = 1.0e-8   ! the initial time step
+  real(kind=8)        , save :: dtmax   = 1.0      ! maximum allowed step size
   integer             , save :: maxit   = 1000     ! the limit of iterations
 
 ! output data parameters
@@ -84,19 +84,19 @@ module params
                                                    ! 'l' - by the logarithmic time
   integer             , save :: ndumps  = 1000     ! number of steps between subsequent dumps if the output is 'i'
                                                    ! or number of dumps per time decade if the output is 'l'
-  real(kind=PREC)     , save :: tmin    = 1.0e-3   ! minimum time of writing data
-  real(kind=PREC)     , save :: tmax    = 1.0      ! maximum time for integration
+  real(kind=8)        , save :: tmin    = 1.0e-3   ! minimum time of writing data
+  real(kind=8)        , save :: tmax    = 1.0      ! maximum time for integration
 
 #ifdef TEST
 ! test problem parameters
 !
-  real(kind=PREC)     , save :: bini    = 1.0      ! the mean magnetic field
-  real(kind=PREC)     , save :: bshr    = 0.0      ! the guilde field
-  real(kind=PREC)     , save :: bamp    = 0.0      ! the amplitude of the magnetic field fluctuations
-  real(kind=PREC)     , save :: vamp    = 0.0      ! the amplitude of the velocity field fluctuations
-  real(kind=PREC)     , save :: vrat    = 1.0      ! the ratio between velocity fluctuations amplitudes in different directions
-  real(kind=PREC)     , save :: freq    = 1.0      ! the frequency of the field fluctuations
-  real(kind=PREC)     , save :: epar    = 0.0      ! the constant electric field along the parallel direction
+  real(kind=8)        , save :: bini    = 1.0      ! the mean magnetic field
+  real(kind=8)        , save :: bshr    = 0.0      ! the guilde field
+  real(kind=8)        , save :: bamp    = 0.0      ! the amplitude of the magnetic field fluctuations
+  real(kind=8)        , save :: vamp    = 0.0      ! the amplitude of the velocity field fluctuations
+  real(kind=8)        , save :: vrat    = 1.0      ! the ratio between velocity fluctuations amplitudes in different directions
+  real(kind=8)        , save :: freq    = 1.0      ! the frequency of the field fluctuations
+  real(kind=8)        , save :: epar    = 0.0      ! the constant electric field along the parallel direction
 #endif /* TEST */
 !
 !-------------------------------------------------------------------------------

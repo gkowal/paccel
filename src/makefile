@@ -20,7 +20,6 @@ INTERPOLATION = N
 TVD           = N
 BNDRY         = N
 PERIODIC      = N
-PREC          = 8
 DIMS          = 3
 TEST          = ISLAND
 
@@ -84,7 +83,6 @@ endif
 ifeq ($(PERIODIC),Y)
 FFLAGS += -DPERIODIC
 endif
-FFLAGS += -DPREC=$(PREC)
 FFLAGS += -DDIMS=$(DIMS)
 ifeq ($(TEST),WAVE)
 FFLAGS += -DTEST -DWTEST
