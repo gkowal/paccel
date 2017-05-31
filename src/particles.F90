@@ -2470,6 +2470,407 @@ module particles
 !
 !===============================================================================
 !
+! integrate_trajectory_si8: subroutine integrates particle trajectory using
+!                           the 8th order simplectic method
+!
+! references: "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
+!             Chapman & Hall, London, New York, 1994
+!             "High order starting iterates for implicit Runge-Kutta methods:
+!              an improvement for variable-step symplectic integrators", 2002,
+!              IMA J. of Num. Ana., 22, 153
+!
+!===============================================================================
+!
+  subroutine integrate_trajectory_si8()
+
+    use params, only : dtini, tmax, c, ndumps, vper
+
+    implicit none
+
+! local variables
+!
+    logical                      :: keepon = .true.
+    character(len=32)            :: str
+    integer                      :: n, m, i, mi, ti
+    real(kind=8), dimension(4,6) :: z
+    real(kind=8), dimension(3)   :: x , u , p , a
+    real(kind=8), dimension(3)   :: v, b
+    real(kind=8)                 :: gm, t, dt, s, ds, dq
+    real(kind=8)                 :: en, ek, ua, ba, up, ur, om, tg, rg
+    real(kind=8)                 :: tol
+
+! local parameters, Butcher's coefficients c_i and Sans-Serna & Calvo's
+! coefficients d_i
+!
+    real(kind=8), parameter :: c1 =  6.9431844202973712388026755553596d-02     &
+                             , c2 =  3.3000947820757186759866712044838d-01     &
+                             , c3 =  6.6999052179242813240133287955162d-01     &
+                             , c4 =  9.3056815579702628761197324444641d-01
+    real(kind=8), parameter :: d1 = -1.6407053217392567182070402516331d+00     &
+                             , d2 =  1.2143939697985776653621798588684d+00     &
+                             , d3 = -1.2143939697985776653621798588684d+00     &
+                             , d4 =  1.6407053217392567182070402516331d+00
+!
+!-------------------------------------------------------------------------------
+!
+! initialize the iteration number, snapshot number, time, and time steps
+!
+    n  = 1
+    m  = 1
+    mi = 0
+    ti = 0
+    t  = 0.0d0
+    s  = 0.0d0
+    dt = dtini
+    dq = qom * dt
+    ds = dt * ndumps
+
+! substitute the initial position, velocity, and momentum
+!
+    x(:) = x0(:)
+    u(:) = u0(:)
+    p(:) = p0(:)
+
+! calculate the acceleration at the starting point
+!
+    call acceleration(t, x(:), u(:), a(:), v(:), b(:))
+
+! separate particle velocity into parallel and perpendicular components
+!
+    call separate_velocity(u(:), b(:), ba, ua, up, ur)
+
+! calculate the Lorentz factor
+!
+    gm = lorentz_factor(p(:))
+
+! calculate the particle energy
+!
+#ifdef RELAT
+    en = gm * mrest
+    ek = en - mrest
+#else /* RELAT */
+    en = 0.5d0 * ua * ua
+    ek = en
+#endif /* RELAT */
+
+! print the progress information
+!
+    write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP'       &
+            , 'SPEED (c)', 'ENERGY (MeV)'
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
+            , char(13)
+
+! open the output file
+!
+    open  (10, file = 'output.dat', form = 'formatted', position = 'append')
+
+!== INTEGRATION LOOP ==
+!
+! iterate until the maximum time is reached
+!
+    do while (keepon)
+
+! obtain velocity and acceleration for the initial guess of Z
+!
+      gm   = lorentz_factor(p(:))
+      u(:) = p(:) / gm
+      call acceleration(t, x(:), u(:), a(:), v(:), b(:))
+
+! find the initial guess for the vector Z (linear estimation)
+!
+      z(1,1:3) = c1 * u(1:3)
+      z(2,1:3) = c2 * u(1:3)
+      z(3,1:3) = c3 * u(1:3)
+      z(4,1:3) = c4 * u(1:3)
+      z(1,4:6) = c1 * a(1:3)
+      z(2,4:6) = c2 * a(1:3)
+      z(3,4:6) = c3 * a(1:3)
+      z(4,4:6) = c4 * a(1:3)
+
+! estimate the vector Z (eq. 5.3)
+!
+!   Z1 = [ a11 * F(y + Z1) + a12 * F(y + Z2) + a13 * F(y + Z3) ]
+!   Z2 = [ a21 * F(y + Z1) + a22 * F(y + Z2) + a23 * F(y + Z3) ]
+!   Z3 = [ a31 * F(y + Z1) + a32 * F(y + Z2) + a33 * F(y + Z3) ]
+!
+      call estimate_si8(x(:), p(:), z(:,:), t, dt, dq, tol, i)
+
+! update the solution
+!
+!   y(n+1) = y(n) + [ d1 * Z1 + d2 * Z2 + d3 * Z3 ]
+!
+      x(1:3) = x(1:3) + dt * (d1 * z(1,1:3) + d2 * z(2,1:3) + d3 * z(3,1:3)    &
+                            + d4 * z(4,1:3))
+      p(1:3) = p(1:3) + dq * (d1 * z(1,4:6) + d2 * z(2,4:6) + d3 * z(3,4:6)    &
+                            + d4 * z(4,4:6))
+
+#ifndef PERIODIC
+! if the boundaries are not periodic and particle is out of the box, stop
+! the integration
+      if (x(1) < bnds(1,1)) keepon = .false.
+      if (x(1) > bnds(1,2)) keepon = .false.
+      if (x(2) < bnds(2,1)) keepon = .false.
+      if (x(2) > bnds(2,2)) keepon = .false.
+      if (x(3) < bnds(3,1)) keepon = .false.
+      if (x(3) > bnds(3,2)) keepon = .false.
+#endif /* PERIODIC */
+
+! update the integration time
+!
+      t = s + m * dt
+
+! check if time exceeded the maximum time
+!
+      if (t >= tmax) keepon = .false.
+
+! find the maximum number of iteration in the estimator and update the counter
+! of the total number of iterations
+!
+      mi = max(mi, i)
+      ti = ti + i
+
+! store the particle parameters at a given snapshot time
+!
+      if (m .eq. ndumps) then
+
+! calculate the Lorentz factor and particle velocity
+!
+        gm   = lorentz_factor(p(:))
+        u(:) = p(:) / gm
+
+! calculate the acceleration at the locations x1 and x2
+!
+        call acceleration(t, x(:), u(:), a(:), v(:), b(:))
+
+! separate particle velocity into parallel and perpendicular components
+!
+        call separate_velocity(u(:), b(:), ba, ua, up, ur)
+
+! calculate the particle gyroperiod and gyroradius
+!
+        call gyro_parameters(gm, ba, ur, om, tg, rg)
+
+! calculate particle energy
+!
+#ifdef RELAT
+        en = gm * mrest
+        ek = en - mrest
+#else /* RELAT */
+        en = 0.5d0 * ua * ua
+        ek = en
+#endif /* RELAT */
+
+! update the integration time
+!
+        s = n * ds
+
+! write the progress
+!
+        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c    &
+            , ek, char(13)
+
+! write results to the output file
+!
+        write (10, "(20(1pe22.14),i10)") t                                     &
+                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
+                                   , ua / c, up / c, ur / c - vper, gm, en, ek        &
+                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , tol, i
+
+        n = n + 1
+        m = 0
+
+      end if
+
+! increase data write counter
+!
+      m = m + 1
+
+! end of iteration
+!
+    end do
+
+! close the output file
+!
+    close(10)
+
+! write the progress
+!
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua / c, ek
+
+! write info about the estimator
+!
+    write(str,"(i12)") mi
+    write(*,"('INFO      : maximum iterations per step = ',a)"      )          &
+          trim(adjustl(str))
+    write(*,"('INFO      : average iterations per step = ',1pe12.6)")          &
+          real(ti, kind=8) / ((n - 1) * ndumps)
+
+! open the info file
+!
+    open  (11, file = 'info.txt', form = 'formatted', position = 'append')
+
+! write info about the estimator
+!
+    write(11,"('INFO      : maximum iterations per step = ',a)"      )         &
+          trim(adjustl(str))
+    write(11,"('INFO      : average iterations per step = ',1pe12.6)")         &
+          real(ti, kind=8) / ((n - 1) * ndumps)
+
+! close the info file
+!
+    close(11)
+!
+!-------------------------------------------------------------------------------
+!
+  end subroutine integrate_trajectory_si8
+!
+!===============================================================================
+!
+! estimate_si8: subroutine estimates the solution for the equation of motion
+!               using a simple functional iteration (SI8 version)
+!
+! references: "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
+!             Chapman & Hall, London, New York, 1994
+!
+! description: This subroutines find the solution of the equation 5.3 for
+!              the increment Z using the functional iteration
+!
+!===============================================================================
+!
+  subroutine estimate_si8(x, p, z, t, dt, dq, tol, it)
+
+    use params, only : maxit, maxeps
+
+    implicit none
+
+! subroutine arguments
+!
+    real(kind=8), dimension(3)  , intent(in)    :: x, p
+    real(kind=8), dimension(4,6), intent(inout) :: z
+    real(kind=8)                , intent(in)    :: t
+    real(kind=8)                , intent(inout) :: dt, dq, tol
+    integer                     , intent(inout) :: it
+
+! local variables
+!
+    real(kind=8), dimension(4,6) :: zn
+    real(kind=8), dimension(6)   :: dh
+    real(kind=8), dimension(3)   :: x1, p1, u1, a1
+    real(kind=8), dimension(3)   :: x2, p2, u2, a2
+    real(kind=8), dimension(3)   :: x3, p3, u3, a3
+    real(kind=8), dimension(3)   :: x4, p4, u4, a4
+    real(kind=8), dimension(3)   :: v, b
+    real(kind=8)                 :: g1, g2, g3, g4, eps
+
+! local parameters, Butcher's coefficients a_ij
+!
+    real(kind=8), parameter :: a11 =  8.6963711284363464343265987305500d-02    &
+                             , a12 = -2.6604180084998793313385130476953d-02    &
+                             , a13 =  1.2627462689404724515056880574618d-02    &
+                             , a14 = -3.5551496857956831569109818495695d-03    &
+                             , a21 =  1.8811811749986807165068554508717d-01    &
+                             , a22 =  1.6303628871563653565673401269450d-01    &
+                             , a23 = -2.7880428602470895224151106418997d-02    &
+                             , a24 =  6.7355005945381555153986690857040d-03    &
+                             , a31 =  1.6719192197418877317113330552530d-01    &
+                             , a32 =  3.5395300603374396653761913180800d-01    &
+                             , a33 =  1.6303628871563653565673401269450d-01    &
+                             , a34 = -1.4190694931141142964153570476171d-02    &
+                             , a41 =  1.7748257225452261184344295646057d-01    &
+                             , a42 =  3.1344511474186834679841114481438d-01    &
+                             , a43 =  3.5267675751627186462685315586596d-01    &
+                             , a44 =  8.6963711284363464343265987305500d-02
+    real(kind=8), parameter :: e1  =   1.0d1 / 3.0d0                        &
+                             , e2  = - 2.0d1 / 3.0d0                        &
+                             , e3  =   1.0d1 / 3.0d0
+!
+!-------------------------------------------------------------------------------
+!
+! initiate the iteration control parameters
+!
+    it  = 0
+    eps = 1.0d+16
+
+! perform the simple functional iteration until the conditions are met
+!
+    do while (eps > maxeps .and. it < maxit)
+
+! prepare the particle position and momentum for the current iteration
+!
+      x1(:) = x(:) + dt * z(1,1:3)
+      x2(:) = x(:) + dt * z(2,1:3)
+      x3(:) = x(:) + dt * z(3,1:3)
+      x4(:) = x(:) + dt * z(4,1:3)
+      p1(:) = p(:) + dq * z(1,4:6)
+      p2(:) = p(:) + dq * z(2,4:6)
+      p3(:) = p(:) + dq * z(3,4:6)
+      p4(:) = p(:) + dq * z(4,4:6)
+
+! calculate the Lorentz factors and particle velocity
+!
+      g1    = lorentz_factor(p1(:))
+      g2    = lorentz_factor(p2(:))
+      g3    = lorentz_factor(p3(:))
+      g4    = lorentz_factor(p4(:))
+      u1(:) = p1(:) / g1
+      u2(:) = p2(:) / g2
+      u3(:) = p3(:) / g3
+      u4(:) = p4(:) / g4
+
+! calculate the accelerations
+!
+      call acceleration(t, x1(1:3), u1(1:3), a1(1:3), v(1:3), b(1:3))
+      call acceleration(t, x2(1:3), u2(1:3), a2(1:3), v(1:3), b(1:3))
+      call acceleration(t, x3(1:3), u3(1:3), a3(1:3), v(1:3), b(1:3))
+      call acceleration(t, x4(1:3), u4(1:3), a4(1:3), v(1:3), b(1:3))
+
+! update the increment
+!
+      zn(1,1:3) = a11 * u1(1:3) + a12 * u2(1:3) + a13 * u3(1:3) + a14 * u4(1:3)
+      zn(1,4:6) = a11 * a1(1:3) + a12 * a2(1:3) + a13 * a3(1:3) + a14 * a4(1:3)
+      zn(2,1:3) = a21 * u1(1:3) + a22 * u2(1:3) + a23 * u3(1:3) + a24 * u4(1:3)
+      zn(2,4:6) = a21 * a1(1:3) + a22 * a2(1:3) + a23 * a3(1:3) + a24 * a4(1:3)
+      zn(3,1:3) = a31 * u1(1:3) + a32 * u2(1:3) + a33 * u3(1:3) + a34 * u4(1:3)
+      zn(3,4:6) = a31 * a1(1:3) + a32 * a2(1:3) + a33 * a3(1:3) + a34 * a4(1:3)
+      zn(4,1:3) = a41 * u1(1:3) + a42 * u2(1:3) + a43 * u3(1:3) + a44 * u4(1:3)
+      zn(4,4:6) = a41 * a1(1:3) + a42 * a2(1:3) + a43 * a3(1:3) + a44 * a4(1:3)
+
+! calculate the maximum of residuum of the increment
+!
+      eps = maxval(abs(zn - z))
+
+! substitute the new solution of the increment
+!
+      z = zn
+
+! increase the iteration counter
+!
+      it = it + 1
+
+    end do
+
+! estimate the integration error
+!
+    dh(1:3) = dt * (e1 * u1(:) + e2 * u2(:) + e3 * u3(:))
+    dh(4:6) = dq * (e1 * a1(:) + e2 * a2(:) + e3 * a3(:))
+    tol     = sqrt(sum(dh(:) * dh(:)))
+
+! if the convergence was not reached write the warning about it
+!
+    if (it .ge. maxit) then
+      open (11, file = 'info.txt', form = 'formatted', position = 'append')
+      write(11,"('WARNING   : convergence not reached at t =',1pe12.5," //     &
+               "' eps =',1pe12.5,' tol =',1pe12.5)") t, eps, tol
+      close(11)
+    end if
+!
+!-------------------------------------------------------------------------------
+!
+  end subroutine estimate_si8
+!
+!===============================================================================
+!
 ! pos2index: subroutine converts a given position to the array index
 !
 !===============================================================================
