@@ -2,7 +2,7 @@
 !!
 !! module: params - subroutines to read parameters file.
 !!
-!! Copyright (C) 2007-2010 Grzegorz Kowal <grzegorz@gkowal.info>
+!! Copyright (C) 2007-2017 Grzegorz Kowal <grzegorz@gkowal.info>
 !!
 !!******************************************************************************
 !!

@@ -2,7 +2,7 @@
 !!
 !! module: particles - subroutines to prepare and advance particles
 !!
-!! Copyright (C) 2010 Grzegorz Kowal <grzegorz@gkowal.info>
+!! Copyright (C) 2010-2017 Grzegorz Kowal <grzegorz@gkowal.info>
 !!
 !!******************************************************************************
 !!
