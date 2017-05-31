@@ -100,9 +100,9 @@ module particles
 
 ! parameters
 !
-    real(kind=PREC) :: cc  = 299792457.99999998416751623153687d0   ! the speed of light [m/s]
-    real(kind=PREC) :: pc  = 3.2407792896656065765177783686188d-17 ! 1 meter [pc]
-    real(kind=PREC) :: sc  = 3.168876464084018437308447107767d-08  ! 1 second [yr]
+    real(kind=PREC) :: cc = 2.99792458d+08 ! the speed of light [m/s]
+    real(kind=PREC) :: pc = 1.0d+00 / 3.0856775814671916d+16 ! 1 meter [pc]
+    real(kind=PREC) :: sc = 3.168876464084018437308447107767d-08 ! 1 second [yr]
 !
 !-------------------------------------------------------------------------------
 !
