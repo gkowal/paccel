@@ -21,7 +21,7 @@ TVD           = N
 BNDRY         = N
 PERIODIC      = N
 DIMS          = 3
-TEST          = ISLAND
+TEST          = WAVE
 
 # include compilation time options
 #
