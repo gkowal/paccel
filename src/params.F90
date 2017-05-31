@@ -165,6 +165,8 @@ module params
         read (value  , *     ) c
       case ('dens')
         read (value  , *     ) dens
+      case ('bunit')
+        read (value  , *     ) bunit
       case ('dtini')
         read (value  , *     ) dtini
       case ('dtmax')
