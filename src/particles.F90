@@ -686,7 +686,7 @@ module particles
 !!
 ! integrate the position and momentum
 !
-      t4    = t    + 0.5d0 * dt
+      t4    = t    + dt
       x4(:) = x(:) + l3(:)
       p4(:) = p(:) + k3(:)
 
@@ -1022,7 +1022,7 @@ module particles
 !!
 ! integrate the position and momentum
 !
-      t4    = t    + 0.5d0 * dt
+      t4    = t    + dt
       x4(:) = x(:) + l3(:)
       p4(:) = p(:) + k3(:)
 
