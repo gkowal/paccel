@@ -2673,7 +2673,7 @@ module particles
 !
         write (10, "(20(1pe22.14),i10)") t                                     &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua / c, up / c, ur / c - vper, gm, en, ek        &
+                                   , ua / c, up / c, ur / c, gm, en, ek        &
                                    , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
                                    , tol, i
 
