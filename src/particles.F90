@@ -1247,10 +1247,10 @@ module particles
 
 ! local parameters
 !
-    real(kind=8), parameter :: b1   = - dsqrt(3.0d0)                        &
-                             , b2   =   dsqrt(3.0d0)
     real(kind=8), parameter :: c1   =   0.5d0 - dsqrt(3.0d0) / 6.0d0        &
                              , c2   =   0.5d0 + dsqrt(3.0d0) / 6.0d0
+    real(kind=8), parameter :: d1   = - dsqrt(3.0d0)                        &
+                             , d2   =   dsqrt(3.0d0)
     real(kind=8), parameter :: b11  =   1.0d0 - 2.0d0 * dsqrt(3.0d0)        &
                              , b12  = - 6.0d0 + 4.0d0 * dsqrt(3.0d0)        &
                              , b21  = - 6.0d0 - 4.0d0 * dsqrt(3.0d0)        &
@@ -1341,10 +1341,10 @@ module particles
 
 ! update the solution
 !
-!   y(n+1) = y(n) + [ b1 * Z1 + b2 * Z2 ]
+!   y(n+1) = y(n) + [ d1 * Z1 + d2 * Z2 ]
 !
-      x(1:3) = x(1:3) + dt * (b1 * z(1,1:3) + b2 * z(2,1:3))
-      p(1:3) = p(1:3) + dq * (b1 * z(1,4:6) + b2 * z(2,4:6))
+      x(1:3) = x(1:3) + dt * (d1 * z(1,1:3) + d2 * z(2,1:3))
+      p(1:3) = p(1:3) + dq * (d1 * z(1,4:6) + d2 * z(2,4:6))
 
 #ifndef PERIODIC
 ! if the boundaries are not periodic and particle is out of the box, stop
@@ -1505,10 +1505,10 @@ module particles
 
 ! local parameters
 !
-    real(kind=8), parameter :: b1   = - dsqrt(3.0d0)                        &
-                             , b2   =   dsqrt(3.0d0)
     real(kind=8), parameter :: c1   =   0.5d0 - dsqrt(3.0d0) / 6.0d0        &
                              , c2   =   0.5d0 + dsqrt(3.0d0) / 6.0d0
+    real(kind=8), parameter :: d1   = - dsqrt(3.0d0)                        &
+                             , d2   =   dsqrt(3.0d0)
     real(kind=8), parameter :: b11  =   1.0d0 - 2.0d0 * dsqrt(3.0d0)        &
                              , b12  = - 6.0d0 + 4.0d0 * dsqrt(3.0d0)        &
                              , b21  = - 6.0d0 - 4.0d0 * dsqrt(3.0d0)        &
@@ -1591,10 +1591,10 @@ module particles
 
 ! update the solution
 !
-!   y(n+1) = y(n) + [ b1 * Z1 + b2 * Z2 ]
+!   y(n+1) = y(n) + [ d1 * Z1 + d2 * Z2 ]
 !
-      xn(1:3) = x(1:3) + dt * (b1 * z(1,1:3) + b2 * z(2,1:3))
-      pn(1:3) = p(1:3) + ds * (b1 * z(1,4:6) + b2 * z(2,4:6))
+      xn(1:3) = x(1:3) + dt * (d1 * z(1,1:3) + d2 * z(2,1:3))
+      pn(1:3) = p(1:3) + ds * (d1 * z(1,4:6) + d2 * z(2,4:6))
 
 ! update the integration time
 !
@@ -1763,12 +1763,10 @@ module particles
 
 ! local parameter
 !
-    real(kind=8), parameter :: a11 = 1.0d0 / 4.0d0                          &
-                             , a12 = 1.0d0 / 4.0d0 - dsqrt(3.0d0) / 6.0d0   &
-                             , a21 = 1.0d0 / 4.0d0 + dsqrt(3.0d0) / 6.0d0   &
-                             , a22 = 1.0d0 / 4.0d0
-    real(kind=8), parameter :: e1  = - dsqrt(3.0d0)                         &
-                             , e2  =   dsqrt(3.0d0)
+    real(kind=8), parameter :: b1  = 5.0d-01, bh = 2.5d-01
+    real(kind=8), parameter :: c1  = sqrt(3.0d+00) / 6.0d+00
+    real(kind=8), parameter :: a11 = bh, a12 = bh - c1, a21 = bh + c1, a22 = bh
+    real(kind=8), parameter :: e1  = sqrt(3.0d+00) / 2.0d+00, e2  = - e1
 !
 !-------------------------------------------------------------------------------
 !
@@ -1879,6 +1877,9 @@ module particles
     real(kind=8), parameter :: c1   =   0.5d0 - 0.1d0 * dsqrt(15.0d0)       &
                              , c2   =   0.5d0                               &
                              , c3   =   0.5d0 + 0.1d0 * dsqrt(15.0d0)
+    real(kind=8), parameter :: d1   =   5.0d0 / 3.0d0                       &
+                             , d2   = - 4.0d0 / 3.0d0                       &
+                             , d3   =   5.0d0 / 3.0d0
 !
 !-------------------------------------------------------------------------------
 !
@@ -1966,8 +1967,8 @@ module particles
 !
 !   y(n+1) = y(n) + [ d1 * Z1 + d2 * Z2 + d3 * Z3 ]
 !
-      x(1:3) = x(1:3) + dt * (b1 * z(1,1:3) + b2 * z(2,1:3) + b3 * z(3,1:3))
-      p(1:3) = p(1:3) + dq * (b1 * z(1,4:6) + b2 * z(2,4:6) + b3 * z(3,4:6))
+      x(1:3) = x(1:3) + dt * (d1 * z(1,1:3) + d2 * z(2,1:3) + d3 * z(3,1:3))
+      p(1:3) = p(1:3) + dq * (d1 * z(1,4:6) + d2 * z(2,4:6) + d3 * z(3,4:6))
 
 #ifndef PERIODIC
 ! if the boundaries are not periodic and particle is out of the box, stop
@@ -2134,6 +2135,9 @@ module particles
     real(kind=8), parameter :: c1   =   0.5d0 - 0.1d0 * dsqrt(15.0d0)       &
                              , c2   =   0.5d0                               &
                              , c3   =   0.5d0 + 0.1d0 * dsqrt(15.0d0)
+    real(kind=8), parameter :: d1   =   5.0d0 / 3.0d0                       &
+                             , d2   = - 4.0d0 / 3.0d0                       &
+                             , d3   =   5.0d0 / 3.0d0
 !
 !-------------------------------------------------------------------------------
 !
@@ -2207,8 +2211,8 @@ module particles
 !
 !   y(n+1) = y(n) + [ d1 * Z1 + d2 * Z2 + d3 * Z3 ]
 !
-      xn(1:3) = x(1:3) + dt * (b1 * z(1,1:3) + b2 * z(2,1:3) + b3 * z(3,1:3))
-      pn(1:3) = p(1:3) + ds * (b1 * z(1,4:6) + b2 * z(2,4:6) + b3 * z(3,4:6))
+      xn(1:3) = x(1:3) + dt * (d1 * z(1,1:3) + d2 * z(2,1:3) + d3 * z(3,1:3))
+      pn(1:3) = p(1:3) + ds * (d1 * z(1,4:6) + d2 * z(2,4:6) + d3 * z(3,4:6))
 
 ! update the integration time
 !
