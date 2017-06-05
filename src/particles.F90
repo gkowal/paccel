@@ -548,7 +548,7 @@ module particles
     real(kind=8), dimension(3) ::    k1, k2, k3, k4, k5
     real(kind=8), dimension(3) ::    l1, l2, l3, l4, l5
     real(kind=8), dimension(3) :: a, v, b
-    real(kind=8)               :: gm, t, dt, ds, dtn
+    real(kind=8)               :: gm, t, dt, dtn
     real(kind=8)               :: en, ek, ua, ba, up, ur, om, tg, rg
     real(kind=8)               :: tol
 !
@@ -560,7 +560,6 @@ module particles
     m  = 0
     t  = 0.0d0
     dt = dtini
-    ds = qom * dt
 
 ! set the initial position, velocity, and momentum
 !
@@ -630,7 +629,7 @@ module particles
 ! calculate the first term
 !
       l1(:) = dt * u1(:)
-      k1(:) = ds * a (:)
+      k1(:) = dt * a (:)
 
 !! 2nd step of the RK integration
 !!
@@ -655,7 +654,7 @@ module particles
 ! calculate the second term
 !
       l2(:) = dt * u2(:)
-      k2(:) = ds * a (:)
+      k2(:) = dt * a (:)
 
 !! 3rd step of the RK integration
 !!
@@ -680,7 +679,7 @@ module particles
 ! calculate the third term
 !
       l3(:) = dt * u3(:)
-      k3(:) = ds * a (:)
+      k3(:) = dt * a (:)
 
 !! 4th step of the RK integration
 !!
@@ -705,7 +704,7 @@ module particles
 ! calculate the third term
 !
       l4(:) = dt * u4(:)
-      k4(:) = ds * a (:)
+      k4(:) = dt * a (:)
 
 !! the final integration of the particle position and momentum
 !!
@@ -728,7 +727,7 @@ module particles
 ! estimate the error for timestep control
 !
       l4(:) = l4(:) - dt * u5(:)
-      k4(:) = k4(:) - ds * a (:)
+      k4(:) = k4(:) - dt * a (:)
 
       tol = sqrt(dot_product(l4(:), l4(:)) + dot_product(k4(:), k4(:))) / 6.0d0
 
@@ -743,7 +742,6 @@ module particles
 ! repeat the integration with a new timestep
 !
         dt = dtn
-        ds = qom * dt
 
       else
 
@@ -758,7 +756,6 @@ module particles
 ! update the new timestep
 !
         dt = min(2.0d0 * dt, dtn, dtmax)
-        ds = qom * dt
 
 ! update the position, velocity and momentum
 !
@@ -889,7 +886,7 @@ module particles
     real(kind=8), dimension(3) ::    k1, k2, k3, k4, k5
     real(kind=8), dimension(3) ::    l1, l2, l3, l4, l5
     real(kind=8), dimension(3) :: a, v, b
-    real(kind=8)               :: gm, t, dt, ds, dtn
+    real(kind=8)               :: gm, t, dt, dtn
     real(kind=8)               :: en, ek, ua, ba, up, ur, om, tg, rg
     real(kind=8)               :: tol, wl, wr
 !
@@ -900,7 +897,6 @@ module particles
     n  = 0
     t  = 0.0d0
     dt = dtini
-    ds = qom * dt
 
 ! set the initial position, velocity, and momentum
 !
@@ -966,7 +962,7 @@ module particles
 ! calculate the first term
 !
       l1(:) = dt * u1(:)
-      k1(:) = ds * a (:)
+      k1(:) = dt * a (:)
 
 !! 2nd step of the RK integration
 !!
@@ -991,7 +987,7 @@ module particles
 ! calculate the second term
 !
       l2(:) = dt * u2(:)
-      k2(:) = ds * a (:)
+      k2(:) = dt * a (:)
 
 !! 3rd step of the RK integration
 !!
@@ -1016,7 +1012,7 @@ module particles
 ! calculate the third term
 !
       l3(:) = dt * u3(:)
-      k3(:) = ds * a (:)
+      k3(:) = dt * a (:)
 
 !! 4th step of the RK integration
 !!
@@ -1041,7 +1037,7 @@ module particles
 ! calculate the third term
 !
       l4(:) = dt * u4(:)
-      k4(:) = ds * a (:)
+      k4(:) = dt * a (:)
 
 !! the final integration of the particle position and momentum
 !!
@@ -1064,7 +1060,7 @@ module particles
 ! estimate the error for timestep control
 !
       l4(:) = l4(:) - dt * u5(:)
-      k4(:) = k4(:) - ds * a (:)
+      k4(:) = k4(:) - dt * a (:)
 
       tol = sqrt(dot_product(l4(:), l4(:)) + dot_product(k4(:), k4(:))) / 6.0d0
 
@@ -1079,7 +1075,6 @@ module particles
 ! repeat the integration with a new timestep
 !
         dt = dtn
-        ds = qom * dt
 
       else
 
@@ -1170,7 +1165,6 @@ module particles
 ! update the new timestep
 !
         dt = min(2.0d0 * dt, dtn, dtmax, max(1.0d-16, tmax - t))
-        ds = qom * dt
 
       end if
 
@@ -1236,7 +1230,7 @@ module particles
     real(kind=8), dimension(2,6) :: z, zp
     real(kind=8), dimension(3)   :: x , u , p , a
     real(kind=8), dimension(3)   :: v, b
-    real(kind=8)                 :: gm, t, dt, dq, s, ds
+    real(kind=8)                 :: gm, t, dt, s, ds
     real(kind=8)                 :: en, ek, ua, ba, up, ur, om, tg, rg
     real(kind=8)                 :: tol
 
@@ -1267,7 +1261,6 @@ module particles
     t  = 0.0d0
     s  = 0.0d0
     dt = dtini
-    dq = qom * dt
     ds = dt * ndumps
 
 ! substitute the initial position, velocity, and momentum
@@ -1337,14 +1330,14 @@ module particles
 !   Z1 = dt * [ a11 * F(y + Z1) + a12 * F(y + Z2) ]
 !   Z2 = dt * [ a21 * F(y + Z1) + a22 * F(y + Z2) ]
 !
-      call estimate_si4(x(:), p(:), z(:,:), t, dt, dq, tol, i)
+      call estimate_si4(x(:), p(:), z(:,:), t, dt, tol, i)
 
 ! update the solution
 !
 !   y(n+1) = y(n) + [ d1 * Z1 + d2 * Z2 ]
 !
       x(1:3) = x(1:3) + dt * (d1 * z(1,1:3) + d2 * z(2,1:3))
-      p(1:3) = p(1:3) + dq * (d1 * z(1,4:6) + d2 * z(2,4:6))
+      p(1:3) = p(1:3) + dt * (d1 * z(1,4:6) + d2 * z(2,4:6))
 
 #ifndef PERIODIC
 ! if the boundaries are not periodic and particle is out of the box, stop
@@ -1494,7 +1487,7 @@ module particles
     real(kind=8), dimension(3)   :: x , u , p , a
     real(kind=8), dimension(3)   :: xn, pn, xt, ut, pt
     real(kind=8), dimension(3)   :: v, b
-    real(kind=8)                 :: gm, t, dt, ds
+    real(kind=8)                 :: gm, t, dt
     real(kind=8)                 :: en, ek, ua, ba, up, ur, om, tg, rg
     real(kind=8)                 :: tol, tp, wl, wr
 
@@ -1522,7 +1515,6 @@ module particles
     m  = 1
     t  = 0.0d0
     dt = dtini
-    ds = qom * dt
 
 ! substitute the initial position, velocity, and momentum
 !
@@ -1587,14 +1579,14 @@ module particles
 !   Z1 = dt * [ a11 * F(y + Z1) + a12 * F(y + Z2) ]
 !   Z2 = dt * [ a21 * F(y + Z1) + a22 * F(y + Z2) ]
 !
-      call estimate_si4(x(:), p(:), z(:,:), t, dt, ds, tol, i)
+      call estimate_si4(x(:), p(:), z(:,:), t, dt, tol, i)
 
 ! update the solution
 !
 !   y(n+1) = y(n) + [ d1 * Z1 + d2 * Z2 ]
 !
       xn(1:3) = x(1:3) + dt * (d1 * z(1,1:3) + d2 * z(2,1:3))
-      pn(1:3) = p(1:3) + ds * (d1 * z(1,4:6) + d2 * z(2,4:6))
+      pn(1:3) = p(1:3) + dt * (d1 * z(1,4:6) + d2 * z(2,4:6))
 
 ! update the integration time
 !
@@ -1685,7 +1677,6 @@ module particles
 ! update timestep
 !
       dt = min(dt, max(1.0d-16, tmax - t))
-      ds = qom * dt
 
 ! end of iteration
 !
@@ -1738,7 +1729,7 @@ module particles
 !
 !===============================================================================
 !
-  subroutine estimate_si4(x, p, z, t, dt, dq, tol, it)
+  subroutine estimate_si4(x, p, z, t, dt, tol, it)
 
     use params, only : maxit, maxeps
 
@@ -1749,7 +1740,7 @@ module particles
     real(kind=8), dimension(3)  , intent(in)    :: x, p
     real(kind=8), dimension(2,6), intent(inout) :: z
     real(kind=8)                , intent(in)    :: t
-    real(kind=8)                , intent(inout) :: dt, dq, tol
+    real(kind=8)                , intent(inout) :: dt, tol
     integer                     , intent(inout) :: it
 
 ! local variables
@@ -1783,8 +1774,8 @@ module particles
 !
       x1(:) = x(:) + dt * z(1,1:3)
       x2(:) = x(:) + dt * z(2,1:3)
-      p1(:) = p(:) + dq * z(1,4:6)
-      p2(:) = p(:) + dq * z(2,4:6)
+      p1(:) = p(:) + dt * z(1,4:6)
+      p2(:) = p(:) + dt * z(2,4:6)
 
 ! calculate the Lorentz factors and particle velocity
 !
@@ -1822,7 +1813,7 @@ module particles
 ! estimate the integration error
 !
     dh(1:3) = dt * (e1 * u1(:) + e2 * u2(:))
-    dh(4:6) = dq * (e1 * a1(:) + e2 * a2(:))
+    dh(4:6) = dt * (e1 * a1(:) + e2 * a2(:))
     tol     = sqrt(sum(dh(:) * dh(:)))
 
 ! if the convergence was not reached write the warning about it
@@ -1865,7 +1856,7 @@ module particles
     real(kind=8), dimension(3,6) :: z
     real(kind=8), dimension(3)   :: x , u , p , a
     real(kind=8), dimension(3)   :: v, b
-    real(kind=8)                 :: gm, t, dt, s, ds, dq
+    real(kind=8)                 :: gm, t, dt, s, ds
     real(kind=8)                 :: en, ek, ua, ba, up, ur, om, tg, rg
     real(kind=8)                 :: tol
 
@@ -1892,7 +1883,6 @@ module particles
     t  = 0.0d0
     s  = 0.0d0
     dt = dtini
-    dq = qom * dt
     ds = dt * ndumps
 
 ! substitute the initial position, velocity, and momentum
@@ -1961,14 +1951,14 @@ module particles
 !   Z2 = [ a21 * F(y + Z1) + a22 * F(y + Z2) + a23 * F(y + Z3) ]
 !   Z3 = [ a31 * F(y + Z1) + a32 * F(y + Z2) + a33 * F(y + Z3) ]
 !
-      call estimate_si6(x(:), p(:), z(:,:), t, dt, dq, tol, i)
+      call estimate_si6(x(:), p(:), z(:,:), t, dt, tol, i)
 
 ! update the solution
 !
 !   y(n+1) = y(n) + [ d1 * Z1 + d2 * Z2 + d3 * Z3 ]
 !
       x(1:3) = x(1:3) + dt * (d1 * z(1,1:3) + d2 * z(2,1:3) + d3 * z(3,1:3))
-      p(1:3) = p(1:3) + dq * (d1 * z(1,4:6) + d2 * z(2,4:6) + d3 * z(3,4:6))
+      p(1:3) = p(1:3) + dt * (d1 * z(1,4:6) + d2 * z(2,4:6) + d3 * z(3,4:6))
 
 #ifndef PERIODIC
 ! if the boundaries are not periodic and particle is out of the box, stop
@@ -2118,7 +2108,7 @@ module particles
     real(kind=8), dimension(3)   :: x , u , p , a
     real(kind=8), dimension(3)   :: xn, pn, xt, ut, pt
     real(kind=8), dimension(3)   :: v, b
-    real(kind=8)                 :: gm, t, dt, ds
+    real(kind=8)                 :: gm, t, dt
     real(kind=8)                 :: en, ek, ua, ba, up, ur, om, tg, rg
     real(kind=8)                 :: tol, tp, wl, wr
 
@@ -2147,7 +2137,6 @@ module particles
     m  = 1
     t  = 0.0d0
     dt = dtini
-    ds = qom * dt
 
 ! substitute the initial position, velocity, and momentum
 !
@@ -2205,14 +2194,14 @@ module particles
 !   Z2 = [ a21 * F(y + Z1) + a22 * F(y + Z2) + a23 * F(y + Z3) ]
 !   Z3 = [ a31 * F(y + Z1) + a32 * F(y + Z2) + a33 * F(y + Z3) ]
 !
-      call estimate_si6(x(:), p(:), z(:,:), t, dt, ds, tol, i)
+      call estimate_si6(x(:), p(:), z(:,:), t, dt, tol, i)
 
 ! update the solution
 !
 !   y(n+1) = y(n) + [ d1 * Z1 + d2 * Z2 + d3 * Z3 ]
 !
       xn(1:3) = x(1:3) + dt * (d1 * z(1,1:3) + d2 * z(2,1:3) + d3 * z(3,1:3))
-      pn(1:3) = p(1:3) + ds * (d1 * z(1,4:6) + d2 * z(2,4:6) + d3 * z(3,4:6))
+      pn(1:3) = p(1:3) + dt * (d1 * z(1,4:6) + d2 * z(2,4:6) + d3 * z(3,4:6))
 
 ! update the integration time
 !
@@ -2303,7 +2292,6 @@ module particles
 ! update timestep
 !
       dt = min(dt, max(1.0d-16, tmax - t))
-      ds = qom * dt
 
 ! end of iteration
 !
@@ -2356,7 +2344,7 @@ module particles
 !
 !===============================================================================
 !
-  subroutine estimate_si6(x, p, z, t, dt, dq, tol, it)
+  subroutine estimate_si6(x, p, z, t, dt, tol, it)
 
     use params, only : maxit, maxeps
 
@@ -2367,7 +2355,7 @@ module particles
     real(kind=8), dimension(3)  , intent(in)    :: x, p
     real(kind=8), dimension(3,6), intent(inout) :: z
     real(kind=8)                , intent(in)    :: t
-    real(kind=8)                , intent(inout) :: dt, dq, tol
+    real(kind=8)                , intent(inout) :: dt, tol
     integer                     , intent(inout) :: it
 
 ! local variables
@@ -2411,9 +2399,9 @@ module particles
       x1(:) = x(:) + dt * z(1,1:3)
       x2(:) = x(:) + dt * z(2,1:3)
       x3(:) = x(:) + dt * z(3,1:3)
-      p1(:) = p(:) + dq * z(1,4:6)
-      p2(:) = p(:) + dq * z(2,4:6)
-      p3(:) = p(:) + dq * z(3,4:6)
+      p1(:) = p(:) + dt * z(1,4:6)
+      p2(:) = p(:) + dt * z(2,4:6)
+      p3(:) = p(:) + dt * z(3,4:6)
 
 ! calculate the Lorentz factors and particle velocity
 !
@@ -2456,7 +2444,7 @@ module particles
 ! estimate the integration error
 !
     dh(1:3) = dt * (e1 * u1(:) + e2 * u2(:) + e3 * u3(:))
-    dh(4:6) = dq * (e1 * a1(:) + e2 * a2(:) + e3 * a3(:))
+    dh(4:6) = dt * (e1 * a1(:) + e2 * a2(:) + e3 * a3(:))
     tol     = sqrt(sum(dh(:) * dh(:)))
 
 ! if the convergence was not reached write the warning about it
@@ -2499,7 +2487,7 @@ module particles
     real(kind=8), dimension(4,6) :: z
     real(kind=8), dimension(3)   :: x , u , p , a
     real(kind=8), dimension(3)   :: v, b
-    real(kind=8)                 :: gm, t, dt, s, ds, dq
+    real(kind=8)                 :: gm, t, dt, s, ds
     real(kind=8)                 :: en, ek, ua, ba, up, ur, om, tg, rg
     real(kind=8)                 :: tol
 
@@ -2526,7 +2514,6 @@ module particles
     t  = 0.0d0
     s  = 0.0d0
     dt = dtini
-    dq = qom * dt
     ds = dt * ndumps
 
 ! substitute the initial position, velocity, and momentum
@@ -2597,7 +2584,7 @@ module particles
 !   Z2 = [ a21 * F(y + Z1) + a22 * F(y + Z2) + a23 * F(y + Z3) ]
 !   Z3 = [ a31 * F(y + Z1) + a32 * F(y + Z2) + a33 * F(y + Z3) ]
 !
-      call estimate_si8(x(:), p(:), z(:,:), t, dt, dq, tol, i)
+      call estimate_si8(x(:), p(:), z(:,:), t, dt, tol, i)
 
 ! update the solution
 !
@@ -2605,7 +2592,7 @@ module particles
 !
       x(1:3) = x(1:3) + dt * (d1 * z(1,1:3) + d2 * z(2,1:3) + d3 * z(3,1:3)    &
                             + d4 * z(4,1:3))
-      p(1:3) = p(1:3) + dq * (d1 * z(1,4:6) + d2 * z(2,4:6) + d3 * z(3,4:6)    &
+      p(1:3) = p(1:3) + dt * (d1 * z(1,4:6) + d2 * z(2,4:6) + d3 * z(3,4:6)    &
                             + d4 * z(4,4:6))
 
 #ifndef PERIODIC
@@ -2742,7 +2729,7 @@ module particles
 !
 !===============================================================================
 !
-  subroutine estimate_si8(x, p, z, t, dt, dq, tol, it)
+  subroutine estimate_si8(x, p, z, t, dt, tol, it)
 
     use params, only : maxit, maxeps
 
@@ -2753,7 +2740,7 @@ module particles
     real(kind=8), dimension(3)  , intent(in)    :: x, p
     real(kind=8), dimension(4,6), intent(inout) :: z
     real(kind=8)                , intent(in)    :: t
-    real(kind=8)                , intent(inout) :: dt, dq, tol
+    real(kind=8)                , intent(inout) :: dt, tol
     integer                     , intent(inout) :: it
 
 ! local variables
@@ -2806,10 +2793,10 @@ module particles
       x2(:) = x(:) + dt * z(2,1:3)
       x3(:) = x(:) + dt * z(3,1:3)
       x4(:) = x(:) + dt * z(4,1:3)
-      p1(:) = p(:) + dq * z(1,4:6)
-      p2(:) = p(:) + dq * z(2,4:6)
-      p3(:) = p(:) + dq * z(3,4:6)
-      p4(:) = p(:) + dq * z(4,4:6)
+      p1(:) = p(:) + dt * z(1,4:6)
+      p2(:) = p(:) + dt * z(2,4:6)
+      p3(:) = p(:) + dt * z(3,4:6)
+      p4(:) = p(:) + dt * z(4,4:6)
 
 ! calculate the Lorentz factors and particle velocity
 !
@@ -2857,7 +2844,7 @@ module particles
 ! estimate the integration error
 !
     dh(1:3) = dt * (e1 * u1(:) + e2 * u2(:) + e3 * u3(:))
-    dh(4:6) = dq * (e1 * a1(:) + e2 * a2(:) + e3 * a3(:))
+    dh(4:6) = dt * (e1 * a1(:) + e2 * a2(:) + e3 * a3(:))
     tol     = sqrt(sum(dh(:) * dh(:)))
 
 ! if the convergence was not reached write the warning about it
@@ -3401,9 +3388,9 @@ module particles
 
 ! compute the acceleration
 !
-        a(1) = w(2) * b(3) - w(3) * b(2)
-        a(2) = w(3) * b(1) - w(1) * b(3)
-        a(3) = w(1) * b(2) - w(2) * b(1)
+        a(1) = qom * (w(2) * b(3) - w(3) * b(2))
+        a(2) = qom * (w(3) * b(1) - w(1) * b(3))
+        a(3) = qom * (w(1) * b(2) - w(2) * b(1))
 #if !defined TEST && defined BNDRY
       else
         a(:) = 0.0
