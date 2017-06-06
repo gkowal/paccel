@@ -1749,14 +1749,15 @@ module particles
     real(kind=8), dimension(2,6) :: zn
     real(kind=8), dimension(2,3) :: xi, pi, ui, ai
     real(kind=8), dimension(3)   :: xm, pm, v, b
+    real(kind=8), dimension(2)   :: ti
     real(kind=8)                 :: lf
 
 ! local parameter
 !
     real(kind=8), parameter :: b1  = 5.0d-01, bh = 2.5d-01
-    real(kind=8), parameter :: c1  = sqrt(3.0d+00) / 6.0d+00
-    real(kind=8), parameter :: a11 = bh, a12 = bh - c1, a21 = bh + c1, a22 = bh
-    real(kind=8), parameter :: e1  = sqrt(3.0d+00) / 2.0d+00, e2  = - e1
+    real(kind=8), parameter :: ch  = sqrt(3.0d+00) / 6.0d+00
+    real(kind=8), parameter :: c1  = b1 - ch, c2  = b1 + ch
+    real(kind=8), parameter :: a11 = bh, a12 = bh - ch, a21 = bh + ch, a22 = bh
 !
 !-------------------------------------------------------------------------------
 !
@@ -1764,6 +1765,11 @@ module particles
 !
     n   = 0
     tol = 2.0d+00 * maxtol
+
+! prepare the time moments for intermedia states
+!
+    ti(1)   = t + c1 * dt
+    ti(2)   = t + c2 * dt
 
 ! prepare normalized state to calculate tolerance
 !
@@ -1790,7 +1796,7 @@ module particles
 
 ! get acceleration for the current state
 !
-        call acceleration(t, xi(i,1:3), ui(i,1:3), ai(i,1:3), v(:), b(:))
+        call acceleration(ti(i), xi(i,1:3), ui(i,1:3), ai(i,1:3), v(:), b(:))
 
       end do
 
