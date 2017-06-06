@@ -1729,9 +1729,9 @@ module particles
 !
 !===============================================================================
 !
-  subroutine estimate_si4(x, p, z, t, dt, tol, it)
+  subroutine estimate_si4(x, p, z, t, dt, tol, n)
 
-    use params, only : maxit, maxeps
+    use params, only : maxit, maxtol
 
     implicit none
 
@@ -1741,16 +1741,15 @@ module particles
     real(kind=8), dimension(2,6), intent(inout) :: z
     real(kind=8)                , intent(in)    :: t
     real(kind=8)                , intent(inout) :: dt, tol
-    integer                     , intent(inout) :: it
+    integer                     , intent(inout) :: n
 
 ! local variables
 !
+    integer                      :: i
     real(kind=8), dimension(2,6) :: zn
-    real(kind=8), dimension(6)   :: dh
-    real(kind=8), dimension(3)   :: x1, p1, u1, a1
-    real(kind=8), dimension(3)   :: x2, p2, u2, a2
-    real(kind=8), dimension(3)   :: v, b
-    real(kind=8)                 :: g1, g2, eps
+    real(kind=8), dimension(2,3) :: xi, pi, ui, ai
+    real(kind=8), dimension(3)   :: xm, pm, v, b
+    real(kind=8)                 :: lf
 
 ! local parameter
 !
@@ -1763,65 +1762,69 @@ module particles
 !
 ! initiate the iteration control parameters
 !
-    it  = 0
-    eps = 1.0d+16
+    n   = 0
+    tol = 2.0d+00 * maxtol
 
-! perform the simple functional iteration until the conditions are met
+! prepare normalized state to calculate tolerance
 !
-    do while (eps .gt. maxeps .and. it .lt. maxit)
+    xm(1:3) = max(1.0d+00, abs(x(1:3)))
+    pm(1:3) = max(1.0d+00, abs(p(1:3)))
 
-! prepare the particle position and momentum for the current iteration
+! perform fixed-point iteration
 !
-      x1(:) = x(:) + z(1,1:3)
-      x2(:) = x(:) + z(2,1:3)
-      p1(:) = p(:) + z(1,4:6)
-      p2(:) = p(:) + z(2,4:6)
+    do while (tol > maxtol .and. n < maxit)
 
-! calculate the Lorentz factors and particle velocity
+! iterate over intermediate states
 !
-      g1    = lorentz_factor(p1(:))
-      g2    = lorentz_factor(p2(:))
-      u1(:) = p1(:) / g1
-      u2(:) = p2(:) / g2
+      do i = 1, 2
 
-! calculate the accelerations
+! prepare the particle intermediate state (position and momentum)
 !
-      call acceleration(t, x1(1:3), u1(1:3), a1(1:3), v(1:3), b(1:3))
-      call acceleration(t, x2(1:3), u2(1:3), a2(1:3), v(1:3), b(1:3))
+        xi(i,:) = x(:) + z(i,1:3)
+        pi(i,:) = p(:) + z(i,4:6)
 
-! update the increment
+! convert particle momentum to velocity
 !
-      zn(1,1:3) = dt * (a11 * u1(1:3) + a12 * u2(1:3))
-      zn(1,4:6) = dt * (a11 * a1(1:3) + a12 * a2(1:3))
-      zn(2,1:3) = dt * (a21 * u1(1:3) + a22 * u2(1:3))
-      zn(2,4:6) = dt * (a21 * a1(1:3) + a22 * a2(1:3))
+        lf      = lorentz_factor(pi(i,:))
+        ui(i,:) = pi(i,:) / lf
+
+! get acceleration for the current state
+!
+        call acceleration(t, xi(i,1:3), ui(i,1:3), ai(i,1:3), v(:), b(:))
+
+      end do
+
+! get the new increment estimate for the intermediate states
+!
+      zn(1,1:3) = dt * (a11 * ui(1,1:3) + a12 * ui(2,1:3))
+      zn(2,1:3) = dt * (a21 * ui(1,1:3) + a22 * ui(2,1:3))
+      zn(1,4:6) = dt * (a11 * ai(1,1:3) + a12 * ai(2,1:3))
+      zn(2,4:6) = dt * (a21 * ai(1,1:3) + a22 * ai(2,1:3))
 
 ! calculate the maximum of residuum of the increment
 !
-      eps = maxval(abs(zn - z))
+      tol = 0.0d+00
+      do i = 1, 2
+        tol = max(tol, maxval(abs(zn(i,1:3) - z(i,1:3)) / xm(1:3)))
+        tol = max(tol, maxval(abs(zn(i,4:6) - z(i,4:6)) / pm(1:3)))
+      end do
 
-! substitute the new solution of the increment
+! update the intermediate states wit the new estimate
 !
-      z = zn
+      z(:,:) = zn(:,:)
 
 ! increase the iteration counter
 !
-      it = it + 1
+      n = n + 1
 
     end do
 
-! estimate the integration error
+! if the convergence was not reached, warn about this
 !
-    dh(1:3) = dt * (e1 * u1(:) + e2 * u2(:))
-    dh(4:6) = dt * (e1 * a1(:) + e2 * a2(:))
-    tol     = sqrt(sum(dh(:) * dh(:)))
-
-! if the convergence was not reached write the warning about it
-!
-    if (it .ge. maxit) then
+    if (n >= maxit) then
       open (11, file = 'info.txt', form = 'formatted', position = 'append')
       write(11,"('WARNING   : convergence not reached at t =',1pe12.5," //     &
-               "' eps =',1pe12.5,' tol =',1pe12.5)") t, eps, tol
+               "' tol =',1pe12.5)") t, tol
       close(11)
     end if
 !
