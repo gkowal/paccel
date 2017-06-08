@@ -476,21 +476,6 @@ module particles
     ek = en
 #endif
 
-! print headers and the initial values
-!
-    open  (10, file = 'output.dat', form = 'formatted', status = 'replace')
-    write (10, "('#',1a20,19a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz'     &
-                                 , '|V| [c]', '|Vpar| [c]', '|Vper| [c]'       &
-                                 , 'gamma', 'En [MeV]', 'Ek [MeV]'             &
-                                 , '<B> [Gs]', 'Omega [1/s]'                   &
-                                 , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'      &
-                                 , 'Tolerance'
-    write (10, "(20(1pe22.14))") 0.0, x0(1), x0(2), x0(3), u0(1), u0(2), u0(3) &
-                                    , vv, vpar, vper, gm, en, ek               &
-                                    , bavg * ba, om, tg, rg, tg / fc, rg / ln  &
-                                    , 1.0d-16
-    close (10)
-
 ! prepare dump times
 !
     if (output .eq. 'l') then
@@ -550,7 +535,7 @@ module particles
     real(kind=8), dimension(3) :: a, v, b
     real(kind=8)               :: gm, t, dt, dtn
     real(kind=8)               :: en, ek, ua, ba, up, ur, om, tg, rg
-    real(kind=8)               :: tol
+    real(kind=8)               :: tol = 0.0d+00
 !
 !-------------------------------------------------------------------------------
 !
@@ -579,6 +564,10 @@ module particles
 !
     gm = lorentz_factor(p(:))
 
+! calculate the particle gyroperiod and gyroradius
+!
+    call gyro_parameters(gm, ba, ur, om, tg, rg)
+
 ! calculate the particle energies
 !
 #ifdef RELAT
@@ -596,9 +585,20 @@ module particles
     write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
             , char(13)
 
-! open the output file
+! open the output file, print headers and the initial values
 !
-    open  (10, file = 'output.dat', form = 'formatted', position = 'append')
+    open  (10, file = 'output.dat', form = 'formatted', status = 'replace')
+    write (10, "('#',1a20,19a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz'     &
+                                 , '|V| [c]', '|Vpar| [c]', '|Vper| [c]'       &
+                                 , 'gamma', 'En [MeV]', 'Ek [MeV]'             &
+                                 , '<B> [Gs]', 'Omega [1/s]'                   &
+                                 , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'      &
+                                 , 'Tolerance'
+    write (10, "(20(1pe22.14))") t                                             &
+                               , x(1), x(2), x(3), u(1), u(2), u(3)            &
+                               , ua / c, up / c, ur / c, gm, en, ek            &
+                               , bavg * ba, om, tg * fc, rg * ln, tg, rg       &
+                               , tol
 
 !== INTEGRATION LOOP ==
 !
@@ -807,7 +807,6 @@ module particles
                                      , ua / c, up / c, ur / c, gm, en, ek      &
                                      , bavg * ba, om, tg * fc, rg * ln, tg, rg &
                                      , tol
-!           close (10)
 
 ! update the counters
 !
@@ -916,6 +915,10 @@ module particles
 !
     gm = lorentz_factor(p(:))
 
+! calculate the particle gyroperiod and gyroradius
+!
+    call gyro_parameters(gm, ba, ur, om, tg, rg)
+
 ! calculate the particle energies
 !
 #ifdef RELAT
@@ -932,6 +935,21 @@ module particles
             , 'SPEED (c)', 'ENERGY (MeV)'
     write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
             , char(13)
+
+! open the output file, print headers and the initial values
+!
+    open  (10, file = 'output.dat', form = 'formatted', status = 'replace')
+    write (10, "('#',1a20,19a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz'     &
+                                 , '|V| [c]', '|Vpar| [c]', '|Vper| [c]'       &
+                                 , 'gamma', 'En [MeV]', 'Ek [MeV]'             &
+                                 , '<B> [Gs]', 'Omega [1/s]'                   &
+                                 , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'      &
+                                 , 'Tolerance'
+    write (10, "(20(1pe22.14))") t                                             &
+                               , x(1), x(2), x(3), u(1), u(2), u(3)            &
+                               , ua / c, up / c, ur / c, gm, en, ek            &
+                               , bavg * ba, om, tg * fc, rg * ln, tg, rg       &
+                               , tol
 
 !== INTEGRATION LOOP ==
 !
@@ -1131,13 +1149,10 @@ module particles
 
 ! store the particle parameters
 !
-          open  (10, file = 'output.dat', form = 'formatted'                   &
-                   , position = 'append')
           write (10, "(20(1pe22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3)   &
                                      , ua / c, up / c, ur / c, gm, en, ek      &
                                      , bavg * ba, om, tg * fc, rg * ln, tg, rg &
                                      , tol
-          close (10)
 
 ! update the counters
 !
@@ -1194,7 +1209,6 @@ module particles
 
 ! store the particle parameters
 !
-    open  (10, file = 'output.dat', form = 'formatted', position = 'append')
     write (10, "(20(1pe22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3)         &
                                , ua / c, up / c, ur / c, gm, en, ek            &
                                , bavg * ba, om, tg * fc, rg * ln, tg, rg, tol
@@ -1288,6 +1302,10 @@ module particles
 !
     gm = lorentz_factor(p(:))
 
+! calculate the particle gyroperiod and gyroradius
+!
+    call gyro_parameters(gm, ba, ur, om, tg, rg)
+
 ! calculate the particle energy
 !
 #ifdef RELAT
@@ -1305,9 +1323,20 @@ module particles
     write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
             , char(13)
 
-! open the output file
+! open the output file, print headers and the initial values
 !
-    open  (10, file = 'output.dat', form = 'formatted', position = 'append')
+    open  (10, file = 'output.dat', form = 'formatted', status = 'replace')
+    write (10, "('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz'     &
+                                 , '|V| [c]', '|Vpar| [c]', '|Vper| [c]'       &
+                                 , 'gamma', 'En [MeV]', 'Ek [MeV]'             &
+                                 , '<B> [Gs]', 'Omega [1/s]'                   &
+                                 , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'      &
+                                 , 'Tolerance', 'Iterations'
+    write (10, "(20(1pe22.14),i22)") t                                         &
+                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
+                                   , ua / c, up / c, ur / c, gm, en, ek        &
+                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , tol, i
 
 !== INTEGRATION LOOP ==
 !
@@ -1412,7 +1441,7 @@ module particles
 
 ! write results to the output file
 !
-        write (10, "(20(1pe22.14),i10)") t                                     &
+        write (10, "(20(1pe22.14),i22)") t                                     &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
                                    , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
@@ -1540,6 +1569,10 @@ module particles
 !
     gm = lorentz_factor(p(:))
 
+! calculate the particle gyroperiod and gyroradius
+!
+    call gyro_parameters(gm, ba, ur, om, tg, rg)
+
 ! calculate the particle energy
 !
 #ifdef RELAT
@@ -1556,6 +1589,21 @@ module particles
             , 'SPEED (c)', 'ENERGY (MeV)'
     write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
             , char(13)
+
+! open the output file, print headers and the initial values
+!
+    open  (10, file = 'output.dat', form = 'formatted', status = 'replace')
+    write (10, "('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz'     &
+                                 , '|V| [c]', '|Vpar| [c]', '|Vper| [c]'       &
+                                 , 'gamma', 'En [MeV]', 'Ek [MeV]'             &
+                                 , '<B> [Gs]', 'Omega [1/s]'                   &
+                                 , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'      &
+                                 , 'Tolerance', 'Iterations'
+    write (10, "(20(1pe22.14),i22)") t                                         &
+                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
+                                   , ua / c, up / c, ur / c, gm, en, ek        &
+                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , tol, i
 
 !== INTEGRATION LOOP ==
 !
@@ -1651,12 +1699,10 @@ module particles
 
 ! write results to the output file
 !
-        open  (10, file = 'output.dat', form = 'formatted', position = 'append')
         write (10, "(20(1pe22.14))") tp, x(1), x(2), x(3), u(1), u(2), u(3)    &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
                                    , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
                                    , tol
-        close (10)
 
 ! increate the snapshot index
 !
@@ -1712,7 +1758,6 @@ module particles
 
 ! store the last snapshot
 !
-    open  (10, file = 'output.dat', form = 'formatted', position = 'append')
     write (10, "(20(1pe22.14))") t, x(1), x(2), x(3), v(1), v(2), v(3)         &
                                , ua / c, up / c, ur / c, gm, en, ek            &
                                , bavg * ba, om, tg * fc, rg * ln, tg, rg, tol
@@ -1925,6 +1970,10 @@ module particles
 !
     gm = lorentz_factor(p(:))
 
+! calculate the particle gyroperiod and gyroradius
+!
+    call gyro_parameters(gm, ba, ur, om, tg, rg)
+
 ! calculate the particle energy
 !
 #ifdef RELAT
@@ -1942,9 +1991,20 @@ module particles
     write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
             , char(13)
 
-! open the output file
+! open the output file, print headers and the initial values
 !
-    open  (10, file = 'output.dat', form = 'formatted', position = 'append')
+    open  (10, file = 'output.dat', form = 'formatted', status = 'replace')
+    write (10, "('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz'     &
+                                 , '|V| [c]', '|Vpar| [c]', '|Vper| [c]'       &
+                                 , 'gamma', 'En [MeV]', 'Ek [MeV]'             &
+                                 , '<B> [Gs]', 'Omega [1/s]'                   &
+                                 , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'      &
+                                 , 'Tolerance', 'Iterations'
+    write (10, "(20(1pe22.14),i22)") t                                         &
+                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
+                                   , ua / c, up / c, ur / c, gm, en, ek        &
+                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , tol, i
 
 !== INTEGRATION LOOP ==
 !
@@ -2050,7 +2110,7 @@ module particles
 
 ! write results to the output file
 !
-        write (10, "(20(1pe22.14),i10)") t                                     &
+        write (10, "(20(1pe22.14),i22)") t                                     &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
                                    , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
@@ -2179,6 +2239,10 @@ module particles
 !
     gm = lorentz_factor(p(:))
 
+! calculate the particle gyroperiod and gyroradius
+!
+    call gyro_parameters(gm, ba, ur, om, tg, rg)
+
 ! calculate the particle energy
 !
 #ifdef RELAT
@@ -2195,6 +2259,21 @@ module particles
             , 'SPEED (c)', 'ENERGY (MeV)'
     write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
             , char(13)
+
+! open the output file, print headers and the initial values
+!
+    open  (10, file = 'output.dat', form = 'formatted', status = 'replace')
+    write (10, "('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz'     &
+                                 , '|V| [c]', '|Vpar| [c]', '|Vper| [c]'       &
+                                 , 'gamma', 'En [MeV]', 'Ek [MeV]'             &
+                                 , '<B> [Gs]', 'Omega [1/s]'                   &
+                                 , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'      &
+                                 , 'Tolerance', 'Iterations'
+    write (10, "(20(1pe22.14),i22)") t                                         &
+                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
+                                   , ua / c, up / c, ur / c, gm, en, ek        &
+                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , tol, i
 
 !== INTEGRATION LOOP ==
 !
@@ -2283,12 +2362,10 @@ module particles
 
 ! write results to the output file
 !
-        open  (10, file = 'output.dat', form = 'formatted', position = 'append')
         write (10, "(20(1pe22.14))") tp, x(1), x(2), x(3), u(1), u(2), u(3)    &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
                                    , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
                                    , tol
-        close (10)
 
 ! increate the snapshot index
 !
@@ -2344,7 +2421,6 @@ module particles
 
 ! store the last snapshot
 !
-    open  (10, file = 'output.dat', form = 'formatted', position = 'append')
     write (10, "(20(1pe22.14))") t, x(1), x(2), x(3), v(1), v(2), v(3)         &
                                , ua / c, up / c, ur / c, gm, en, ek            &
                                , bavg * ba, om, tg * fc, rg * ln, tg, rg, tol
@@ -2569,6 +2645,10 @@ module particles
 !
     gm = lorentz_factor(p(:))
 
+! calculate the particle gyroperiod and gyroradius
+!
+    call gyro_parameters(gm, ba, ur, om, tg, rg)
+
 ! calculate the particle energy
 !
 #ifdef RELAT
@@ -2586,9 +2666,20 @@ module particles
     write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
             , char(13)
 
-! open the output file
+! open the output file, print headers and the initial values
 !
-    open  (10, file = 'output.dat', form = 'formatted', position = 'append')
+    open  (10, file = 'output.dat', form = 'formatted', status = 'replace')
+    write (10, "('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz'     &
+                                 , '|V| [c]', '|Vpar| [c]', '|Vper| [c]'       &
+                                 , 'gamma', 'En [MeV]', 'Ek [MeV]'             &
+                                 , '<B> [Gs]', 'Omega [1/s]'                   &
+                                 , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'      &
+                                 , 'Tolerance', 'Iterations'
+    write (10, "(20(1pe22.14),i22)") t                                         &
+                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
+                                   , ua / c, up / c, ur / c, gm, en, ek        &
+                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , tol, i
 
 !== INTEGRATION LOOP ==
 !
@@ -2696,7 +2787,7 @@ module particles
 
 ! write results to the output file
 !
-        write (10, "(20(1pe22.14),i10)") t                                     &
+        write (10, "(20(1pe22.14),i22)") t                                     &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
                                    , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
