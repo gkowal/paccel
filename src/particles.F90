@@ -875,7 +875,7 @@ module particles
     real(kind=8), dimension(3)     :: v, b
     real(kind=8)                   :: gm, t, dt, s, ds
     real(kind=8)                   :: en, ek, ua, ba, up, ur, om, tg, rg
-    real(kind=8)                   :: tol
+    real(kind=8)                   :: tol = 0.0d+00
 
 ! local flags
 !
@@ -1275,7 +1275,7 @@ module particles
     real(kind=8), dimension(3)     :: v, b
     real(kind=8)                   :: gm, t, dt, s, ds
     real(kind=8)                   :: en, ek, ua, ba, up, ur, om, tg, rg
-    real(kind=8)                   :: tol
+    real(kind=8)                   :: tol = 0.0d+00
 
 ! local parameters
 !
@@ -1684,7 +1684,7 @@ module particles
     real(kind=8), dimension(3)     :: v, b
     real(kind=8)                   :: gm, t, dt, s, ds
     real(kind=8)                   :: en, ek, ua, ba, up, ur, om, tg, rg
-    real(kind=8)                   :: tol
+    real(kind=8)                   :: tol = 0.0d+00
 
 ! local parameters, Butcher's coefficients c_i and Sans-Serna & Calvo's
 ! coefficients d_i
