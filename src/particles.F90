@@ -1753,8 +1753,8 @@ module particles
 !
     integer                      :: i
     real(kind=8), dimension(2,6) :: zn
-    real(kind=8), dimension(2,3) :: xi, pi, ui, ai
-    real(kind=8), dimension(3)   :: xm, pm, v, b
+    real(kind=8), dimension(2,3) :: ui, ai
+    real(kind=8), dimension(3)   :: xi, pi, xm, pm, v, b
     real(kind=8), dimension(2)   :: ti
     real(kind=8)                 :: lf
 
@@ -1792,17 +1792,17 @@ module particles
 
 ! prepare the particle intermediate state (position and momentum)
 !
-        xi(i,:) = x(:) + z(i,1:3)
-        pi(i,:) = p(:) + z(i,4:6)
+        xi(1:3) = x(:) + z(i,1:3)
+        pi(1:3) = p(:) + z(i,4:6)
 
 ! convert particle momentum to velocity
 !
-        lf      = lorentz_factor(pi(i,:))
-        ui(i,:) = pi(i,:) / lf
+        lf        = lorentz_factor(pi(1:3))
+        ui(i,1:3) = pi(1:3) / lf
 
 ! get acceleration for the current state
 !
-        call acceleration(ti(i), xi(i,1:3), ui(i,1:3), ai(i,1:3), v(:), b(:))
+        call acceleration(ti(i), xi(1:3), ui(i,1:3), ai(i,1:3), v(:), b(:))
 
       end do
 
