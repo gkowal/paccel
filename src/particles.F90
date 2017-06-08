@@ -2489,15 +2489,16 @@ module particles
 
 ! local variables
 !
-    logical                      :: keepon = .true.
-    character(len=32)            :: str
-    integer                      :: n, m, i, mi, ti
-    real(kind=8), dimension(4,6) :: z
-    real(kind=8), dimension(3)   :: x , u , p , a
-    real(kind=8), dimension(3)   :: v, b
-    real(kind=8)                 :: gm, t, dt, s, ds
-    real(kind=8)                 :: en, ek, ua, ba, up, ur, om, tg, rg
-    real(kind=8)                 :: tol
+    logical                        :: keepon = .true.
+    character(len=32)              :: str
+    integer                        :: n, m, i, mi, ti
+    real(kind=8), dimension(4,6)   :: z
+    real(kind=8), dimension(5,4,6) :: zp
+    real(kind=8), dimension(3)     :: x , u , p , a
+    real(kind=8), dimension(3)     :: v, b
+    real(kind=8)                   :: gm, t, dt, s, ds
+    real(kind=8)                   :: en, ek, ua, ba, up, ur, om, tg, rg
+    real(kind=8)                   :: tol
 
 ! local parameters, Butcher's coefficients c_i and Sans-Serna & Calvo's
 ! coefficients d_i
@@ -2523,6 +2524,10 @@ module particles
     s  = 0.0d0
     dt = dtini
     ds = dt * ndumps
+
+! reset the initial guess
+!
+    zp(:,:,:) = 0.0d+00
 
 ! substitute the initial position, velocity, and momentum
 !
@@ -2569,22 +2574,15 @@ module particles
 !
     do while (keepon)
 
-! obtain velocity and acceleration for the initial guess of Z
+! find the initial guess for the vector Z using Newton's interpolation formula
 !
-      gm   = lorentz_factor(p(:))
-      u(:) = p(:) / gm
-      call acceleration(t, x(:), u(:), a(:), v(:), b(:))
-
-! find the initial guess for the vector Z (linear estimation)
-!
-      z(1,1:3) = c1 * u(1:3)
-      z(2,1:3) = c2 * u(1:3)
-      z(3,1:3) = c3 * u(1:3)
-      z(4,1:3) = c4 * u(1:3)
-      z(1,4:6) = c1 * a(1:3)
-      z(2,4:6) = c2 * a(1:3)
-      z(3,4:6) = c3 * a(1:3)
-      z(4,4:6) = c4 * a(1:3)
+      zp(5,:,:) = zp(4,:,:)
+      zp(4,:,:) = zp(3,:,:)
+      zp(3,:,:) = zp(2,:,:)
+      zp(2,:,:) = zp(1,:,:)
+      zp(1,:,:) = z (  :,:)
+      z (  :,:) = 5.0d+00 * zp(1,:,:) - 1.0d+01 * zp(2,:,:)                    &
+                + 1.0d+01 * zp(3,:,:) - 5.0d+00 * zp(4,:,:) + zp(5,:,:)
 
 ! estimate the vector Z (eq. 5.3)
 !
