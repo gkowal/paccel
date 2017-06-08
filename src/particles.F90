@@ -1611,14 +1611,14 @@ module particles
 !
     logical                        :: keepon = .true.
     character(len=32)              :: str
-    integer                        :: n, m, i, mi, ti
+    integer                        :: n, m, i = 0, mi, ti
     real(kind=8), dimension(3,6)   :: z
     real(kind=8), dimension(5,3,6) :: zp
     real(kind=8), dimension(3)     :: x, u, p, a
     real(kind=8), dimension(3)     :: xc, xe, xs
     real(kind=8), dimension(3)     :: pc, pe, ps
     real(kind=8), dimension(3)     :: v, b
-    real(kind=8)                   :: gm, t, dt, s, ds
+    real(kind=8)                   :: gm, t, dt, tc, te, ts
     real(kind=8)                   :: en, ek, ua, ba, up, ur, om, tg, rg
     real(kind=8)                   :: tol = 0.0d+00
 
@@ -1643,9 +1643,7 @@ module particles
     mi = 0
     ti = 0
     t  = 0.0d0
-    s  = 0.0d0
     dt = dtini
-    ds = dt * ndumps
 
 ! reset the initial guess
 !
@@ -1755,7 +1753,10 @@ module particles
 
 ! update the integration time
 !
-      t = s + m * dt
+      tc = dt - te
+      ts = t  + tc
+      te = (ts - t) - tc
+      t  = ts
 
 ! check if time exceeded the maximum time
 !
@@ -1797,10 +1798,6 @@ module particles
         en = 0.5d0 * ua * ua
         ek = en
 #endif /* RELAT */
-
-! update the integration time
-!
-        s = n * ds
 
 ! write the progress
 !
