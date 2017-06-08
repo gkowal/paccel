@@ -1225,30 +1225,26 @@ module particles
 
 ! local variables
 !
-    character(len=32)            :: str
-    integer                      :: n, m, i, mi, ti
-    real(kind=8), dimension(2,6) :: z, zp
-    real(kind=8), dimension(3)   :: x , u , p , a
-    real(kind=8), dimension(3)   :: v, b
-    real(kind=8)                 :: gm, t, dt, s, ds
-    real(kind=8)                 :: en, ek, ua, ba, up, ur, om, tg, rg
-    real(kind=8)                 :: tol
+    character(len=32)              :: str
+    integer                        :: n, m, i, mi, ti
+    real(kind=8), dimension(2,6)   :: z
+    real(kind=8), dimension(5,2,6) :: zp
+    real(kind=8), dimension(3)     :: x, u, p, a
+    real(kind=8), dimension(3)     :: v, b
+    real(kind=8)                   :: gm, t, dt, s, ds
+    real(kind=8)                   :: en, ek, ua, ba, up, ur, om, tg, rg
+    real(kind=8)                   :: tol
 
 ! local flags
 !
-    logical                      :: flag   = .true.
-    logical                      :: keepon = .true.
+    logical                        :: keepon = .true.
 
 ! local parameters
 !
-    real(kind=8), parameter :: c1   =   0.5d0 - dsqrt(3.0d0) / 6.0d0        &
-                             , c2   =   0.5d0 + dsqrt(3.0d0) / 6.0d0
-    real(kind=8), parameter :: d1   = - dsqrt(3.0d0)                        &
-                             , d2   =   dsqrt(3.0d0)
-    real(kind=8), parameter :: b11  =   1.0d0 - 2.0d0 * dsqrt(3.0d0)        &
-                             , b12  = - 6.0d0 + 4.0d0 * dsqrt(3.0d0)        &
-                             , b21  = - 6.0d0 - 4.0d0 * dsqrt(3.0d0)        &
-                             , b22  =   1.0d0 + 2.0d0 * dsqrt(3.0d0)
+    real(kind=8), parameter :: b1  = 5.0d-01
+    real(kind=8), parameter :: ch  = sqrt(3.0d+00) / 6.0d+00
+    real(kind=8), parameter :: c1  = b1 - ch, c2  = b1 + ch
+    real(kind=8), parameter :: d1   = - sqrt(3.0d+00), d2   = - d1
 !
 !-------------------------------------------------------------------------------
 !
@@ -1262,6 +1258,10 @@ module particles
     s  = 0.0d0
     dt = dtini
     ds = dt * ndumps
+
+! reset the initial guess
+!
+    zp(:,:,:) = 0.0d+00
 
 ! substitute the initial position, velocity, and momentum
 !
@@ -1308,22 +1308,15 @@ module particles
 !
     do while (keepon)
 
-! find the initial guess for the vector Z
+! find the initial guess for the vector Z using Newton's interpolation formula
 !
-      if (flag) then
-
-        z(1,1:3) = dt * c1 * u(1:3)
-        z(2,1:3) = dt * c2 * u(1:3)
-        z(1,4:6) = dt * c1 * a(1:3)
-        z(2,4:6) = dt * c2 * a(1:3)
-
-        flag = .false.
-      else
-        zp(:,:) = z(:,:)
-
-        z(1,1:6) = b11 * zp(1,1:6) + b12 * zp(2,1:6)
-        z(2,1:6) = b21 * zp(1,1:6) + b22 * zp(2,1:6)
-      end if
+      zp(5,:,:) = zp(4,:,:)
+      zp(4,:,:) = zp(3,:,:)
+      zp(3,:,:) = zp(2,:,:)
+      zp(2,:,:) = zp(1,:,:)
+      zp(1,:,:) = z (  :,:)
+      z (  :,:) = 5.0d+00 * zp(1,:,:) - 1.0d+01 * zp(2,:,:)                    &
+                + 1.0d+01 * zp(3,:,:) - 5.0d+00 * zp(4,:,:) + zp(5,:,:)
 
 ! estimate the vector Z (eq. 5.3)
 !
