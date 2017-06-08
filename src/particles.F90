@@ -1937,12 +1937,6 @@ module particles
 !
     do while (keepon)
 
-! obtain velocity and acceleration for the initial guess of Z
-!
-      gm   = lorentz_factor(p(:))
-      u(:) = p(:) / gm
-      call acceleration(t, x(:), u(:), a(:), v(:), b(:))
-
 ! find the initial guess for the vector Z using Newton's interpolation formula
 !
       zp(5,:,:) = zp(4,:,:)
