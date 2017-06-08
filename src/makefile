@@ -22,6 +22,7 @@ BNDRY         = N
 PERIODIC      = N
 DIMS          = 3
 TEST          = WAVE
+ERRORS        = N
 
 # include compilation time options
 #
@@ -89,6 +90,9 @@ FFLAGS += -DTEST -DWTEST
 endif
 ifeq ($(TEST),ISLAND)
 FFLAGS += -DTEST -DITEST
+endif
+ifeq ($(ERRORS),Y)
+FFLAGS += -DERRORS
 endif
 
 ifeq ($(HDF5),Y)

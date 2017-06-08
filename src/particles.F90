@@ -876,6 +876,9 @@ module particles
     real(kind=8)                   :: gm, t, dt, tc, te, ts
     real(kind=8)                   :: en, ek, ua, ba, up, ur, om, tg, rg
     real(kind=8)                   :: tol = 0.0d+00
+#ifdef ERRORS
+    real(kind=8)                   :: en0, ek0, ua0, up0, ur0
+#endif
 
 ! local flags
 !
@@ -941,6 +944,14 @@ module particles
     ek = en
 #endif /* RELAT */
 
+#ifdef ERRORS
+    en0 = en
+    ek0 = ek
+    ua0 = ua
+    up0 = up
+    ur0 = ur
+#endif
+
 ! print the progress information
 !
     write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP'       &
@@ -957,11 +968,21 @@ module particles
                                  , '<B> [Gs]', 'Omega [1/s]'                   &
                                  , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'      &
                                  , 'Tolerance', 'Iterations'
+#ifdef ERRORS
+    write (10, "(20(1pe22.14),i22)") t                                         &
+                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
+                                   , abs(ua - ua0) / c, abs(up - up0) / c      &
+                                   , abs(ur - ur0) / c, gm                     &
+                                   , abs(en - en0), abs(ek - ek0)              &
+                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , tol, i
+#else
     write (10, "(20(1pe22.14),i22)") t                                         &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
                                    , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
                                    , tol, i
+#endif
 
 !== INTEGRATION LOOP ==
 !
@@ -1065,11 +1086,21 @@ module particles
 
 ! write results to the output file
 !
+#ifdef ERRORS
+    write (10, "(20(1pe22.14),i22)") t                                         &
+                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
+                                   , abs(ua - ua0) / c, abs(up - up0) / c      &
+                                   , abs(ur - ur0) / c, gm                     &
+                                   , abs(en - en0), abs(ek - ek0)              &
+                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , tol, i
+#else
         write (10, "(20(1pe22.14),i22)") t                                     &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
                                    , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
                                    , tol, i
+#endif
 
         n = n + 1
         m = 0
