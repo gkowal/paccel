@@ -2763,9 +2763,9 @@ module particles
 !
 !===============================================================================
 !
-  subroutine estimate_si8(x, p, z, t, dt, tol, it)
+  subroutine estimate_si8(x, p, z, t, dt, tol, n)
 
-    use params, only : maxit, maxeps
+    use params, only : maxit, maxtol
 
     implicit none
 
@@ -2775,18 +2775,16 @@ module particles
     real(kind=8), dimension(4,6), intent(inout) :: z
     real(kind=8)                , intent(in)    :: t
     real(kind=8)                , intent(inout) :: dt, tol
-    integer                     , intent(inout) :: it
+    integer                     , intent(inout) :: n
 
 ! local variables
 !
+    integer                      :: i
     real(kind=8), dimension(4,6) :: zn
-    real(kind=8), dimension(6)   :: dh
-    real(kind=8), dimension(3)   :: x1, p1, u1, a1
-    real(kind=8), dimension(3)   :: x2, p2, u2, a2
-    real(kind=8), dimension(3)   :: x3, p3, u3, a3
-    real(kind=8), dimension(3)   :: x4, p4, u4, a4
-    real(kind=8), dimension(3)   :: v, b
-    real(kind=8)                 :: g1, g2, g3, g4, eps
+    real(kind=8), dimension(4,3) :: ui, ai
+    real(kind=8), dimension(3)   :: xi, pi, xm, pm, v, b
+    real(kind=8), dimension(4)   :: ti
+    real(kind=8)                 :: lf
 
 ! local parameters, Butcher's coefficients a_ij
 !
@@ -2806,95 +2804,97 @@ module particles
                              , a42 =  3.1344511474186834679841114481438d-01    &
                              , a43 =  3.5267675751627186462685315586596d-01    &
                              , a44 =  8.6963711284363464343265987305500d-02
-    real(kind=8), parameter :: e1  =   1.0d1 / 3.0d0                        &
-                             , e2  = - 2.0d1 / 3.0d0                        &
-                             , e3  =   1.0d1 / 3.0d0
+    real(kind=8), parameter :: c1  =  6.9431844202973712388026755553596d-02    &
+                             , c2  =  3.3000947820757186759866712044838d-01    &
+                             , c3  =  6.6999052179242813240133287955162d-01    &
+                             , c4  =  9.3056815579702628761197324444641d-01
 !
 !-------------------------------------------------------------------------------
 !
 ! initiate the iteration control parameters
 !
-    it  = 0
-    eps = 1.0d+16
+    n   = 0
+    tol = 2.0d+00 * maxtol
 
-! perform the simple functional iteration until the conditions are met
+! prepare the time moments for intermedia states
 !
-    do while (eps > maxeps .and. it < maxit)
+    ti(1)   = t + c1 * dt
+    ti(2)   = t + c2 * dt
+    ti(3)   = t + c3 * dt
+    ti(4)   = t + c4 * dt
 
-! prepare the particle position and momentum for the current iteration
+! prepare normalized state to calculate tolerance
 !
-      x1(:) = x(:) + z(1,1:3)
-      x2(:) = x(:) + z(2,1:3)
-      x3(:) = x(:) + z(3,1:3)
-      x4(:) = x(:) + z(4,1:3)
-      p1(:) = p(:) + z(1,4:6)
-      p2(:) = p(:) + z(2,4:6)
-      p3(:) = p(:) + z(3,4:6)
-      p4(:) = p(:) + z(4,4:6)
+    xm(1:3) = max(1.0d+00, abs(x(1:3)))
+    pm(1:3) = max(1.0d+00, abs(p(1:3)))
 
-! calculate the Lorentz factors and particle velocity
+! perform fixed-point iteration
 !
-      g1    = lorentz_factor(p1(:))
-      g2    = lorentz_factor(p2(:))
-      g3    = lorentz_factor(p3(:))
-      g4    = lorentz_factor(p4(:))
-      u1(:) = p1(:) / g1
-      u2(:) = p2(:) / g2
-      u3(:) = p3(:) / g3
-      u4(:) = p4(:) / g4
+    do while (tol > maxtol .and. n < maxit)
 
-! calculate the accelerations
+! iterate over intermediate states
 !
-      call acceleration(t, x1(1:3), u1(1:3), a1(1:3), v(1:3), b(1:3))
-      call acceleration(t, x2(1:3), u2(1:3), a2(1:3), v(1:3), b(1:3))
-      call acceleration(t, x3(1:3), u3(1:3), a3(1:3), v(1:3), b(1:3))
-      call acceleration(t, x4(1:3), u4(1:3), a4(1:3), v(1:3), b(1:3))
+      do i = 1, 4
 
-! update the increment
+! prepare the particle intermediate state (position and momentum)
 !
-      zn(1,1:3) = dt * (a11 * u1(1:3) + a12 * u2(1:3) + a13 * u3(1:3)          &
-                                                      + a14 * u4(1:3))
-      zn(1,4:6) = dt * (a11 * a1(1:3) + a12 * a2(1:3) + a13 * a3(1:3)          &
-                                                      + a14 * a4(1:3))
-      zn(2,1:3) = dt * (a21 * u1(1:3) + a22 * u2(1:3) + a23 * u3(1:3)          &
-                                                      + a24 * u4(1:3))
-      zn(2,4:6) = dt * (a21 * a1(1:3) + a22 * a2(1:3) + a23 * a3(1:3)          &
-                                                      + a24 * a4(1:3))
-      zn(3,1:3) = dt * (a31 * u1(1:3) + a32 * u2(1:3) + a33 * u3(1:3)          &
-                                                      + a34 * u4(1:3))
-      zn(3,4:6) = dt * (a31 * a1(1:3) + a32 * a2(1:3) + a33 * a3(1:3)          &
-                                                      + a34 * a4(1:3))
-      zn(4,1:3) = dt * (a41 * u1(1:3) + a42 * u2(1:3) + a43 * u3(1:3)          &
-                                                      + a44 * u4(1:3))
-      zn(4,4:6) = dt * (a41 * a1(1:3) + a42 * a2(1:3) + a43 * a3(1:3)          &
-                                                      + a44 * a4(1:3))
+        xi(1:3) = x(:) + z(i,1:3)
+        pi(1:3) = p(:) + z(i,4:6)
+
+! convert particle momentum to velocity
+!
+        lf        = lorentz_factor(pi(1:3))
+        ui(i,1:3) = pi(1:3) / lf
+
+! get acceleration for the current state
+!
+        call acceleration(ti(i), xi(1:3), ui(i,1:3), ai(i,1:3), v(:), b(:))
+
+      end do
+
+! get the new increment estimate for the intermediate states
+!
+      zn(1,1:3) = dt * (a11 * ui(1,1:3) + a12 * ui(2,1:3) + a13 * ui(3,1:3)    &
+                                                          + a14 * ui(4,1:3))
+      zn(2,1:3) = dt * (a21 * ui(1,1:3) + a22 * ui(2,1:3) + a23 * ui(3,1:3)    &
+                                                          + a24 * ui(4,1:3))
+      zn(3,1:3) = dt * (a31 * ui(1,1:3) + a32 * ui(2,1:3) + a33 * ui(3,1:3)    &
+                                                          + a34 * ui(4,1:3))
+      zn(4,1:3) = dt * (a41 * ui(1,1:3) + a42 * ui(2,1:3) + a43 * ui(3,1:3)    &
+                                                          + a44 * ui(4,1:3))
+      zn(1,4:6) = dt * (a11 * ai(1,1:3) + a12 * ai(2,1:3) + a13 * ai(3,1:3)    &
+                                                          + a14 * ai(4,1:3))
+      zn(2,4:6) = dt * (a21 * ai(1,1:3) + a22 * ai(2,1:3) + a23 * ai(3,1:3)    &
+                                                          + a24 * ai(4,1:3))
+      zn(3,4:6) = dt * (a31 * ai(1,1:3) + a32 * ai(2,1:3) + a33 * ai(3,1:3)    &
+                                                          + a34 * ai(4,1:3))
+      zn(4,4:6) = dt * (a41 * ai(1,1:3) + a42 * ai(2,1:3) + a43 * ai(3,1:3)    &
+                                                          + a44 * ai(4,1:3))
 
 ! calculate the maximum of residuum of the increment
 !
-      eps = maxval(abs(zn - z))
+      tol = 0.0d+00
+      do i = 1, 4
+        tol = max(tol, maxval(abs(zn(i,1:3) - z(i,1:3)) / xm(1:3)))
+        tol = max(tol, maxval(abs(zn(i,4:6) - z(i,4:6)) / pm(1:3)))
+      end do
 
-! substitute the new solution of the increment
+! update the intermediate states with the new estimate
 !
-      z = zn
+      z(:,:) = zn(:,:)
 
 ! increase the iteration counter
 !
-      it = it + 1
+      n = n + 1
 
     end do
 
-! estimate the integration error
+! if the convergence was not reached, warn about this
 !
-    dh(1:3) = dt * (e1 * u1(:) + e2 * u2(:) + e3 * u3(:))
-    dh(4:6) = dt * (e1 * a1(:) + e2 * a2(:) + e3 * a3(:))
-    tol     = sqrt(sum(dh(:) * dh(:)))
-
-! if the convergence was not reached write the warning about it
-!
-    if (it .ge. maxit) then
+    if (n >= maxit) then
       open (11, file = 'info.txt', form = 'formatted', position = 'append')
       write(11,"('WARNING   : convergence not reached at t =',1pe12.5," //     &
-               "' eps =',1pe12.5,' tol =',1pe12.5)") t, eps, tol
+               "' tol =',1pe12.5)") t, tol
       close(11)
     end if
 !
