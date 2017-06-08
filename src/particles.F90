@@ -873,7 +873,7 @@ module particles
     real(kind=8), dimension(3)     :: xc, xe, xs
     real(kind=8), dimension(3)     :: pc, pe, ps
     real(kind=8), dimension(3)     :: v, b
-    real(kind=8)                   :: gm, t, dt
+    real(kind=8)                   :: gm, t, dt, tc, te, ts
     real(kind=8)                   :: en, ek, ua, ba, up, ur, om, tg, rg
     real(kind=8)                   :: tol = 0.0d+00
 
@@ -898,6 +898,7 @@ module particles
     ti = 0
     t  = 0.0d+00
     dt = dtini
+    te = 0.0d+00
 
 ! reset the initial guess
 !
@@ -1011,7 +1012,10 @@ module particles
 
 ! update the integration time
 !
-      t = t + dt
+      tc = dt - te
+      ts = t  + tc
+      te = (ts - t) - tc
+      t  = ts
 
 ! check if time exceeded the maximum time
 !
