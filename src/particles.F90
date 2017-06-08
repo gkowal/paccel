@@ -1230,6 +1230,8 @@ module particles
     real(kind=8), dimension(2,6)   :: z
     real(kind=8), dimension(5,2,6) :: zp
     real(kind=8), dimension(3)     :: x, u, p, a
+    real(kind=8), dimension(3)     :: xc, xe, xs
+    real(kind=8), dimension(3)     :: pc, pe, ps
     real(kind=8), dimension(3)     :: v, b
     real(kind=8)                   :: gm, t, dt, s, ds
     real(kind=8)                   :: en, ek, ua, ba, up, ur, om, tg, rg
@@ -1262,6 +1264,11 @@ module particles
 ! reset the initial guess
 !
     zp(:,:,:) = 0.0d+00
+
+! reset the vector of the position and momentum errors
+!
+    xe(:) = 0.0d+00
+    pe(:) = 0.0d+00
 
 ! substitute the initial position, velocity, and momentum
 !
@@ -1329,8 +1336,14 @@ module particles
 !
 !   y(n+1) = y(n) + [ d1 * Z1 + d2 * Z2 ]
 !
-      x(1:3) = x(1:3) + (d1 * z(1,1:3) + d2 * z(2,1:3))
-      p(1:3) = p(1:3) + (d1 * z(1,4:6) + d2 * z(2,4:6))
+      xc(1:3) = (d1 * z(1,1:3) + d2 * z(2,1:3)) - xe(1:3)
+      pc(1:3) = (d1 * z(1,4:6) + d2 * z(2,4:6)) - pe(1:3)
+      xs(1:3) = x(1:3) + xc(1:3)
+      ps(1:3) = p(1:3) + pc(1:3)
+      xe(1:3) = (xs(1:3) - x(1:3)) - xc(1:3)
+      pe(1:3) = (ps(1:3) - p(1:3)) - pc(1:3)
+      x (1:3) = xs(1:3)
+      p (1:3) = ps(1:3)
 
 #ifndef PERIODIC
 ! if the boundaries are not periodic and particle is out of the box, stop
