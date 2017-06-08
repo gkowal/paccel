@@ -27,12 +27,10 @@
 program paccel
 
   use fields   , only : init_fields, finit_fields
-  use params   , only : read_params, method, output
+  use params   , only : read_params, method
   use particles, only : init_particle, finit_particle                          &
-                      , integrate_trajectory_rk4, integrate_trajectory_rk4_log &
-                      , integrate_trajectory_si4, integrate_trajectory_si4_log &
-                      , integrate_trajectory_si6, integrate_trajectory_si6_log &
-                      , integrate_trajectory_si8
+                      , integrate_trajectory_rk4, integrate_trajectory_si4     &
+                      , integrate_trajectory_si6, integrate_trajectory_si8
 
   implicit none
 
@@ -74,26 +72,16 @@ program paccel
   select case(method)
   case('rk4')
     write( *, "('INFO      : ',a)" ) "integrating the particle trajectory (RK4 method)"
-    if (output .eq. 'i') &
-      call integrate_trajectory_rk4()
-    if (output .eq. 'l') &
-      call integrate_trajectory_rk4_log()
+    call integrate_trajectory_rk4()
   case('si4')
     write( *, "('INFO      : ',a)" ) "integrating the particle trajectory (SI4 method)"
-    if (output .eq. 'i') &
-      call integrate_trajectory_si4()
-    if (output .eq. 'l') &
-      call integrate_trajectory_si4_log()
+    call integrate_trajectory_si4()
   case('si6')
     write( *, "('INFO      : ',a)" ) "integrating the particle trajectory (SI6 method)"
-    if (output .eq. 'i') &
-      call integrate_trajectory_si6()
-    if (output .eq. 'l') &
-      call integrate_trajectory_si6_log()
+    call integrate_trajectory_si6()
   case('si8')
     write( *, "('INFO      : ',a)" ) "integrating the particle trajectory (SI8 method)"
-    if (output == 'i') &
-      call integrate_trajectory_si8()
+    call integrate_trajectory_si8()
   end select
 
 ! display performance information

@@ -79,11 +79,7 @@ module params
 
 ! output data parameters
 !
-  character(len =   1), save :: output  = 'i'      ! the type of output:
-                                                   ! 'i' - by the iteration number
-                                                   ! 'l' - by the logarithmic time
-  integer             , save :: ndumps  = 1000     ! number of steps between subsequent dumps if the output is 'i'
-                                                   ! or number of dumps per time decade if the output is 'l'
+  integer             , save :: ndumps  = 1000     ! number of steps between subsequent dumps
   real(kind=8)        , save :: tmin    = 1.0e-3   ! minimum time of writing data
   real(kind=8)        , save :: tmax    = 1.0      ! maximum time for integration
 
@@ -142,9 +138,6 @@ module params
       case ('odir')
         l = len_trim(value)
         write(odir   , "(a)" ) value(2:l-1)
-      case ('output')
-        l = len_trim(value)
-        write(output , "(a)" ) value(2:l-1)
       case ('ptype')
         l = len_trim(value)
         write(ptype  , "(a)" ) value(2:l-1)
