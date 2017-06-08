@@ -873,7 +873,7 @@ module particles
     real(kind=8), dimension(3)     :: xc, xe, xs
     real(kind=8), dimension(3)     :: pc, pe, ps
     real(kind=8), dimension(3)     :: v, b
-    real(kind=8)                   :: gm, t, dt, s, ds
+    real(kind=8)                   :: gm, t, dt
     real(kind=8)                   :: en, ek, ua, ba, up, ur, om, tg, rg
     real(kind=8)                   :: tol = 0.0d+00
 
@@ -896,10 +896,8 @@ module particles
     m  = 1
     mi = 0
     ti = 0
-    t  = 0.0d0
-    s  = 0.0d0
+    t  = 0.0d+00
     dt = dtini
-    ds = dt * ndumps
 
 ! reset the initial guess
 !
@@ -1013,7 +1011,7 @@ module particles
 
 ! update the integration time
 !
-      t = s + m * dt
+      t = t + dt
 
 ! check if time exceeded the maximum time
 !
@@ -1027,7 +1025,7 @@ module particles
 
 ! store the particle parameters at a given snapshot time
 !
-      if (m .eq. ndumps) then
+      if (m == ndumps) then
 
 ! calculate the Lorentz factor and particle velocity
 !
@@ -1052,13 +1050,9 @@ module particles
         en = gm * mrest
         ek = en - mrest
 #else /* RELAT */
-        en = 0.5d0 * ua * ua
+        en = 5.0d-01 * ua * ua
         ek = en
 #endif /* RELAT */
-
-! update the integration time
-!
-        s = n * ds
 
 ! write the progress
 !
