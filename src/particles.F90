@@ -866,7 +866,7 @@ module particles
 ! local variables
 !
     character(len=32)              :: str
-    integer                        :: n, m, i = 0, mi, ti
+    integer                        :: n, m, i = 0, mi, ti, k
     real(kind=8), dimension(2,6)   :: z
     real(kind=8), dimension(5,2,6) :: zp
     real(kind=8), dimension(3)     :: x, u, p, a
@@ -897,6 +897,7 @@ module particles
 !
     n  = 1
     m  = 1
+    k  = 5
     mi = 0
     ti = 0
     t  = 0.0d+00
@@ -997,8 +998,26 @@ module particles
       zp(3,:,:) = zp(2,:,:)
       zp(2,:,:) = zp(1,:,:)
       zp(1,:,:) = z (  :,:)
-      z (  :,:) = 5.0d+00 * zp(1,:,:) - 1.0d+01 * zp(2,:,:)                    &
-                + 1.0d+01 * zp(3,:,:) - 5.0d+00 * zp(4,:,:) + zp(5,:,:)
+      if (k == 0) then
+        z (  :,:) = 5.0d+00 * zp(1,:,:) - 1.0d+01 * zp(2,:,:)                  &
+                  + 1.0d+01 * zp(3,:,:) - 5.0d+00 * zp(4,:,:) + zp(5,:,:)
+      else if (k == 1) then
+        z (  :,:) = 4.0d+00 * zp(1,:,:) - 6.0d+00 * zp(2,:,:)                  &
+                  + 4.0d+00 * zp(3,:,:) - zp(4,:,:)
+        k = k - 1
+      else if (k == 2) then
+        z (  :,:) = 3.0d+00 * zp(1,:,:) - 3.0d+00 * zp(2,:,:) + zp(3,:,:)
+        k = k - 1
+      else if (k == 3) then
+        z (  :,:) = 2.0d+00 * zp(1,:,:) - zp(2,:,:)
+        k = k - 1
+      else if (k == 4) then
+        z (  :,:) = zp(1,:,:)
+        k = k - 1
+      else if (k == 5) then
+        z (  :,:) = 0.0d+00
+        k = k - 1
+      end if
 
 ! estimate the vector Z (eq. 5.3)
 !
