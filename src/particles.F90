@@ -2660,14 +2660,15 @@ module particles
 !
     logical                        :: keepon = .true.
     character(len=32)              :: str
-    integer                        :: n, m, i = 0, mi, ti
+    integer                        :: n, m, i = 0, mi, ti, k
     real(kind=8), dimension(4,6)   :: z
     real(kind=8), dimension(5,4,6) :: zp
+    real(kind=8), dimension(5)     :: hp
     real(kind=8), dimension(3)     :: x, u, p, a
     real(kind=8), dimension(3)     :: xc, xe, xs
     real(kind=8), dimension(3)     :: pc, pe, ps
     real(kind=8), dimension(3)     :: v, b
-    real(kind=8)                   :: gm, t, dt, tc, te, ts
+    real(kind=8)                   :: gm, t, dt, dtp, tc, te, ts
     real(kind=8)                   :: en, ek, ua, ba, up, ur, om, tg, rg
     real(kind=8)                   :: tol = 0.0d+00
 
@@ -2689,6 +2690,7 @@ module particles
 !
     n  = 1
     m  = 1
+    k  = 5
     mi = 0
     ti = 0
     t  = 0.0d+00
@@ -2760,13 +2762,26 @@ module particles
 
 ! find the initial guess for the vector Z using Newton's interpolation formula
 !
-      zp(5,:,:) = zp(4,:,:)
-      zp(4,:,:) = zp(3,:,:)
+      dtp   = dt
+      hp(2) = hp(1)
+      hp(1) = dt / dtp
       zp(3,:,:) = zp(2,:,:)
       zp(2,:,:) = zp(1,:,:)
       zp(1,:,:) = z (  :,:)
-      z (  :,:) = 5.0d+00 * zp(1,:,:) - 1.0d+01 * zp(2,:,:)                    &
-                + 1.0d+01 * zp(3,:,:) - 5.0d+00 * zp(4,:,:) + zp(5,:,:)
+      if (k == 2) then
+        z (  :,:) = zp(1,:,:) * (1.0d+00 + hp(1) + hp(1) * hp(1))              &
+                  - zp(2,:,:) * (hp(1) * (1.0d+00 + hp(1) + hp(2)))            &
+                  + zp(3,:,:) * (hp(1) * hp(2))
+      else if (k == 3) then
+        z (  :,:) = zp(1,:,:) + (zp(1,:,:) - zp(2,:,:)) * hp(1)
+        k = k - 1
+      else if (k == 4) then
+        z (  :,:) = zp(1,:,:)
+        k = k - 1
+      else if (k == 5) then
+        z (  :,:) = 0.0d+00
+        k = k - 1
+      end if
 
 ! estimate the vector Z (eq. 5.3)
 !
