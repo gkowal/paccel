@@ -195,7 +195,6 @@ module particles
     end select
     tunit = tmulti * tunit
     lunit = vunit * tunit
-    vunit = vunit / cc
 
 ! print geometry parameters
 !
@@ -208,6 +207,54 @@ module particles
     write( *, "('INFO      : plasma parameters:')" )
     write( *, "('INFO      : V     =',1es15.8,' [m/s] =',1es15.8,' [c]')") vunit, vunit / cc
     write( *, "('INFO      : B     =',1es15.8,' [G]')") bunit
+
+! initialize particle parameters
+!
+    select case(ptype)
+    case ('e')
+      mrest =  5.10998949998580864751d-01  ! rest energy of electron [MeV]
+      mp    =  9.10938370154308020807d-31  ! electron mass [kg]
+      qom   = -1.75882001076384559274d+07  ! e/m [1 / Gs s]
+    case default
+      mrest =  9.38272088161040869636d+02  ! rest energy of proton   [MeV]
+      mp    =  1.67262192369098122997d-27  ! proton mass [kg]
+      qom   =  9.57883315593801671639d+03  ! e/m [1 / Gs s]
+    end select
+    vp = cc * vpar                                       ! parallel particle speed
+    vr = cc * vper                                       ! perpendicular particle speed
+    vv = sqrt(vpar**2 + vper**2)         ! absolute velocity
+    gm = 1.0d+00 / sqrt(1.0d+00 - vv * vv)
+    rg = gm * vper * cc / (abs(qom) * bunit)
+    tg = pi2 * rg / (vper * cc)
+    om = abs(qom) * bunit
+
+! print particle parameters
+!
+    write( *, "('INFO      : particle parameters:')" )
+    select case(ptype)
+    case ('e')
+      write( *, "('INFO      : trajectory for electron')" )
+    case default
+      write( *, "('INFO      : trajectory for proton')" )
+    end select
+    write( *, "('INFO      : e/m   =',1pe15.8,' [1 / G s]')" ) qom
+    write( *, "('INFO      : Vpar  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vpar, vpar * cc
+    write( *, "('INFO      : Vper  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vper, vper * cc
+    write( *, "('INFO      : |V|   =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vv  , vv * cc
+    write( *, "('INFO      : gamma =',1pe15.8)"              ) gm
+    write( *, "('INFO      : Om    =',1pe15.8,' [1 / s]')"   ) om
+    write( *, "('INFO      : Tg    =',1pe15.8,' [s]')"       ) tg
+    write( *, "('INFO      : Rg    =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) rg, pc * rg
+    write( *, "('INFO      : E0    =',1pe15.8,' [MeV]')"     ) mrest
+    write( *, "('INFO      : Rg/L  =',1pe15.8)" ) rg / lunit
+    write( *, "('INFO      : Tg/T  =',1pe15.8)" ) tg / tunit
+    write( *, "('INFO      : code units:')" )
+    write( *, "('INFO      : e/m   =',1pe15.8)" ) qom * bunit
+
+! convert units
+!
+    qom   = qom * tunit
+    vunit = vunit / cc
 
 ! get dimain dimensions
 !
@@ -229,101 +276,6 @@ module particles
     do p = 1, 3
       bsiz(p) = bnds(p,2) - bnds(p,1)
     end do
-
-! initialize particle parameters
-!
-    select case(ptype)
-    case ('e')
-      mrest =  0.51099890307660134070033564057667d+00    ! rest energy of electron [MeV]
-      qom   = -1.75882017226579003036022186279300d+07    ! e/m [1 / Gs s]
-      mp    =  9.10938188715453137087986438336060d-31    ! electron mass [kg]
-    case default
-      mrest =  0.93827199893682302445085952058434d+03    ! rest energy of proton   [MeV]
-      qom   =  0.95788340668294185888953506946564d+04    ! e/m [1 / Gs s]
-      mp    =  1.67262158507180250864766404816270d-27    ! proton mass [kg]
-    end select
-    vp = cc * vpar                                       ! parallel particle speed
-    vr = cc * vper                                       ! perpendicular particle speed
-    vv = sqrt(vpar**2 + vper**2)                         ! absolute velocity
-    gm = 1.0d0 / sqrt(1.0d0 - vv * vv)
-    mu = 0.5d0 * mp * vr**2 / bunit                      ! magnetic moment [kg m^2 / s^2 Gs]
-    om = abs(qom) * bunit / gm                           ! relativistic gyrofrequency
-    tg = 1.0d0 / om                                      ! gyroperiod
-    tg = pi2 * tg
-    rg = vr / om                                         ! gyroradius (Larmor radius)
-
-! print particle parameters
-!
-    write( *, "('INFO      : particle parameters:')" )
-    select case(ptype)
-    case ('e')
-      write( *, "('INFO      : trajectory for electron')" )
-    case default
-      write( *, "('INFO      : trajectory for proton')" )
-    end select
-    write( *, "('INFO      : e/m   =',1pe15.8,' [1 / G s]')" ) qom
-    write( *, "('INFO      : Vpar  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vpar, vp
-    write( *, "('INFO      : Vper  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vper, vr
-    write( *, "('INFO      : |V|   =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vv  , vv * cc
-    write( *, "('INFO      : gamma =',1pe15.8)"              ) gm
-    write( *, "('INFO      : Om    =',1pe15.8,' [1 / s]')"   ) om
-    write( *, "('INFO      : Tg    =',1pe15.8,' [s]')"       ) tg
-    write( *, "('INFO      : Rg    =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) rg, pc * rg
-    write( *, "('INFO      : mu    =',1pe15.8,' [N m / Gs]')") mu
-    write( *, "('INFO      : E0    =',1pe15.8,' [MeV]')"     ) mrest
-    qom = qom * tunit
-
-! print geometry parameters
-!
-    write( *, "('INFO      : geometry parameters:')" )
-    write( *, "('INFO      : T     =',1pe15.8,' [s] =',1pe15.8,' [yr]')" ) tunit, sc * tunit
-    write( *, "('INFO      : L     =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) lunit, pc * lunit
-    write( *, "('INFO      : Rg/L  =',1pe15.8)" ) rg / lunit
-    write( *, "('INFO      : Tg/T  =',1pe15.8)" ) tg / tunit
-
-    write( *, "('INFO      : code units:')" )
-    write( *, "('INFO      : e/m   =',1pe15.8)" ) qom * bunit
-
-! write parameters to info.txt
-!
-    open  (10, file = 'info.txt', form = 'formatted', status = 'replace')
-
-! print plasma parametes
-!
-    write (10, "('INFO      : particle parameters:')" )
-    select case(ptype)
-    case ('e')
-      write (10, "('INFO      : trajectory for electron')" )
-    case default
-      write (10, "('INFO      : trajectory for proton')" )
-    end select
-    write (10, "('INFO      : e/m   =',1pe15.8,' [1 / G s]')" ) qom
-    write (10, "('INFO      : Om    =',1pe15.8,' [1 / s]')"   ) om
-    write (10, "('INFO      : Tg    =',1pe15.8,' [s]')"       ) tg
-    write (10, "('INFO      : Vpar  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vpar, vp
-    write (10, "('INFO      : Vper  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vper, vr
-    write (10, "('INFO      : |V|   =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vv  , vv * cc
-    write (10, "('INFO      : Rg    =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) rg, pc * rg
-    write (10, "('INFO      : gamma =',1pe15.8)"              ) gm
-    write (10, "('INFO      : mu    =',1pe15.8,' [N m / Gs]')") mu
-    write (10, "('INFO      : E0    =',1pe15.8,' [MeV]')"     ) mrest
-
-! print geometry parameters
-!
-    write (10, "('INFO      : geometry parameters:')" )
-    write (10, "('INFO      : T     =',1pe15.8,' [s] =',1pe15.8,' [yr]')" ) tunit, sc * tunit
-    write (10, "('INFO      : L     =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) lunit, pc * lunit
-    write (10, "('INFO      : Rg/L  =',1pe15.8)" ) rg / lunit
-    write (10, "('INFO      : Tg/T  =',1pe15.8)" ) tg / tunit
-
-    write (10, "('INFO      : code units:')" )
-    write (10, "('INFO      : e/m   =',1pe15.8)" ) qom * bunit
-
-    close (10)
-
-! convert e/m to the units of magnetic field
-!
-    qom = qom * bunit
 
 #ifdef TEST
 #ifdef WTEST
