@@ -28,6 +28,8 @@ module fitsio
 
   implicit none
 
+  character(len = 128), save :: idir = "./" ! the input data directory
+
   integer, dimension(3), save :: dm
   integer              , save :: nl
 
@@ -43,7 +45,7 @@ module fitsio
 !
   subroutine fits_init(nm)
 
-    use params, only : idir
+    use parameters, only : get_parameter
 
     implicit none
 
@@ -62,6 +64,10 @@ module fitsio
 !
 !-------------------------------------------------------------------------------
 !
+! get the input data directory
+!
+    call get_parameter('idir', idir)
+
 ! set default values
 !
     dm (:) = 1
@@ -254,8 +260,6 @@ module fitsio
 !===============================================================================
 !
   subroutine fits_read_data(var, qty)
-
-    use params, only : idir
 
 ! arguments
 !
