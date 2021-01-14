@@ -44,11 +44,42 @@ module particles
 !
   real(kind=8), save :: tunit = 1.0d+00, lunit = 1.0d+00
   real(kind=8), save :: vunit = 1.0d+00, bunit = 1.0d+00
+  integer     , save :: nghost = 8 ! the number of ghost pixels near the boundary
 
 ! particle mass and the speed of light
 !
   real(kind=8), save :: qom   = 9.5788332d+03
-  real(kind=8), save :: mrest, om0, bpar
+  real(kind=8), save :: mrest, bpar
+
+#ifdef TEST
+! test problem parameters
+!
+  real(kind=8), save :: bini = 1.0d+00 ! the mean magnetic field
+  real(kind=8), save :: bamp = 0.0d+00 ! the amplitude of the magnetic field fluctuations
+  real(kind=8), save :: vamp = 0.0d+00 ! the amplitude of the velocity field fluctuations
+  real(kind=8), save :: freq = 1.0d+00 ! the frequency of the field fluctuations
+#ifdef ITEST
+  real(kind=8), save :: vrat = 1.0d+00 ! the ratio between velocity fluctuations amplitudes in different directions
+  real(kind=8), save :: bshr = 0.0d+00 ! the guilde field
+  real(kind=8), save :: epar = 0.0d+00 ! the constant electric field along the parallel direction
+#endif /* ITEST */
+#endif /* TEST */
+
+! output data parameters
+!
+  integer     , save :: ndumps = 1000    ! number of steps between subsequent dumps
+  real(kind=8), save :: tmin   = 1.0d-03 ! minimum time of writing data
+  real(kind=8), save :: tmax   = 1.0d+00 ! maximum time for integration
+
+! integration parameters
+!
+  real(kind=8), save :: safety = 5.0d-01  ! safety coefficient
+  real(kind=8), save :: maxtol = 1.0d-04  ! the maximi integration tolerance
+  real(kind=8), save :: maxeps = 1.0d-15  ! the maximum iteration error
+  real(kind=8), save :: dtini  = 1.0d-08  ! the initial time step
+  real(kind=8), save :: dtmax  = 1.0d+00  ! maximum allowed step size
+  integer     , save :: maxit  = 1000     ! the limit of iterations
+
 
 ! arrays containing the initial positions and velocities of particle
 !
@@ -70,23 +101,21 @@ module particles
 !
   subroutine init_particle()
 
-    use fields, only : get_dimensions, get_domain_bounds, bx, by, bz
-    use params, only : ptype, vpar, vper, c, dens, xc, yc, zc
-    use params, only : tmin, tmax, ndumps
-#ifdef TEST
-    use params, only : bini, bshr, bamp, vamp, vrat, freq
-#endif /* TEST */
+    use fields    , only : get_dimensions, get_domain_bounds, bx, by, bz
     use parameters, only : get_parameter
 
     implicit none
 
 ! local variables
 !
+    character(len= 1) :: ptype  = 'p' ! particle type: 'p' - proton, 'e' - electron
     character(len=16) :: stunit = 's'
     real(kind=8)      :: tmulti = 1.0d+00
+    real(kind=8)      :: vpar  = 0.0d+00  ! the parallel component of the initial speed in c
+    real(kind=8)      :: vper  = 1.0d-02  ! the perpendicular component of the initial speed in c
     integer      :: p, n
-    real(kind=8) :: vp, vr, vv, va
-    real(kind=8) :: gm, dn, mu0, om, tg, rg, mu, mp, en, ek, ba
+    real(kind=8) :: vp, vr, vv
+    real(kind=8) :: gm, mu0, om, tg, rg, mu, mp, en, ek, ba
     real(kind=8) :: bb, ub, uu
 #ifdef ITEST
     real(kind=8) :: xt, yt, rt, dl, ra, rb, ec
@@ -121,6 +150,28 @@ module particles
     call get_parameter('xc'    , x0(1))
     call get_parameter('yc'    , x0(2))
     call get_parameter('zc'    , x0(3))
+    call get_parameter('vpar'  , vpar)
+    call get_parameter('vper'  , vper)
+#ifdef TEST
+    call get_parameter('bini'  , bini)
+    call get_parameter('bamp'  , bamp)
+    call get_parameter('vamp'  , vamp)
+    call get_parameter('freq'  , freq)
+#ifdef ITEST
+    call get_parameter('bshr'  , bshr)
+    call get_parameter('vrat'  , vrat)
+    call get_parameter('epar'  , epar)
+#endif /* ITEST */
+#endif /* TEST */
+    call get_parameter('ndumps', ndumps)
+    call get_parameter('tmin'  , tmin)
+    call get_parameter('tmax'  , tmax)
+    call get_parameter('safety', safety)
+    call get_parameter('maxtol', maxtol)
+    call get_parameter('maxeps', maxeps)
+    call get_parameter('dtini' , dtini)
+    call get_parameter('dtmax' , dtmax)
+    call get_parameter('maxit' , maxit)
 
 ! get time unit in seconds
 !
@@ -179,20 +230,6 @@ module particles
       bsiz(p) = bnds(p,2) - bnds(p,1)
     end do
 
-! compute plasma parameters
-!                                                        ! c is expressed in Va
-    dn   = 1.6726215850718025379202284485224d-21 * dens  ! density conversion from
-                                                         ! protonmass/cm^3 to kg/m^3
-    mu0  = 125.66370614359171042906382353976             ! magnetic permeability [Gs^2 m s^2 / kg]
-    if (c .le. 1.0d0) then
-      gm   = 1.0d0
-      va   = 1.0d0 * cc
-    else
-      gm   = 1.0d0 / sqrt(1.0d0 - (1.0 / c)**2)          ! Lorentz factor
-      va   = gm * cc  / c                                ! Alfven speed [m/s]
-      bunit= va * sqrt(mu0 * dn)                         ! magnetic field strength [Gs]
-    end if
-
 ! initialize particle parameters
 !
     select case(ptype)
@@ -210,19 +247,10 @@ module particles
     vv = sqrt(vpar**2 + vper**2)                         ! absolute velocity
     gm = 1.0d0 / sqrt(1.0d0 - vv * vv)
     mu = 0.5d0 * mp * vr**2 / bunit                      ! magnetic moment [kg m^2 / s^2 Gs]
-    om0   = abs(qom * bunit)                             ! classical gyrofrequency
-    om = om0 / gm                                        ! relativistic gyrofrequency
+    om = abs(qom) * bunit / gm                           ! relativistic gyrofrequency
     tg = 1.0d0 / om                                      ! gyroperiod
     tg = pi2 * tg
     rg = vr / om                                         ! gyroradius (Larmor radius)
-
-! print plasma parametes
-!
-    write( *, "('INFO      : plasma parameters:')" )
-    write( *, "('INFO      : c     =',1pe15.8,' [Va]')"       ) c
-    write( *, "('INFO      : Va    =',1pe15.8,' [m / s]')"    ) va
-    write( *, "('INFO      : dens  =',1pe15.8,' [u / cm^3] =',1pe15.8,' [kg / m^3]')" ) dens, dn
-    write( *, "('INFO      : <B>   =',1pe15.8,' [G]')"        ) bunit
 
 ! print particle parameters
 !
@@ -262,12 +290,6 @@ module particles
 
 ! print plasma parametes
 !
-    write (10, "('INFO      : plasma parameters:')" )
-    write (10, "('INFO      : c     =',1pe15.8,' [Va]')"       ) c
-    write (10, "('INFO      : Va    =',1pe15.8,' [m / s]')"    ) va
-    write (10, "('INFO      : dens  =',1pe15.8,' [u / cm^3] =',1pe15.8,' [kg / m^3]')" ) dens, dn
-    write (10, "('INFO      : <B>   =',1pe15.8,' [G]')"        ) bunit
-
     write (10, "('INFO      : particle parameters:')" )
     select case(ptype)
     case ('e')
@@ -516,9 +538,6 @@ module particles
 !
   subroutine integrate_trajectory_rk4()
 
-    use params, only : c, tmin, tmax, rho, maxtol, dtini, dtmax, ndumps,    &
-                       vpar, vper
-
     implicit none
 
 ! local variables
@@ -581,7 +600,7 @@ module particles
 !
     write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP'       &
             , 'SPEED (c)', 'ENERGY (MeV)'
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua, ek        &
             , char(13)
 
 ! open the output file, print headers and the initial values
@@ -595,7 +614,7 @@ module particles
                                  , 'Tolerance'
     write (10, "(20(1pe22.14))") t                                             &
                                , x(1), x(2), x(3), u(1), u(2), u(3)            &
-                               , ua / c, up / c, ur / c, gm, en, ek            &
+                               , ua, up, ur, gm, en, ek                        &
                                , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                , tol
 
@@ -732,7 +751,7 @@ module particles
 
 ! estimate the new timestep
 !
-      dtn   = dt * (rho * maxtol / tol)**0.2d0
+      dtn   = dt * (safety * maxtol / tol)**0.2d0
 
 ! check if the error is below desired tolerance
 !
@@ -797,13 +816,13 @@ module particles
 
 ! print the progress
 !
-          write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c  &
+          write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua  &
                   , ek, char(13)
 
 ! store the particle parameters
 !
           write (10, "(20(1pe22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3)   &
-                                     , ua / c, up / c, ur / c, gm, en, ek      &
+                                     , ua, up, ur, gm, en, ek                  &
                                      , bunit * ba, om, tg * tunit, rg * lunit, tg, rg &
                                      , tol
 
@@ -842,12 +861,12 @@ module particles
 
 ! print the progress
 !
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua / c, ek
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua, ek
 
 ! store the particle parameters
 !
     write (10, "(20(1pe22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3)         &
-                               , ua / c, up / c, ur / c, gm, en, ek            &
+                               , ua, up, ur, gm, en, ek            &
                                , bunit * ba, om, tg * tunit, rg * lunit, tg, rg, tol
 
 ! close the output file
@@ -872,8 +891,6 @@ module particles
 !===============================================================================
 !
   subroutine integrate_trajectory_si4()
-
-    use params, only : dtini, tmax, c, ndumps
 
     implicit none
 
@@ -971,7 +988,7 @@ module particles
 !
     write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP'       &
             , 'SPEED (c)', 'ENERGY (MeV)'
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua, ek    &
             , char(13)
 
 ! open the output file, print headers and the initial values
@@ -986,15 +1003,15 @@ module particles
 #ifdef ERRORS
     write (10, "(20(1pe22.14),i22)") t                                         &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , abs(ua - ua0) / c, abs(up - up0) / c      &
-                                   , abs(ur - ur0) / c, gm                     &
+                                   , abs(ua - ua0), abs(up - up0)      &
+                                   , abs(ur - ur0), gm                     &
                                    , abs(en - en0), abs(ek - ek0)              &
                                    , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 #else
     write (10, "(20(1pe22.14),i22)") t                                         &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua / c, up / c, ur / c, gm, en, ek        &
+                                   , ua, up, ur, gm, en, ek        &
                                    , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 #endif
@@ -1114,7 +1131,7 @@ module particles
 
 ! write the progress
 !
-        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c    &
+        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua    &
             , ek, char(13)
 
 ! write results to the output file
@@ -1122,15 +1139,15 @@ module particles
 #ifdef ERRORS
     write (10, "(20(1pe22.14),i22)") t                                         &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , abs(ua - ua0) / c, abs(up - up0) / c      &
-                                   , abs(ur - ur0) / c, gm                     &
+                                   , abs(ua - ua0), abs(up - up0)      &
+                                   , abs(ur - ur0), gm                     &
                                    , abs(en - en0), abs(ek - ek0)              &
                                    , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 #else
         write (10, "(20(1pe22.14),i22)") t                                     &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua / c, up / c, ur / c, gm, en, ek        &
+                                   , ua, up, ur, gm, en, ek        &
                                    , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 #endif
@@ -1154,7 +1171,7 @@ module particles
 
 ! write the progress
 !
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua / c, ek
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua, ek
 
 ! write info about the estimator
 !
@@ -1197,8 +1214,6 @@ module particles
 !===============================================================================
 !
   subroutine integrate_trajectory_si4v()
-
-    use params, only : dtini, tmax, c, ndumps, maxtol, maxit, dtmax
 
     implicit none
 
@@ -1297,7 +1312,7 @@ module particles
 !
     write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP'       &
             , 'SPEED (c)', 'ENERGY (MeV)'
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua, ek    &
             , char(13)
 
 ! open the output file, print headers and the initial values
@@ -1312,15 +1327,15 @@ module particles
 #ifdef ERRORS
     write (10, "(20(1pe22.14),i22)") t                                         &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , abs(ua - ua0) / c, abs(up - up0) / c      &
-                                   , abs(ur - ur0) / c, gm                     &
+                                   , abs(ua - ua0), abs(up - up0)      &
+                                   , abs(ur - ur0), gm                     &
                                    , abs(en - en0), abs(ek - ek0)              &
                                    , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 #else
     write (10, "(20(1pe22.14),i22)") t                                         &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua / c, up / c, ur / c, gm, en, ek        &
+                                   , ua, up, ur, gm, en, ek        &
                                    , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 #endif
@@ -1439,7 +1454,7 @@ module particles
 
 ! write the progress
 !
-        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c    &
+        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua    &
             , ek, char(13)
 
 ! write results to the output file
@@ -1447,15 +1462,15 @@ module particles
 #ifdef ERRORS
     write (10, "(20(1pe22.14),i22)") t                                         &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , abs(ua - ua0) / c, abs(up - up0) / c      &
-                                   , abs(ur - ur0) / c, gm                     &
+                                   , abs(ua - ua0), abs(up - up0)      &
+                                   , abs(ur - ur0), gm                     &
                                    , abs(en - en0), abs(ek - ek0)              &
                                    , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 #else
         write (10, "(20(1pe22.14),i22)") t                                     &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua / c, up / c, ur / c, gm, en, ek        &
+                                   , ua, up, ur, gm, en, ek        &
                                    , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 #endif
@@ -1485,7 +1500,7 @@ module particles
 
 ! write the progress
 !
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua / c, ek
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua, ek
 
 ! write info about the estimator
 !
@@ -1528,8 +1543,6 @@ module particles
 !===============================================================================
 !
   subroutine estimate_si4(x, p, z, t, dt, tol, n)
-
-    use params, only : maxit, maxtol
 
     implicit none
 
@@ -1651,8 +1664,6 @@ module particles
 !
   subroutine integrate_trajectory_si6()
 
-    use params, only : dtini, tmax, c, ndumps
-
     implicit none
 
 ! local variables
@@ -1734,7 +1745,7 @@ module particles
 !
     write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP'       &
             , 'SPEED (c)', 'ENERGY (MeV)'
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua, ek    &
             , char(13)
 
 ! open the output file, print headers and the initial values
@@ -1748,7 +1759,7 @@ module particles
                                  , 'Tolerance', 'Iterations'
     write (10, "(20(1pe22.14),i22)") t                                         &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua / c, up / c, ur / c, gm, en, ek        &
+                                   , ua, up, ur, gm, en, ek        &
                                    , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 
@@ -1868,14 +1879,14 @@ module particles
 
 ! write the progress
 !
-        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c    &
+        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua    &
             , ek, char(13)
 
 ! write results to the output file
 !
         write (10, "(20(1pe22.14),i22)") t                                     &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua / c, up / c, ur / c, gm, en, ek        &
+                                   , ua, up, ur, gm, en, ek        &
                                    , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 
@@ -1898,7 +1909,7 @@ module particles
 
 ! write the progress
 !
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua / c, ek
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua, ek
 
 ! write info about the estimator
 !
@@ -1941,8 +1952,6 @@ module particles
 !===============================================================================
 !
   subroutine integrate_trajectory_si6v()
-
-    use params, only : dtini, tmax, c, ndumps, maxtol, maxit, dtmax
 
     implicit none
 
@@ -2026,7 +2035,7 @@ module particles
 !
     write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP'       &
             , 'SPEED (c)', 'ENERGY (MeV)'
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua, ek    &
             , char(13)
 
 ! open the output file, print headers and the initial values
@@ -2040,7 +2049,7 @@ module particles
                                  , 'Tolerance', 'Iterations'
     write (10, "(20(1pe22.14),i22)") t                                         &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua / c, up / c, ur / c, gm, en, ek        &
+                                   , ua, up, ur, gm, en, ek        &
                                    , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 
@@ -2159,14 +2168,14 @@ module particles
 
 ! write the progress
 !
-        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c    &
+        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua    &
             , ek, char(13)
 
 ! write results to the output file
 !
         write (10, "(20(1pe22.14),i22)") t                                     &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua / c, up / c, ur / c, gm, en, ek        &
+                                   , ua, up, ur, gm, en, ek        &
                                    , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 
@@ -2195,7 +2204,7 @@ module particles
 
 ! write the progress
 !
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua / c, ek
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua, ek
 
 ! write info about the estimator
 !
@@ -2238,8 +2247,6 @@ module particles
 !===============================================================================
 !
   subroutine estimate_si6(x, p, z, t, dt, tol, n)
-
-    use params, only : maxit, maxtol
 
     implicit none
 
@@ -2373,8 +2380,6 @@ module particles
 !
   subroutine integrate_trajectory_si8()
 
-    use params, only : dtini, tmax, c, ndumps, vper
-
     implicit none
 
 ! local variables
@@ -2456,7 +2461,7 @@ module particles
 !
     write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP'       &
             , 'SPEED (c)', 'ENERGY (MeV)'
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua, ek    &
             , char(13)
 
 ! open the output file, print headers and the initial values
@@ -2470,7 +2475,7 @@ module particles
                                  , 'Tolerance', 'Iterations'
     write (10, "(20(1pe22.14),i22)") t                                         &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua / c, up / c, ur / c, gm, en, ek        &
+                                   , ua, up, ur, gm, en, ek        &
                                    , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 
@@ -2592,14 +2597,14 @@ module particles
 
 ! write the progress
 !
-        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c    &
+        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua    &
             , ek, char(13)
 
 ! write results to the output file
 !
         write (10, "(20(1pe22.14),i22)") t                                     &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua / c, up / c, ur / c, gm, en, ek        &
+                                   , ua, up, ur, gm, en, ek        &
                                    , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 
@@ -2622,7 +2627,7 @@ module particles
 
 ! write the progress
 !
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua / c, ek
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua, ek
 
 ! write info about the estimator
 !
@@ -2665,8 +2670,6 @@ module particles
 !===============================================================================
 !
   subroutine integrate_trajectory_si8v()
-
-    use params, only : dtini, tmax, c, ndumps, maxtol, maxit, dtmax
 
     implicit none
 
@@ -2750,7 +2753,7 @@ module particles
 !
     write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP'       &
             , 'SPEED (c)', 'ENERGY (MeV)'
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c, ek    &
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua, ek    &
             , char(13)
 
 ! open the output file, print headers and the initial values
@@ -2764,7 +2767,7 @@ module particles
                                  , 'Tolerance', 'Iterations'
     write (10, "(20(1pe22.14),i22)") t                                         &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua / c, up / c, ur / c, gm, en, ek        &
+                                   , ua, up, ur, gm, en, ek        &
                                    , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 
@@ -2885,14 +2888,14 @@ module particles
 
 ! write the progress
 !
-        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua / c    &
+        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua    &
             , ek, char(13)
 
 ! write results to the output file
 !
         write (10, "(20(1pe22.14),i22)") t                                     &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua / c, up / c, ur / c, gm, en, ek        &
+                                   , ua, up, ur, gm, en, ek        &
                                    , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 
@@ -2921,7 +2924,7 @@ module particles
 
 ! write the progress
 !
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua / c, ek
+    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua, ek
 
 ! write info about the estimator
 !
@@ -2964,8 +2967,6 @@ module particles
 !===============================================================================
 !
   subroutine estimate_si8(x, p, z, t, dt, tol, n)
-
-    use params, only : maxit, maxtol
 
     implicit none
 
@@ -3519,10 +3520,6 @@ module particles
   subroutine acceleration(t, x, v, s, a, u, b)
 
     use fields, only : ux, uy, uz, bx, by, bz
-    use params, only : nghost
-#ifdef TEST
-    use params, only : bini, bshr, bamp, vamp, vrat, freq
-#endif /* TEST */
 
     implicit none
 
