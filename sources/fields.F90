@@ -28,6 +28,10 @@ module fields
 
   implicit none
 
+! the format of the input data
+!
+  character(len=32), save :: fformat = 'fits'
+
 ! the dimesion of the field components
 !
   integer, dimension(3), save :: dm, qm
@@ -70,11 +74,11 @@ module fields
 !
   subroutine init_fields()
 
-    use params, only : fformat
     use fitsio, only : fits_init, fits_get_dims, fits_get_bounds, fits_read_var
 #ifdef HDF5
     use hdf5io, only : hdf5_init, hdf5_get_dims, hdf5_get_bounds, hdf5_read_var
 #endif /* HDF5 */
+    use parameters, only : get_parameter
 
     implicit none
 
@@ -84,13 +88,17 @@ module fields
 !
 !-------------------------------------------------------------------------------
 !
+! get the input data file format
+!
+    call get_parameter('fformat', fformat)
+
 ! initialize dimensions
 !
     dm(:) = 1
 
 ! obtain array dimensions
 !
-    select case(fformat)
+    select case(trim(fformat))
     case('fits')
       call fits_init('magx')
       call fits_get_dims(dm)
@@ -102,7 +110,7 @@ module fields
       call hdf5_get_bounds(xmin, xmax, ymin, ymax, zmin, zmax)
 #endif /* HDF5 */
     case default
-      write( *, "('ERROR     : ',a,1x,a)" ) "unsupported data format:", fformat
+      write( *, "('ERROR     : ',a,1x,a)" ) "unsupported data format:", trim(fformat)
       stop
     end select
 
@@ -156,7 +164,7 @@ module fields
 ! read the field components from the file
 !
     write( *, "('INFO      : ',a)" ) "reading velocity and magnetic field"
-    select case(fformat)
+    select case(trim(fformat))
     case('fits')
       call fits_read_var('velx', tt)
       call expand_array(tt, ux)
