@@ -47,7 +47,8 @@ module particles
 
 ! particle mass and the speed of light
 !
-  real(kind=8)           , save :: mrest, qom, csq, om0, bpar
+  real(kind=8), save :: qom   = 9.5788332d+03
+  real(kind=8), save :: mrest, csq, om0, bpar
 
 ! arrays containing the initial positions and velocities of particle
 !
@@ -116,6 +117,10 @@ module particles
     call get_parameter('bunit' , bunit)
     call get_parameter('tunit' , stunit)
     call get_parameter('tmulti', tmulti)
+    call get_parameter('ptype' , ptype)
+    call get_parameter('xc'    , x0(1))
+    call get_parameter('yc'    , x0(2))
+    call get_parameter('zc'    , x0(3))
 
 ! get time unit in seconds
 !
@@ -139,6 +144,7 @@ module particles
     end select
     tunit = tmulti * tunit
     lunit = vunit * tunit
+    vunit = vunit / cc
 
 ! print geometry parameters
 !
@@ -298,16 +304,12 @@ module particles
 !
     qom = qom * bunit
 
-! initial position and velocity
-!
-    x0(:) = (/ xc, yc, zc /)
-
 #ifdef TEST
 #ifdef WTEST
     bpar = sqrt(bini**2 - bamp**2)
     b(1) = bpar
-    b(2) = bamp * cos(pi2 * freq * xc)
-    b(3) = bamp * sin(pi2 * freq * xc)
+    b(2) = bamp * cos(pi2 * freq * x0(1))
+    b(3) = bamp * sin(pi2 * freq * x0(1))
 
     u(1) = 0.0
     u(2) = 0.0
@@ -470,15 +472,11 @@ module particles
 
 ! calculate the initial velocity
 !
-    u0(:) = (vpar * b(:) + vper * u(:)) * c
+    u0(:) = (vpar * b(:) + vper * u(:))
 
 ! calculate the Lorentz factor of the initial state
 !
-#ifdef RELAT
-    gm = 1.0 / sqrt(1.0d0 - dot_product(u0, u0) / csq)
-#else
-    gm = 1.0
-#endif
+    gm = 1.0d+00 / sqrt(1.0d+00 - dot_product(u0, u0))
 
 ! calculate the initial particle momentuum
 !
@@ -486,13 +484,8 @@ module particles
 
 ! calculate particle energy
 !
-#ifdef RELAT
     en = gm * mrest
-    ek = en - mrest
-#else
-    en = 0.5 * (vpar**2 + vper**2) * csq
-    ek = en
-#endif
+    ek = (gm - 1.0d+00) * mrest
 !
 !-------------------------------------------------------------------------------
 !
@@ -539,7 +532,7 @@ module particles
     real(kind=8), dimension(3) :: p, p1, p2, p3, p4, p5
     real(kind=8), dimension(3) ::    k1, k2, k3, k4, k5
     real(kind=8), dimension(3) ::    l1, l2, l3, l4, l5
-    real(kind=8), dimension(3) :: a, v, b
+    real(kind=8), dimension(3) :: s, a, v, b
     real(kind=8)               :: gm, t, dt, dtn
     real(kind=8)               :: en, ek, ua, ba, up, ur, om, tg, rg
     real(kind=8)               :: tol = 0.0d+00
@@ -561,7 +554,7 @@ module particles
 
 ! calculate the acceleration at the initial position
 !
-    call acceleration(t, x(:), u(:), a(:), v(:), b(:))
+    call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
 
 ! separate the particle velocity into parallel and perpendicular components
 !
@@ -631,12 +624,12 @@ module particles
 
 ! calculate the acceleration for the location x1 and velocity u1
 !
-      call acceleration(t1, x1(:), u1(:), a(:), v(:), b(:))
+      call acceleration(t1, x1(:), u1(:), s(:), a(:), v(:), b(:))
 
 ! calculate the first term
 !
-      l1(:) = dt * u1(:)
-      k1(:) = dt * a (:)
+      l1(:) = dt * s(:)
+      k1(:) = dt * a(:)
 
 !! 2nd step of the RK integration
 !!
@@ -656,12 +649,12 @@ module particles
 
 ! calculate the acceleration for the location x2 and velocity u2
 !
-      call acceleration(t2, x2(:), u2(:), a(:), v(:), b(:))
+      call acceleration(t2, x2(:), u2(:), s(:), a(:), v(:), b(:))
 
 ! calculate the second term
 !
-      l2(:) = dt * u2(:)
-      k2(:) = dt * a (:)
+      l2(:) = dt * s(:)
+      k2(:) = dt * a(:)
 
 !! 3rd step of the RK integration
 !!
@@ -681,12 +674,12 @@ module particles
 
 ! calculate the acceleration for the location x3 and velocity u3
 !
-      call acceleration(t3, x3(:), u3(:), a(:), v(:), b(:))
+      call acceleration(t3, x3(:), u3(:), s(:), a(:), v(:), b(:))
 
 ! calculate the third term
 !
-      l3(:) = dt * u3(:)
-      k3(:) = dt * a (:)
+      l3(:) = dt * s(:)
+      k3(:) = dt * a(:)
 
 !! 4th step of the RK integration
 !!
@@ -706,12 +699,12 @@ module particles
 
 ! calculate the acceleration for the location x4 and velocity u4
 !
-      call acceleration(t4, x4(:), u4(:), a(:), v(:), b(:))
+      call acceleration(t4, x4(:), u4(:), s(:), a(:), v(:), b(:))
 
 ! calculate the third term
 !
-      l4(:) = dt * u4(:)
-      k4(:) = dt * a (:)
+      l4(:) = dt * s(:)
+      k4(:) = dt * a(:)
 
 !! the final integration of the particle position and momentum
 !!
@@ -729,12 +722,12 @@ module particles
 
 ! calculate the acceleration at the updated location
 !
-      call acceleration(t5, x5(:), u5(:), a(:), v(:), b(:))
+      call acceleration(t5, x5(:), u5(:), s(:), a(:), v(:), b(:))
 
 ! estimate the error for timestep control
 !
-      l4(:) = l4(:) - dt * u5(:)
-      k4(:) = k4(:) - dt * a (:)
+      l4(:) = l4(:) - dt * s(:)
+      k4(:) = k4(:) - dt * a(:)
 
       tol = sqrt(dot_product(l4(:), l4(:)) + dot_product(k4(:), k4(:))) / 6.0d0
 
@@ -891,7 +884,7 @@ module particles
     integer                        :: n, m, i = 0, mi, ti, k
     real(kind=8), dimension(2,6)   :: z
     real(kind=8), dimension(5,2,6) :: zp
-    real(kind=8), dimension(3)     :: x, u, p, a
+    real(kind=8), dimension(3)     :: x, u, p, s, a
     real(kind=8), dimension(3)     :: xc, xe, xs
     real(kind=8), dimension(3)     :: pc, pe, ps
     real(kind=8), dimension(3)     :: v, b
@@ -943,7 +936,7 @@ module particles
 
 ! calculate the acceleration at the starting point
 !
-    call acceleration(t, x(:), u(:), a(:), v(:), b(:))
+    call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
 
 ! separate particle velocity into parallel and perpendicular components
 !
@@ -1100,7 +1093,7 @@ module particles
 
 ! calculate the acceleration at the locations x1 and x2
 !
-        call acceleration(t, x(:), u(:), a(:), v(:), b(:))
+        call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
 
 ! separate particle velocity into parallel and perpendicular components
 !
@@ -1217,7 +1210,7 @@ module particles
     real(kind=8), dimension(2,6)   :: z
     real(kind=8), dimension(5,2,6) :: zp
     real(kind=8), dimension(5)     :: hp
-    real(kind=8), dimension(3)     :: x, u, p, a
+    real(kind=8), dimension(3)     :: x, u, p, s, a
     real(kind=8), dimension(3)     :: xc, xe, xs
     real(kind=8), dimension(3)     :: pc, pe, ps
     real(kind=8), dimension(3)     :: v, b
@@ -1269,7 +1262,7 @@ module particles
 
 ! calculate the acceleration at the starting point
 !
-    call acceleration(t, x(:), u(:), a(:), v(:), b(:))
+    call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
 
 ! separate particle velocity into parallel and perpendicular components
 !
@@ -1425,7 +1418,7 @@ module particles
 
 ! calculate the acceleration at the locations x1 and x2
 !
-        call acceleration(t, x(:), u(:), a(:), v(:), b(:))
+        call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
 
 ! separate particle velocity into parallel and perpendicular components
 !
@@ -1553,7 +1546,7 @@ module particles
 !
     integer                      :: i
     real(kind=8), dimension(2,6) :: zn
-    real(kind=8), dimension(2,3) :: ui, ai
+    real(kind=8), dimension(2,3) :: ui, si, ai
     real(kind=8), dimension(3)   :: xi, pi, xm, pm, v, b
     real(kind=8), dimension(2)   :: ti
     real(kind=8)                 :: lf
@@ -1602,14 +1595,14 @@ module particles
 
 ! get acceleration for the current state
 !
-        call acceleration(ti(i), xi(1:3), ui(i,1:3), ai(i,1:3), v(:), b(:))
+        call acceleration(ti(i), xi(1:3), ui(i,1:3), si(i,1:3), ai(i,1:3), v(:), b(:))
 
       end do
 
 ! get the new increment estimate for the intermediate states
 !
-      zn(1,1:3) = dt * (a11 * ui(1,1:3) + a12 * ui(2,1:3))
-      zn(2,1:3) = dt * (a21 * ui(1,1:3) + a22 * ui(2,1:3))
+      zn(1,1:3) = dt * (a11 * si(1,1:3) + a12 * si(2,1:3))
+      zn(2,1:3) = dt * (a21 * si(1,1:3) + a22 * si(2,1:3))
       zn(1,4:6) = dt * (a11 * ai(1,1:3) + a12 * ai(2,1:3))
       zn(2,4:6) = dt * (a21 * ai(1,1:3) + a22 * ai(2,1:3))
 
@@ -1670,7 +1663,7 @@ module particles
     integer                        :: n, m, i = 0, mi, ti, k
     real(kind=8), dimension(3,6)   :: z
     real(kind=8), dimension(5,3,6) :: zp
-    real(kind=8), dimension(3)     :: x, u, p, a
+    real(kind=8), dimension(3)     :: x, u, p, s, a
     real(kind=8), dimension(3)     :: xc, xe, xs
     real(kind=8), dimension(3)     :: pc, pe, ps
     real(kind=8), dimension(3)     :: v, b
@@ -1714,7 +1707,7 @@ module particles
 
 ! calculate the acceleration at the starting point
 !
-    call acceleration(t, x(:), u(:), a(:), v(:), b(:))
+    call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
 
 ! separate particle velocity into parallel and perpendicular components
 !
@@ -1854,7 +1847,7 @@ module particles
 
 ! calculate the acceleration at the locations x1 and x2
 !
-        call acceleration(t, x(:), u(:), a(:), v(:), b(:))
+        call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
 
 ! separate particle velocity into parallel and perpendicular components
 !
@@ -1962,7 +1955,7 @@ module particles
     real(kind=8), dimension(3,6)   :: z
     real(kind=8), dimension(5,3,6) :: zp
     real(kind=8), dimension(5)     :: hp
-    real(kind=8), dimension(3)     :: x, u, p, a
+    real(kind=8), dimension(3)     :: x, u, p, s, a
     real(kind=8), dimension(3)     :: xc, xe, xs
     real(kind=8), dimension(3)     :: pc, pe, ps
     real(kind=8), dimension(3)     :: v, b
@@ -2006,7 +1999,7 @@ module particles
 
 ! calculate the acceleration at the starting point
 !
-    call acceleration(t, x(:), u(:), a(:), v(:), b(:))
+    call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
 
 ! separate particle velocity into parallel and perpendicular components
 !
@@ -2145,7 +2138,7 @@ module particles
 
 ! calculate the acceleration at the locations x1 and x2
 !
-        call acceleration(t, x(:), u(:), a(:), v(:), b(:))
+        call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
 
 ! separate particle velocity into parallel and perpendicular components
 !
@@ -2263,7 +2256,7 @@ module particles
 !
     integer                      :: i
     real(kind=8), dimension(3,6) :: zn
-    real(kind=8), dimension(3,3) :: ui, ai
+    real(kind=8), dimension(3,3) :: ui, si, ai
     real(kind=8), dimension(3)   :: xi, pi, xm, pm, v, b
     real(kind=8), dimension(3)   :: ti
     real(kind=8)                 :: lf
@@ -2322,15 +2315,15 @@ module particles
 
 ! get acceleration for the current state
 !
-        call acceleration(ti(i), xi(1:3), ui(i,1:3), ai(i,1:3), v(:), b(:))
+        call acceleration(ti(i), xi(1:3), ui(i,1:3), si(i,1:3), ai(i,1:3), v(:), b(:))
 
       end do
 
 ! get the new increment estimate for the intermediate states
 !
-      zn(1,1:3) = dt * (a11 * ui(1,1:3) + a12 * ui(2,1:3) + a13 * ui(3,1:3))
-      zn(2,1:3) = dt * (a21 * ui(1,1:3) + a22 * ui(2,1:3) + a23 * ui(3,1:3))
-      zn(3,1:3) = dt * (a31 * ui(1,1:3) + a32 * ui(2,1:3) + a33 * ui(3,1:3))
+      zn(1,1:3) = dt * (a11 * si(1,1:3) + a12 * si(2,1:3) + a13 * si(3,1:3))
+      zn(2,1:3) = dt * (a21 * si(1,1:3) + a22 * si(2,1:3) + a23 * si(3,1:3))
+      zn(3,1:3) = dt * (a31 * si(1,1:3) + a32 * si(2,1:3) + a33 * si(3,1:3))
       zn(1,4:6) = dt * (a11 * ai(1,1:3) + a12 * ai(2,1:3) + a13 * ai(3,1:3))
       zn(2,4:6) = dt * (a21 * ai(1,1:3) + a22 * ai(2,1:3) + a23 * ai(3,1:3))
       zn(3,4:6) = dt * (a31 * ai(1,1:3) + a32 * ai(2,1:3) + a33 * ai(3,1:3))
@@ -2392,7 +2385,7 @@ module particles
     integer                        :: n, m, i = 0, mi, ti, k
     real(kind=8), dimension(4,6)   :: z
     real(kind=8), dimension(5,4,6) :: zp
-    real(kind=8), dimension(3)     :: x, u, p, a
+    real(kind=8), dimension(3)     :: x, u, p, s, a
     real(kind=8), dimension(3)     :: xc, xe, xs
     real(kind=8), dimension(3)     :: pc, pe, ps
     real(kind=8), dimension(3)     :: v, b
@@ -2436,7 +2429,7 @@ module particles
 
 ! calculate the acceleration at the starting point
 !
-    call acceleration(t, x(:), u(:), a(:), v(:), b(:))
+    call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
 
 ! separate particle velocity into parallel and perpendicular components
 !
@@ -2578,7 +2571,7 @@ module particles
 
 ! calculate the acceleration at the locations x1 and x2
 !
-        call acceleration(t, x(:), u(:), a(:), v(:), b(:))
+        call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
 
 ! separate particle velocity into parallel and perpendicular components
 !
@@ -2686,7 +2679,7 @@ module particles
     real(kind=8), dimension(4,6)   :: z
     real(kind=8), dimension(5,4,6) :: zp
     real(kind=8), dimension(5)     :: hp
-    real(kind=8), dimension(3)     :: x, u, p, a
+    real(kind=8), dimension(3)     :: x, u, p, s, a
     real(kind=8), dimension(3)     :: xc, xe, xs
     real(kind=8), dimension(3)     :: pc, pe, ps
     real(kind=8), dimension(3)     :: v, b
@@ -2730,7 +2723,7 @@ module particles
 
 ! calculate the acceleration at the starting point
 !
-    call acceleration(t, x(:), u(:), a(:), v(:), b(:))
+    call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
 
 ! separate particle velocity into parallel and perpendicular components
 !
@@ -2871,7 +2864,7 @@ module particles
 
 ! calculate the acceleration at the locations x1 and x2
 !
-        call acceleration(t, x(:), u(:), a(:), v(:), b(:))
+        call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
 
 ! separate particle velocity into parallel and perpendicular components
 !
@@ -2989,7 +2982,7 @@ module particles
 !
     integer                      :: i
     real(kind=8), dimension(4,6) :: zn
-    real(kind=8), dimension(4,3) :: ui, ai
+    real(kind=8), dimension(4,3) :: ui, si, ai
     real(kind=8), dimension(3)   :: xi, pi, xm, pm, v, b
     real(kind=8), dimension(4)   :: ti
     real(kind=8)                 :: lf
@@ -3056,20 +3049,20 @@ module particles
 
 ! get acceleration for the current state
 !
-        call acceleration(ti(i), xi(1:3), ui(i,1:3), ai(i,1:3), v(:), b(:))
+        call acceleration(ti(i), xi(1:3), ui(i,1:3), si(i,1:3), ai(i,1:3), v(:), b(:))
 
       end do
 
 ! get the new increment estimate for the intermediate states
 !
-      zn(1,1:3) = dt * (a11 * ui(1,1:3) + a12 * ui(2,1:3) + a13 * ui(3,1:3)    &
-                                                          + a14 * ui(4,1:3))
-      zn(2,1:3) = dt * (a21 * ui(1,1:3) + a22 * ui(2,1:3) + a23 * ui(3,1:3)    &
-                                                          + a24 * ui(4,1:3))
-      zn(3,1:3) = dt * (a31 * ui(1,1:3) + a32 * ui(2,1:3) + a33 * ui(3,1:3)    &
-                                                          + a34 * ui(4,1:3))
-      zn(4,1:3) = dt * (a41 * ui(1,1:3) + a42 * ui(2,1:3) + a43 * ui(3,1:3)    &
-                                                          + a44 * ui(4,1:3))
+      zn(1,1:3) = dt * (a11 * si(1,1:3) + a12 * si(2,1:3) + a13 * si(3,1:3)    &
+                                                          + a14 * si(4,1:3))
+      zn(2,1:3) = dt * (a21 * si(1,1:3) + a22 * si(2,1:3) + a23 * si(3,1:3)    &
+                                                          + a24 * si(4,1:3))
+      zn(3,1:3) = dt * (a31 * si(1,1:3) + a32 * si(2,1:3) + a33 * si(3,1:3)    &
+                                                          + a34 * si(4,1:3))
+      zn(4,1:3) = dt * (a41 * si(1,1:3) + a42 * si(2,1:3) + a43 * si(3,1:3)    &
+                                                          + a44 * si(4,1:3))
       zn(1,4:6) = dt * (a11 * ai(1,1:3) + a12 * ai(2,1:3) + a13 * ai(3,1:3)    &
                                                           + a14 * ai(4,1:3))
       zn(2,4:6) = dt * (a21 * ai(1,1:3) + a22 * ai(2,1:3) + a23 * ai(3,1:3)    &
@@ -3530,7 +3523,7 @@ module particles
 !
 !===============================================================================
 !
-  subroutine acceleration(t, x, v, a, u, b)
+  subroutine acceleration(t, x, v, s, a, u, b)
 
     use fields, only : ux, uy, uz, bx, by, bz
     use params, only : nghost
@@ -3544,7 +3537,7 @@ module particles
 !
     real(kind=8)              , intent(in)  :: t
     real(kind=8), dimension(3), intent(in)  :: x, v
-    real(kind=8), dimension(3), intent(out) :: a, u, b
+    real(kind=8), dimension(3), intent(out) :: s, a, u, b
 
 #ifdef TEST
 ! local variables
@@ -3568,32 +3561,15 @@ module particles
 !
 !-------------------------------------------------------------------------------
 !
-#ifndef TEST
-! convert position to index
-!
-      call pos2index(x, r)
-
-#ifdef BNDRY
-      dist = min(minval(dm(1:DIMS) - r(1:DIMS)), minval(r(1:DIMS)))
-      if (dist .gt. nghost) then
-#endif /* BNDRY */
-
-! prepare coefficients for interpolation
-!
-        call prepare_interpolation(r, ii, jj, kk, dr, cx, cy, cz)
-#endif /* !TEST */
-
-! interpolate field components at the particle position
-!
 #ifdef TEST
 #ifdef WTEST
-        u(1) = 0.0
+        u(1) =   0.0d+00
         u(2) = - vamp * sin(pi2 * freq * x(1))
-        u(3) = 0.0
+        u(3) =   0.0d+00
 
-        b(1) = bpar
-        b(2) = bamp * cos(pi2 * freq * x(1))
-        b(3) = bamp * sin(pi2 * freq * x(1))
+        b(1) =   bpar
+        b(2) =   bamp * cos(pi2 * freq * x(1))
+        b(3) =   bamp * sin(pi2 * freq * x(1))
 #endif /* WTEST */
 #ifdef ITEST
 ! calculate the local velocity
@@ -3624,6 +3600,21 @@ module particles
         end if
 #endif /* ITEST */
 #else /* TEST */
+! convert position to index
+!
+      call pos2index(x, r)
+
+#ifdef BNDRY
+      dist = min(minval(dm(1:DIMS) - r(1:DIMS)), minval(r(1:DIMS)))
+      if (dist .gt. nghost) then
+#endif /* BNDRY */
+
+! prepare coefficients for interpolation
+!
+        call prepare_interpolation(r, ii, jj, kk, dr, cx, cy, cz)
+
+! interpolate field components at the particle position
+!
         u(1) = interpolate(ux, ii, jj, kk, dr, cx, cy, cz)
         u(2) = interpolate(uy, ii, jj, kk, dr, cx, cy, cz)
         u(3) = interpolate(uz, ii, jj, kk, dr, cx, cy, cz)
@@ -3635,6 +3626,10 @@ module particles
 ! subtract the fluid velocity
 !
         w(:) = v(:) - u(:)
+
+! normalize the speed
+!
+        s(:) = v(:) / vunit
 
 ! compute the acceleration
 !
