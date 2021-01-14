@@ -28,6 +28,7 @@ program paccel
 
   use fields   , only : init_fields, finit_fields
   use params   , only : read_params, method
+  use parameters, only : read_parameters
   use particles, only : init_particle, finit_particle                          &
                       , integrate_trajectory_rk4                               &
                       , integrate_trajectory_si4, integrate_trajectory_si4v    &
@@ -36,7 +37,8 @@ program paccel
 
   implicit none
 
-  real :: timer
+  integer :: status
+  real    :: timer
 !
 !-------------------------------------------------------------------------------
 !
@@ -51,6 +53,7 @@ program paccel
 
 ! read parameters
 !
+  call read_parameters(.true., status)
   call read_params()
 
 #ifndef TEST
