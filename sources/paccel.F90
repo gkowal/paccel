@@ -27,8 +27,8 @@
 program paccel
 
   use fields   , only : init_fields, finit_fields
-  use params   , only : read_params, method
-  use parameters, only : read_parameters
+  use params   , only : read_params
+  use parameters, only : read_parameters, get_parameter
   use particles, only : init_particle, finit_particle                          &
                       , integrate_trajectory_rk4                               &
                       , integrate_trajectory_si4, integrate_trajectory_si4v    &
@@ -36,6 +36,8 @@ program paccel
                       , integrate_trajectory_si8, integrate_trajectory_si8v
 
   implicit none
+
+  character(len = 32), save :: method = 'rk4' ! the integration method
 
   integer :: status
   real    :: timer
@@ -68,13 +70,17 @@ program paccel
   write( *, "('INFO      : ',a)" ) "initializing the particle positions and velocities"
   call init_particle()
 
+! get the integration method
+!
+  call get_parameter('method', method)
+
 ! take the time of calculations only
 !
   timer = secnds(0.0)
 
 ! integrate particle trajectories
 !
-  select case(method)
+  select case(trim(method))
   case('rk4')
     write( *, "('INFO      : ',a)" ) "integrating the particle trajectory (RK4 method)"
     call integrate_trajectory_rk4()
