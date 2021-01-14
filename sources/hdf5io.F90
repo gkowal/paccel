@@ -32,6 +32,10 @@ module hdf5io
 
   implicit none
 
+  character(len = 128), save :: idir    = "./" ! the input data directory
+  character(len =   1), save :: ftype   = 'r'  ! file type: 'r', 'p', 'f'
+  integer             , save :: fnumber = 0    ! file number
+
   integer, dimension(3), save :: dm, pdm, cdm, fdm, qb, qe
   integer              , save :: nf, ng
   logical              , save :: mhd, mag
@@ -49,11 +53,11 @@ module hdf5io
 !
   subroutine hdf5_init
 
-#ifdef HDF5
-    use params, only : idir, ftype, fnumber
+    use parameters, only : get_parameter
 
     implicit none
 
+#ifdef HDF5
 ! local variables
 !
     character(len=255) :: fl
@@ -70,6 +74,12 @@ module hdf5io
 !
 !-------------------------------------------------------------------------------
 !
+! get the input data directory, the type of file and the file number
+!
+    call get_parameter('idir'   , idir)
+    call get_parameter('ftype'  , ftype)
+    call get_parameter('fnumber', fnumber)
+
 ! set default values
 !
     nf     = 1
@@ -332,8 +342,6 @@ module hdf5io
 !
   subroutine hdf5_get_coord(n, coord)
 
-    use params, only : idir, ftype, fnumber
-
     implicit none
 
 ! arguments
@@ -436,8 +444,6 @@ module hdf5io
 !
   subroutine hdf5_read_var(var, qty)
 
-    use params, only : ftype, fnumber
-
     implicit none
 
 ! arguments
@@ -503,8 +509,6 @@ module hdf5io
 !===============================================================================
 !
   subroutine hdf5_get_var(n, var, qty)
-
-    use params, only : ftype
 
 ! arguments
 !
@@ -693,8 +697,6 @@ module hdf5io
 !===============================================================================
 !
   subroutine hdf5_read_data(n, var, qty)
-
-    use params, only : idir, ftype, fnumber
 
 ! arguments
 !
