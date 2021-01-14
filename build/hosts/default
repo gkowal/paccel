@@ -1,0 +1,181 @@
+#-------------------------------------------------------------------------------
+#
+# Compilation flags depend on variable COMPILER set in make.default or
+# make.config. This variable indicates which compiler family should be used.
+# Currently, we support GNU, PGI and INTEL compilers. If you need support
+# for a different compiler, please add corresponding section below.
+#
+#-------------------------------------------------------------------------------
+#
+# GNU Fortran compiler
+#
+ifeq ($(COMPILER), GNU)
+
+# compiler and linker setup
+#
+ifeq ($(MPI),Y)
+FC        = mpifort
+else
+FC        = gfortran
+endif
+LD        = $(FC)
+
+# compiler and linker flags
+#
+ifeq ($(DEBUG),Y)
+FFLAGS    = -Og -g -DDEBUG
+else
+FFLAGS    = -O2 -march=native -pipe
+endif
+ifeq ($(PROFILE),Y)
+FFLAGS   += -pg
+endif
+LDFLAGS   = $(FFLAGS)
+ifeq ($(STATIC),Y)
+LDFLAGS  += -static
+endif
+
+endif
+
+#-------------------------------------------------------------------------------
+#
+# PGI Fortran compiler
+#
+ifeq ($(COMPILER), PGI)
+
+# compiler and linker setup
+#
+FC        = pgfortran
+LD        = $(FC)
+
+# compiler and linker flags
+#
+ifeq ($(DEBUG),Y)
+FFLAGS    = -O -g -DDEBUG
+else
+FFLAGS    = -fast
+endif
+ifeq ($(PROFILE),Y)
+FFLAGS   += -Mprof=dwarf
+endif
+LDFLAGS   = $(FFLAGS)
+ifeq ($(STATIC),Y)
+LDFLAGS  += -Bstatic
+endif
+
+endif
+
+#-------------------------------------------------------------------------------
+#
+# INTEL Fortran compiler
+#
+ifeq ($(COMPILER), INTEL)
+
+# compiler and linker setup
+#
+FC        = ifort
+
+# compiler and linker flags
+#
+ifeq ($(DEBUG),Y)
+FFLAGS    = -O -g -DDEBUG
+else
+FFLAGS    = -O2 -xHost
+endif
+ifeq ($(PROFILE),Y)
+FFLAGS   += -p
+endif
+LDFLAGS   = $(FFLAGS)
+ifeq ($(STATIC),Y)
+LDFLAGS  += -static
+endif
+
+endif
+
+#-------------------------------------------------------------------------------
+#
+# Additional common directives set in make.config
+#
+ifeq ($(SIGNALS),Y)
+FFLAGS   += -DSIGNALS
+endif
+
+ifeq ($(DEBUG),Y)
+FFLAGS += -g -DDEBUG
+endif
+ifeq ($(RELAT),Y)
+FFLAGS += -DRELAT
+endif
+ifeq ($(INTERPOLATION),L)
+FFLAGS += -DTRILIN
+endif
+ifeq ($(INTERPOLATION),C)
+FFLAGS += -DTRICUB
+ifeq ($(TVD),Y)
+FFLAGS += -DTVD
+endif
+endif
+ifeq ($(BNDRY),Y)
+FFLAGS += -DBNDRY
+endif
+ifeq ($(PERIODIC),Y)
+FFLAGS += -DPERIODIC
+endif
+FFLAGS += -DDIMS=$(DIMS)
+ifeq ($(TEST),WAVE)
+FFLAGS += -DTEST -DWTEST
+endif
+ifeq ($(TEST),ISLAND)
+FFLAGS += -DTEST -DITEST
+endif
+ifeq ($(ERRORS),Y)
+FFLAGS += -DERRORS
+endif
+
+ifeq ($(HDF5),Y)
+FFLAGS   += -DHDF5
+endif
+
+#-------------------------------------------------------------------------------
+#
+# libraries and their dependencies
+#
+LIBS      =
+
+# if your CFITSIO libraries not are installed in the standard location /usr,
+# you can set their path using the FITSDIR variable here
+#
+#FITSDIR=/${HOME}/cfitsio
+
+ifneq ($(FITSDIR),)
+FFLAGS   += -I$(FITSDIR)/include
+LIBS     += -L$(FITSDIR)/lib
+endif
+LIBS     += -lcfitsio
+
+# if your HDF5 libraries not are installed in the standard location /usr,
+# you can set this path using the HDF5DIR variable here
+#
+#HDF5DIR=/${HOME}/hdf5
+
+ifeq ($(HDF5),Y)
+ifeq ($(HDF5DIR),)
+FFLAGS   += -I/usr/include
+else
+FFLAGS   += -I$(HDF5DIR)/include
+LIBS     += -L$(HDF5DIR)/lib
+endif
+LIBS     += -lhdf5_fortran -lhdf5
+endif
+
+# compression for DataXML files
+#
+ifeq ($(ZSTD),Y)
+FFLAGS   += -DZSTD
+ifneq ($(ZSTDDIR),)
+LIBS     += -L$(ZSTDDIR)/lib
+endif
+LIBS     += -lzstd
+endif
+#
+#-------------------------------------------------------------------------------
