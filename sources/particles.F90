@@ -48,7 +48,7 @@ module particles
 ! particle mass and the speed of light
 !
   real(kind=8), save :: qom   = 9.5788332d+03
-  real(kind=8), save :: mrest, csq, om0, bpar
+  real(kind=8), save :: mrest, om0, bpar
 
 ! arrays containing the initial positions and velocities of particle
 !
@@ -192,7 +192,6 @@ module particles
       va   = gm * cc  / c                                ! Alfven speed [m/s]
       bunit= va * sqrt(mu0 * dn)                         ! magnetic field strength [Gs]
     end if
-    csq  = c * c                                         ! square of the speed of light
 
 ! initialize particle parameters
 !
@@ -3501,17 +3500,11 @@ module particles
 
     implicit none
 
-! input and output arguments
-!
-    real(kind=8), dimension(3), intent(in)  :: p
+    real(kind=8), dimension(3), intent(in) :: p
 !
 !------------------------------------------------------------------------------
 !
-#ifdef RELAT
-    gm = sqrt(1.0d0 + dot_product(p, p) / csq)
-#else
-    gm = 1.0
-#endif
+    gm = sqrt(1.0d+00 + dot_product(p, p))
 !
 !-------------------------------------------------------------------------------
 !
