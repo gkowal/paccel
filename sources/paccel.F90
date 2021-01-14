@@ -26,14 +26,13 @@
 !
 program paccel
 
-  use fields   , only : init_fields, finit_fields
-  use params   , only : read_params
+  use fields    , only : init_fields, finit_fields
   use parameters, only : read_parameters, get_parameter
-  use particles, only : init_particle, finit_particle                          &
-                      , integrate_trajectory_rk4                               &
-                      , integrate_trajectory_si4, integrate_trajectory_si4v    &
-                      , integrate_trajectory_si6, integrate_trajectory_si6v    &
-                      , integrate_trajectory_si8, integrate_trajectory_si8v
+  use particles , only : init_particle, finit_particle                         &
+                       , integrate_trajectory_rk4                              &
+                       , integrate_trajectory_si4, integrate_trajectory_si4v   &
+                       , integrate_trajectory_si6, integrate_trajectory_si6v   &
+                       , integrate_trajectory_si8, integrate_trajectory_si8v
 
   implicit none
 
@@ -56,7 +55,6 @@ program paccel
 ! read parameters
 !
   call read_parameters(.true., status)
-  call read_params()
 
 #ifndef TEST
 ! initialize field variables

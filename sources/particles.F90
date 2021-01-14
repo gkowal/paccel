@@ -376,8 +376,8 @@ module particles
 ! calculate the parallel and perpendicular directions with respect to the
 ! local magnetic field at the initial particle position
 !
-    xt   = xc / ra
-    yt   = yc / rb
+    xt   = x0(1) / ra
+    yt   = x0(2) / rb
 
     rt   = dsqrt(xt * xt + yt * yt)
 
