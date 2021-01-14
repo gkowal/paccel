@@ -40,9 +40,14 @@ module particles
 !
   real   , dimension(3)  , save :: bsiz
 
+! the units of time, length, velocity and magnetic field
+!
+  real(kind=8), save :: tunit = 1.0d+00, lunit = 1.0d+00
+  real(kind=8), save :: vunit = 1.0d+00, bunit = 1.0d+00
+
 ! particle mass and the speed of light
 !
-  real(kind=8)           , save :: mrest, qom, csq, om0, fc, ln, bavg, bpar
+  real(kind=8)           , save :: mrest, qom, csq, om0, bpar
 
 ! arrays containing the initial positions and velocities of particle
 !
@@ -65,16 +70,19 @@ module particles
   subroutine init_particle()
 
     use fields, only : get_dimensions, get_domain_bounds, bx, by, bz
-    use params, only : ptype, vpar, vper, c, dens, tunit, tmulti, bunit, xc, yc, zc
+    use params, only : ptype, vpar, vper, c, dens, xc, yc, zc
     use params, only : tmin, tmax, ndumps
 #ifdef TEST
     use params, only : bini, bshr, bamp, vamp, vrat, freq
 #endif /* TEST */
+    use parameters, only : get_parameter
 
     implicit none
 
 ! local variables
 !
+    character(len=16) :: stunit = 's'
+    real(kind=8)      :: tmulti = 1.0d+00
     integer      :: p, n
     real(kind=8) :: vp, vr, vv, va
     real(kind=8) :: gm, dn, mu0, om, tg, rg, mu, mp, en, ek, ba
@@ -102,6 +110,48 @@ module particles
 !
 !-------------------------------------------------------------------------------
 !
+! get parameters
+!
+    call get_parameter('vunit' , vunit)
+    call get_parameter('bunit' , bunit)
+    call get_parameter('tunit' , stunit)
+    call get_parameter('tmulti', tmulti)
+
+! get time unit in seconds
+!
+    select case(trim(stunit))
+    case('u')
+      tunit = 1.0d-06
+    case('s')
+      tunit = 1.0d+00
+    case('m')
+      tunit = 6.0d+01
+    case('h')
+      tunit = 3.6d+03
+    case('d')
+      tunit = 8.64d+04
+    case('w')
+      tunit = 6.048d+05
+    case('y')
+      tunit = 3.1557d+07
+    case default
+      tunit = 1.0d+00
+    end select
+    tunit = tmulti * tunit
+    lunit = vunit * tunit
+
+! print geometry parameters
+!
+    write( *, "('INFO      : geometry parameters:')" )
+    write( *, "('INFO      : T     =',1es15.8,' [s]   =',1es15.8,' [yr]')" ) tunit, sc * tunit
+    write( *, "('INFO      : L     =',1es15.8,' [m]   =',1es15.8,' [pc]')" ) lunit, pc * lunit
+
+! print plasma parametes
+!
+    write( *, "('INFO      : plasma parameters:')" )
+    write( *, "('INFO      : V     =',1es15.8,' [m/s] =',1es15.8,' [c]')") vunit, vunit / cc
+    write( *, "('INFO      : B     =',1es15.8,' [G]')") bunit
+
 ! get dimain dimensions
 !
     call get_dimensions(dm)
@@ -131,11 +181,10 @@ module particles
     if (c .le. 1.0d0) then
       gm   = 1.0d0
       va   = 1.0d0 * cc
-      bavg = bunit
     else
       gm   = 1.0d0 / sqrt(1.0d0 - (1.0 / c)**2)          ! Lorentz factor
       va   = gm * cc  / c                                ! Alfven speed [m/s]
-      bavg = va * sqrt(mu0 * dn)                         ! magnetic field strength [Gs]
+      bunit= va * sqrt(mu0 * dn)                         ! magnetic field strength [Gs]
     end if
     csq  = c * c                                         ! square of the speed of light
 
@@ -155,8 +204,8 @@ module particles
     vr = cc * vper                                       ! perpendicular particle speed
     vv = sqrt(vpar**2 + vper**2)                         ! absolute velocity
     gm = 1.0d0 / sqrt(1.0d0 - vv * vv)
-    mu = 0.5d0 * mp * vr**2 / bavg                       ! magnetic moment [kg m^2 / s^2 Gs]
-    om0   = abs(qom * bavg)                              ! classical gyrofrequency
+    mu = 0.5d0 * mp * vr**2 / bunit                      ! magnetic moment [kg m^2 / s^2 Gs]
+    om0   = abs(qom * bunit)                             ! classical gyrofrequency
     om = om0 / gm                                        ! relativistic gyrofrequency
     tg = 1.0d0 / om                                      ! gyroperiod
     tg = pi2 * tg
@@ -168,7 +217,7 @@ module particles
     write( *, "('INFO      : c     =',1pe15.8,' [Va]')"       ) c
     write( *, "('INFO      : Va    =',1pe15.8,' [m / s]')"    ) va
     write( *, "('INFO      : dens  =',1pe15.8,' [u / cm^3] =',1pe15.8,' [kg / m^3]')" ) dens, dn
-    write( *, "('INFO      : <B>   =',1pe15.8,' [G]')"        ) bavg
+    write( *, "('INFO      : <B>   =',1pe15.8,' [G]')"        ) bunit
 
 ! print particle parameters
 !
@@ -189,45 +238,18 @@ module particles
     write( *, "('INFO      : Rg    =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) rg, pc * rg
     write( *, "('INFO      : mu    =',1pe15.8,' [N m / Gs]')") mu
     write( *, "('INFO      : E0    =',1pe15.8,' [MeV]')"     ) mrest
-
-! change time unit
-!
-    select case(tunit)
-    case('u')
-      fc = 1.0d-6
-    case('s')
-      fc = 1.0
-    case('m')
-      fc = 60.0
-    case('h')
-      fc = 3600.0
-    case('d')
-      fc = 86400.0
-    case('w')
-      fc = 604800.0
-    case('y')
-      fc = 31556925.974678400903940200805664
-    case default
-      fc = 1.0
-    end select
-
-    fc  = tmulti * fc
-    qom = qom * fc
-
-! calculate geometry parameters
-!
-    ln = va * fc                                         ! the size of the box
+    qom = qom * tunit
 
 ! print geometry parameters
 !
     write( *, "('INFO      : geometry parameters:')" )
-    write( *, "('INFO      : T     =',1pe15.8,' [s] =',1pe15.8,' [yr]')" ) fc, sc * fc
-    write( *, "('INFO      : L     =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) ln, pc * ln
-    write( *, "('INFO      : Rg/L  =',1pe15.8)" ) rg / ln
-    write( *, "('INFO      : Tg/T  =',1pe15.8)" ) tg / fc
+    write( *, "('INFO      : T     =',1pe15.8,' [s] =',1pe15.8,' [yr]')" ) tunit, sc * tunit
+    write( *, "('INFO      : L     =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) lunit, pc * lunit
+    write( *, "('INFO      : Rg/L  =',1pe15.8)" ) rg / lunit
+    write( *, "('INFO      : Tg/T  =',1pe15.8)" ) tg / tunit
 
     write( *, "('INFO      : code units:')" )
-    write( *, "('INFO      : e/m   =',1pe15.8)" ) qom * bavg
+    write( *, "('INFO      : e/m   =',1pe15.8)" ) qom * bunit
 
 ! write parameters to info.txt
 !
@@ -239,7 +261,7 @@ module particles
     write (10, "('INFO      : c     =',1pe15.8,' [Va]')"       ) c
     write (10, "('INFO      : Va    =',1pe15.8,' [m / s]')"    ) va
     write (10, "('INFO      : dens  =',1pe15.8,' [u / cm^3] =',1pe15.8,' [kg / m^3]')" ) dens, dn
-    write (10, "('INFO      : <B>   =',1pe15.8,' [G]')"        ) bavg
+    write (10, "('INFO      : <B>   =',1pe15.8,' [G]')"        ) bunit
 
     write (10, "('INFO      : particle parameters:')" )
     select case(ptype)
@@ -262,19 +284,19 @@ module particles
 ! print geometry parameters
 !
     write (10, "('INFO      : geometry parameters:')" )
-    write (10, "('INFO      : T     =',1pe15.8,' [s] =',1pe15.8,' [yr]')" ) fc, sc * fc
-    write (10, "('INFO      : L     =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) ln, pc * ln
-    write (10, "('INFO      : Rg/L  =',1pe15.8)" ) rg / ln
-    write (10, "('INFO      : Tg/T  =',1pe15.8)" ) tg / fc
+    write (10, "('INFO      : T     =',1pe15.8,' [s] =',1pe15.8,' [yr]')" ) tunit, sc * tunit
+    write (10, "('INFO      : L     =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) lunit, pc * lunit
+    write (10, "('INFO      : Rg/L  =',1pe15.8)" ) rg / lunit
+    write (10, "('INFO      : Tg/T  =',1pe15.8)" ) tg / tunit
 
     write (10, "('INFO      : code units:')" )
-    write (10, "('INFO      : e/m   =',1pe15.8)" ) qom * bavg
+    write (10, "('INFO      : e/m   =',1pe15.8)" ) qom * bunit
 
     close (10)
 
 ! convert e/m to the units of magnetic field
 !
-    qom = qom * bavg
+    qom = qom * bunit
 
 ! initial position and velocity
 !
@@ -582,7 +604,7 @@ module particles
     write (10, "(20(1pe22.14))") t                                             &
                                , x(1), x(2), x(3), u(1), u(2), u(3)            &
                                , ua / c, up / c, ur / c, gm, en, ek            &
-                               , bavg * ba, om, tg * fc, rg * ln, tg, rg       &
+                               , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                , tol
 
 !== INTEGRATION LOOP ==
@@ -790,7 +812,7 @@ module particles
 !
           write (10, "(20(1pe22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3)   &
                                      , ua / c, up / c, ur / c, gm, en, ek      &
-                                     , bavg * ba, om, tg * fc, rg * ln, tg, rg &
+                                     , bunit * ba, om, tg * tunit, rg * lunit, tg, rg &
                                      , tol
 
 ! update the counters
@@ -834,7 +856,7 @@ module particles
 !
     write (10, "(20(1pe22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3)         &
                                , ua / c, up / c, ur / c, gm, en, ek            &
-                               , bavg * ba, om, tg * fc, rg * ln, tg, rg, tol
+                               , bunit * ba, om, tg * tunit, rg * lunit, tg, rg, tol
 
 ! close the output file
 !
@@ -975,13 +997,13 @@ module particles
                                    , abs(ua - ua0) / c, abs(up - up0) / c      &
                                    , abs(ur - ur0) / c, gm                     &
                                    , abs(en - en0), abs(ek - ek0)              &
-                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 #else
     write (10, "(20(1pe22.14),i22)") t                                         &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
-                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 #endif
 
@@ -1111,13 +1133,13 @@ module particles
                                    , abs(ua - ua0) / c, abs(up - up0) / c      &
                                    , abs(ur - ur0) / c, gm                     &
                                    , abs(en - en0), abs(ek - ek0)              &
-                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 #else
         write (10, "(20(1pe22.14),i22)") t                                     &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
-                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 #endif
 
@@ -1301,13 +1323,13 @@ module particles
                                    , abs(ua - ua0) / c, abs(up - up0) / c      &
                                    , abs(ur - ur0) / c, gm                     &
                                    , abs(en - en0), abs(ek - ek0)              &
-                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 #else
     write (10, "(20(1pe22.14),i22)") t                                         &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
-                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 #endif
 
@@ -1436,13 +1458,13 @@ module particles
                                    , abs(ua - ua0) / c, abs(up - up0) / c      &
                                    , abs(ur - ur0) / c, gm                     &
                                    , abs(en - en0), abs(ek - ek0)              &
-                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 #else
         write (10, "(20(1pe22.14),i22)") t                                     &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
-                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 #endif
 
@@ -1735,7 +1757,7 @@ module particles
     write (10, "(20(1pe22.14),i22)") t                                         &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
-                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 
 !== INTEGRATION LOOP ==
@@ -1862,7 +1884,7 @@ module particles
         write (10, "(20(1pe22.14),i22)") t                                     &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
-                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 
         n = n + 1
@@ -2027,7 +2049,7 @@ module particles
     write (10, "(20(1pe22.14),i22)") t                                         &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
-                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 
 !== INTEGRATION LOOP ==
@@ -2153,7 +2175,7 @@ module particles
         write (10, "(20(1pe22.14),i22)") t                                     &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
-                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 
         n = n + 1
@@ -2457,7 +2479,7 @@ module particles
     write (10, "(20(1pe22.14),i22)") t                                         &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
-                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 
 !== INTEGRATION LOOP ==
@@ -2586,7 +2608,7 @@ module particles
         write (10, "(20(1pe22.14),i22)") t                                     &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
-                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 
         n = n + 1
@@ -2751,7 +2773,7 @@ module particles
     write (10, "(20(1pe22.14),i22)") t                                         &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
-                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 
 !== INTEGRATION LOOP ==
@@ -2879,7 +2901,7 @@ module particles
         write (10, "(20(1pe22.14),i22)") t                                     &
                                    , x(1), x(2), x(3), u(1), u(2), u(3)        &
                                    , ua / c, up / c, ur / c, gm, en, ek        &
-                                   , bavg * ba, om, tg * fc, rg * ln, tg, rg   &
+                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
                                    , tol, i
 
         n = n + 1
@@ -3702,8 +3724,8 @@ module particles
 !------------------------------------------------------------------------------
 !
     om = om0 * ba / gm
-    tg = pi2 / om / fc
-    rg = vr / om / fc
+    tg = pi2 / om / tunit
+    rg = vr / om / tunit
 !
 !-------------------------------------------------------------------------------
 !
