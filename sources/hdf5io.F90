@@ -2,7 +2,7 @@
 !!
 !! module: hdf5io - subroutines to read data from HDF files
 !!
-!! Copyright (C) 2007-2017 Grzegorz Kowal <grzegorz@gkowal.info>
+!! Copyright (C) 2007-2021 Grzegorz Kowal <grzegorz@gkowal.info>
 !!
 !!******************************************************************************
 !!

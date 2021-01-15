@@ -2,7 +2,7 @@
 !!
 !! Program: PAccel - particle acceleration
 !!
-!! Copyright (C) 2008-2017 Grzegorz Kowal <grzegorz@gkowal.info>
+!! Copyright (C) 2008-2021 Grzegorz Kowal <grzegorz@gkowal.info>
 !!
 !!******************************************************************************
 !!
@@ -47,7 +47,7 @@ program paccel
 !
   write (*,'(a)') '------------------------------------------------------------------------------'
   write (*,'(a)') '===        PAccel algorithm started         =================================='
-  write (*,'(a)') '===  Copyright (C) 2008-2017 Grzegorz Kowal =================================='
+  write (*,'(a)') '===  Copyright (C) 2008-2021 Grzegorz Kowal =================================='
   write (*,*)
   write( *, "('TASK      : ',a)" ) "integrating the trajectory of a charged particle"
   write( *, "('INFO      : ',a)" ) "reading parameters"

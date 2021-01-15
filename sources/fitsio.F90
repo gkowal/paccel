@@ -2,7 +2,7 @@
 !!
 !! module: fitsio - subroutines to read data from FITS files
 !!
-!! Copyright (C) 2007-2017 Grzegorz Kowal <grzegorz@gkowal.info>
+!! Copyright (C) 2007-2021 Grzegorz Kowal <grzegorz@gkowal.info>
 !!
 !!******************************************************************************
 !!

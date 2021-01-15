@@ -1,6 +1,6 @@
 --------------------------------------------------------------------------------
 # **The PACCEL Code**
-## Copyright (C) 2009-2017 Grzegorz Kowal ##
+## Copyright (C) 2009-2021 Grzegorz Kowal ##
 --------------------------------------------------------------------------------
 
 PAccel is a tool to integrate test particle trajectory in fields obtained

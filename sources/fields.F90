@@ -2,7 +2,7 @@
 !!
 !! module: fields - subroutines to access velocity and magnetic fields
 !!
-!! Copyright (C) 2009-2017 Grzegorz Kowal <grzegorz@gkowal.info>
+!! Copyright (C) 2009-2021 Grzegorz Kowal <grzegorz@gkowal.info>
 !!
 !!******************************************************************************
 !!
