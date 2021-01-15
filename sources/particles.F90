@@ -32,12 +32,11 @@ module particles
 !
   real(kind=8), save :: tunit = 1.0d+00, lunit = 1.0d+00
   real(kind=8), save :: vunit = 1.0d+00, bunit = 1.0d+00
-  integer     , save :: nghost = 8 ! the number of ghost pixels near the boundary
 
-! particle mass and the speed of light
+! particle mass and the ratio q/m
 !
-  real(kind=8), save :: qom   = 9.5788332d+03
-  real(kind=8), save :: mrest, bpar
+  real(kind=8), save :: mrest = 9.38272088161040869636d+02
+  real(kind=8), save :: qom   = 9.57883315593801671639d+03
 
 #ifdef TEST
 ! test problem parameters
@@ -51,6 +50,7 @@ module particles
   real(kind=8), save :: bshr = 0.0d+00 ! the guilde field
   real(kind=8), save :: epar = 0.0d+00 ! the constant electric field along the parallel direction
 #endif /* ITEST */
+  real(kind=8), save :: bpar
 #endif /* TEST */
 
 ! output data parameters
