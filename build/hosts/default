@@ -103,21 +103,6 @@ endif
 ifeq ($(DEBUG),Y)
 FFLAGS += -g -DDEBUG
 endif
-ifeq ($(INTERPOLATION),L)
-FFLAGS += -DTRILIN
-endif
-ifeq ($(INTERPOLATION),C)
-FFLAGS += -DTRICUB
-ifeq ($(TVD),Y)
-FFLAGS += -DTVD
-endif
-endif
-ifeq ($(BNDRY),Y)
-FFLAGS += -DBNDRY
-endif
-ifeq ($(PERIODIC),Y)
-FFLAGS += -DPERIODIC
-endif
 FFLAGS += -DDIMS=$(DIMS)
 ifeq ($(TEST),WAVE)
 FFLAGS += -DTEST -DWTEST
@@ -125,7 +110,6 @@ endif
 ifeq ($(TEST),ISLAND)
 FFLAGS += -DTEST -DITEST
 endif
-
 ifeq ($(HDF5),Y)
 FFLAGS   += -DHDF5
 endif
