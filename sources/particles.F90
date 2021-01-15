@@ -2759,26 +2759,6 @@ module particles
 !
 !===============================================================================
 !
-! lorentz_factor: subroutine calculates the Lorentz factor
-!
-!===============================================================================
-!
-  real(kind=8) function lorentz_factor(p) result(gm)
-
-    implicit none
-
-    real(kind=8), dimension(3), intent(in) :: p
-!
-!------------------------------------------------------------------------------
-!
-    gm = sqrt(1.0d+00 + dot_product(p, p))
-!
-!-------------------------------------------------------------------------------
-!
-  end function lorentz_factor
-!
-!===============================================================================
-!
 ! acceleration: subroutine calculates acceleration vector at a given location
 !
 !===============================================================================
@@ -2935,24 +2915,66 @@ module particles
 !
 !===============================================================================
 !
-! separate_velocity: subroutine separates velocity into two components, parallel
-!                    and perpendicular to the local magnetic field
+! subroutine LORENTZ_FACTOR:
+! -------------------------
+!
+!   Function calculates the Lorentz factor from the particle moment.
+!
+!   Arguments:
+!
+!     p - the particle momentum vector;
 !
 !===============================================================================
 !
-  subroutine separate_velocity(v, b, ba, vu, vp, vr)
+  function lorentz_factor(p) result(gm)
 
     implicit none
 
-! input and output arguments
+! subroutine arguments
+!
+    real(kind=8), dimension(3), intent(in) :: p
+    real(kind=8)                           :: gm
+!
+!------------------------------------------------------------------------------
+!
+    gm = sqrt(1.0d+00 + dot_product(p(:), p(:)))
+
+!-------------------------------------------------------------------------------
+!
+  end function lorentz_factor
+!
+!===============================================================================
+!
+! subroutine SEPARATE_VELOCITY:
+! ----------------------------
+!
+!   Subroutine separates velocity into components parallel and perpendicular
+!   to the local field.
+!
+!   Arguments:
+!
+!     v  - the particle velocity vector;
+!     b  - the local magnetic field vector;
+!     ba - the local magnetic field strength;
+!     vm - the particle velocity magnitude;
+!     vp - the particle velocity component parallel to the local field;
+!     vr - the particle velocity component perpendicular to the local field;
+!
+!===============================================================================
+!
+  subroutine separate_velocity(v, b, ba, vm, vp, vr)
+
+    implicit none
+
+! subroutine arguments
 !
     real(kind=8), dimension(3), intent(in)  :: v, b
-    real(kind=8)              , intent(out) :: ba, vu, vp, vr
+    real(kind=8)              , intent(out) :: ba, vm, vp, vr
 
 ! local variables
 !
-    real(kind=8), dimension(3) :: p
-    real(kind=8)               :: pp, vv
+    real(kind=8), dimension(3) :: u
+    real(kind=8)               :: uu, vv
 !
 !------------------------------------------------------------------------------
 !
@@ -2960,36 +2982,47 @@ module particles
 !
     ba = sqrt(dot_product(b, b))
 
-! calculate unit vector parallel to B
+! calculate component parallel to B
 !
-    if (ba .gt. 0.0) then
-      p  = b / ba
+    if (ba > 0.0d+00) then
+      u(:) = b(:) / ba
     else
-      p  = 0.0
+      u(:) = 0.0d+00
     end if
 
 ! calculate component parallel to B
 !
-    pp = dot_product(v, p)**2
+    uu = dot_product(v(:), u(:))**2
 
 ! calculate amplitude of velocity
 !
-    vv = dot_product(v, v)
+    vv = dot_product(v(:), v(:))
 
-! calculate amplitude of the parallel and perpendicular components of velocity
+! calculate amplitude and the parallel and perpendicular components of velocity
 !
-    vu = sqrt(vv)
-    vp = sqrt(pp)
-    vr = sqrt(vv - pp)
-!
+    vm = sqrt(vv)
+    vp = sqrt(uu)
+    vr = sqrt(vv - uu)
+
 !-------------------------------------------------------------------------------
 !
   end subroutine separate_velocity
 !
 !===============================================================================
 !
-! gyro_parameters: subroutine calculates particle gyrofrequency, gyroperiod and
-!                  gyroradius
+! subroutine GYRO_PARAMETERS:
+! --------------------------
+!
+!   Subroutine calculates particle gyro parameters.
+!
+!   Arguments:
+!
+!     gm - the particle Lorentz factor;
+!     ba - the local magnetic field strength;
+!     vr - the particle velocity component perpendicular to the local field;
+!     om - the particle gyrofrequency (in radians per time unit);
+!     tg - the particle gyroperiod (in time units);
+!     rg - the particle gyroradius (in length units);
 !
 !===============================================================================
 !
@@ -2997,20 +3030,21 @@ module particles
 
     implicit none
 
-! input and output arguments
+! subroutine arguments
 !
-    real(kind=8), intent(in)  :: gm
-    real(kind=8), intent(in)  :: ba, vr
+    real(kind=8), intent(in)  :: gm, ba, vr
     real(kind=8), intent(out) :: om, tg, rg
 !
 !------------------------------------------------------------------------------
-!
+
     om = abs(qom) * ba / gm
     tg = pi2 / om
     rg = vr / (vunit * om)
-!
+
 !-------------------------------------------------------------------------------
 !
   end subroutine gyro_parameters
+
+!===============================================================================
 !
 end module particles
