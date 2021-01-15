@@ -7,7 +7,6 @@
 COMPILER      = GNU
 DEBUG         = N
 HDF5          = N
-RELAT         = N
 INTERPOLATION = N
 TVD           = N
 BNDRY         = N

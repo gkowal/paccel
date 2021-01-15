@@ -540,13 +540,8 @@ module particles
 
 ! calculate the particle energies
 !
-#ifdef RELAT
     en = gm * mrest
     ek = en - mrest
-#else /* RELAT */
-    en = 0.5d0 * ua * ua
-    ek = en
-#endif /* RELAT */
 
 ! print the progress
 !
@@ -758,13 +753,8 @@ module particles
 
 ! calculate the particle energies
 !
-#ifdef RELAT
           en = gm * mrest
           ek = en - mrest
-#else /* RELAT */
-          en = 0.5d0 * ua * ua
-          ek = en
-#endif /* RELAT */
 
 ! print the progress
 !
@@ -803,13 +793,8 @@ module particles
 
 ! calculate the particle energies
 !
-#ifdef RELAT
     en = gm * mrest
     ek = en - mrest
-#else /* RELAT */
-    en = 0.5d0 * ua * ua
-    ek = en
-#endif /* RELAT */
 
 ! print the progress
 !
@@ -920,13 +905,8 @@ module particles
 
 ! calculate the particle energy
 !
-#ifdef RELAT
     en = gm * mrest
     ek = en - mrest
-#else /* RELAT */
-    en = 0.5d0 * ua * ua
-    ek = en
-#endif /* RELAT */
 
 #ifdef ERRORS
     en0 = en
@@ -1073,13 +1053,8 @@ module particles
 
 ! calculate particle energy
 !
-#ifdef RELAT
         en = gm * mrest
         ek = en - mrest
-#else /* RELAT */
-        en = 5.0d-01 * ua * ua
-        ek = en
-#endif /* RELAT */
 
 ! write the progress
 !
@@ -1244,13 +1219,8 @@ module particles
 
 ! calculate the particle energy
 !
-#ifdef RELAT
     en = gm * mrest
     ek = en - mrest
-#else /* RELAT */
-    en = 0.5d0 * ua * ua
-    ek = en
-#endif /* RELAT */
 
 #ifdef ERRORS
     en0 = en
@@ -1396,13 +1366,8 @@ module particles
 
 ! calculate particle energy
 !
-#ifdef RELAT
         en = gm * mrest
         ek = en - mrest
-#else /* RELAT */
-        en = 5.0d-01 * ua * ua
-        ek = en
-#endif /* RELAT */
 
 ! write the progress
 !
@@ -1685,13 +1650,8 @@ module particles
 
 ! calculate the particle energy
 !
-#ifdef RELAT
     en = gm * mrest
     ek = en - mrest
-#else /* RELAT */
-    en = 0.5d0 * ua * ua
-    ek = en
-#endif /* RELAT */
 
 ! print the progress information
 !
@@ -1821,13 +1781,8 @@ module particles
 
 ! calculate particle energy
 !
-#ifdef RELAT
         en = gm * mrest
         ek = en - mrest
-#else /* RELAT */
-        en = 0.5d0 * ua * ua
-        ek = en
-#endif /* RELAT */
 
 ! write the progress
 !
@@ -1975,13 +1930,8 @@ module particles
 
 ! calculate the particle energy
 !
-#ifdef RELAT
     en = gm * mrest
     ek = en - mrest
-#else /* RELAT */
-    en = 0.5d0 * ua * ua
-    ek = en
-#endif /* RELAT */
 
 ! print the progress information
 !
@@ -2110,13 +2060,8 @@ module particles
 
 ! calculate particle energy
 !
-#ifdef RELAT
         en = gm * mrest
         ek = en - mrest
-#else /* RELAT */
-        en = 0.5d0 * ua * ua
-        ek = en
-#endif /* RELAT */
 
 ! write the progress
 !
@@ -2401,13 +2346,8 @@ module particles
 
 ! calculate the particle energy
 !
-#ifdef RELAT
     en = gm * mrest
     ek = en - mrest
-#else /* RELAT */
-    en = 0.5d0 * ua * ua
-    ek = en
-#endif /* RELAT */
 
 ! print the progress information
 !
@@ -2539,13 +2479,8 @@ module particles
 
 ! calculate particle energy
 !
-#ifdef RELAT
         en = gm * mrest
         ek = en - mrest
-#else /* RELAT */
-        en = 0.5d0 * ua * ua
-        ek = en
-#endif /* RELAT */
 
 ! write the progress
 !
@@ -2693,13 +2628,8 @@ module particles
 
 ! calculate the particle energy
 !
-#ifdef RELAT
     en = gm * mrest
     ek = en - mrest
-#else /* RELAT */
-    en = 0.5d0 * ua * ua
-    ek = en
-#endif /* RELAT */
 
 ! print the progress information
 !
@@ -2830,13 +2760,8 @@ module particles
 
 ! calculate particle energy
 !
-#ifdef RELAT
         en = gm * mrest
         ek = en - mrest
-#else /* RELAT */
-        en = 0.5d0 * ua * ua
-        ek = en
-#endif /* RELAT */
 
 ! write the progress
 !

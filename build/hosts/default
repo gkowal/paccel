@@ -103,9 +103,6 @@ endif
 ifeq ($(DEBUG),Y)
 FFLAGS += -g -DDEBUG
 endif
-ifeq ($(RELAT),Y)
-FFLAGS += -DRELAT
-endif
 ifeq ($(INTERPOLATION),L)
 FFLAGS += -DTRILIN
 endif
