@@ -455,9 +455,12 @@ module particles
 !
     p0(:) = gm * u0(:)
 
+! allow to set the particle moment explicitely
+!
     call get_parameter('px', p0(1))
     call get_parameter('py', p0(2))
     call get_parameter('pz', p0(3))
+
     gm = lorentz_factor(p0(:))
     u0(:) = p0(:) / gm
 
