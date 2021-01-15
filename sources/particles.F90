@@ -101,7 +101,8 @@ module particles
 !
   subroutine init_particle()
 
-    use fields    , only : get_dimensions, get_domain_bounds, bx, by, bz
+    use fields    , only : ux, uy, uz, bx, by, bz
+    use fields    , only : get_dimensions, get_domain_bounds
     use parameters, only : get_parameter
 
     implicit none
@@ -256,7 +257,16 @@ module particles
     qom   = qom * tunit
     vunit = vunit / cc
 
-! get dimain dimensions
+! convert plasma fields to desired units
+!
+    ux = vunit * ux
+    uy = vunit * uy
+    uz = vunit * uz
+    bx = bunit * bx
+    by = bunit * by
+    bz = bunit * bz
+
+! get domain dimensions
 !
     call get_dimensions(dm)
 
