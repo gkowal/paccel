@@ -371,17 +371,6 @@ module particles
       stop
     end if
 
-! store the parameters in the info file
-!
-    open (10, file = 'info.txt', form = 'formatted', position = 'append')
-    write(10, "('PROBLEM   : motion in the contracting magnetic island:')" )
-    write(10, "('INFO      : magnetic field strength          =',1pe15.8)") bini
-    write(10, "('INFO      : guide field strength             =',1pe15.8)") bshr
-    write(10, "('INFO      : magnetic field perturbation      =',1pe15.8)") bamp
-    write(10, "('INFO      : magnetic island eccentricity     =',1pe15.8)") ec
-    write(10, "('INFO      : horizontal velocity perturbation =',1pe15.8)") vamp
-    write(10, "('INFO      : vertical velocity perturbation   =',1pe15.8)") vamp * vrat
-    close(10)
 #endif /* ITEST */
 #else /* TEST */
 ! convert position to index
@@ -1107,21 +1096,6 @@ module particles
           trim(adjustl(str))
     write(*,"('INFO      : average iterations per step = ',1pe12.6)")          &
           real(ti, kind=8) / ((n - 1) * ndumps)
-
-! open the info file
-!
-    open  (11, file = 'info.txt', form = 'formatted', position = 'append')
-
-! write info about the estimator
-!
-    write(11,"('INFO      : maximum iterations per step = ',a)"      )         &
-          trim(adjustl(str))
-    write(11,"('INFO      : average iterations per step = ',1pe12.6)")         &
-          real(ti, kind=8) / ((n - 1) * ndumps)
-
-! close the info file
-!
-    close(11)
 !
 !-------------------------------------------------------------------------------
 !
@@ -1426,21 +1400,6 @@ module particles
           trim(adjustl(str))
     write(*,"('INFO      : average iterations per step = ',1pe12.6)")          &
           real(ti, kind=8) / ((n - 1) * ndumps)
-
-! open the info file
-!
-    open  (11, file = 'info.txt', form = 'formatted', position = 'append')
-
-! write info about the estimator
-!
-    write(11,"('INFO      : maximum iterations per step = ',a)"      )         &
-          trim(adjustl(str))
-    write(11,"('INFO      : average iterations per step = ',1pe12.6)")         &
-          real(ti, kind=8) / ((n - 1) * ndumps)
-
-! close the info file
-!
-    close(11)
 !
 !-------------------------------------------------------------------------------
 !
@@ -1552,15 +1511,6 @@ module particles
       n = n + 1
 
     end do
-
-! if the convergence was not reached, warn about this
-!
-    if (n >= maxit) then
-      open (11, file = 'info.txt', form = 'formatted', position = 'append')
-      write(11,"('WARNING   : convergence not reached at t =',1pe12.5," //     &
-               "' tol =',1pe12.5)") t, tol
-      close(11)
-    end if
 !
 !-------------------------------------------------------------------------------
 !
@@ -1825,21 +1775,6 @@ module particles
           trim(adjustl(str))
     write(*,"('INFO      : average iterations per step = ',1pe12.6)")          &
           real(ti, kind=8) / ((n - 1) * ndumps)
-
-! open the info file
-!
-    open  (11, file = 'info.txt', form = 'formatted', position = 'append')
-
-! write info about the estimator
-!
-    write(11,"('INFO      : maximum iterations per step = ',a)"      )         &
-          trim(adjustl(str))
-    write(11,"('INFO      : average iterations per step = ',1pe12.6)")         &
-          real(ti, kind=8) / ((n - 1) * ndumps)
-
-! close the info file
-!
-    close(11)
 !
 !-------------------------------------------------------------------------------
 !
@@ -2110,21 +2045,6 @@ module particles
           trim(adjustl(str))
     write(*,"('INFO      : average iterations per step = ',1pe12.6)")          &
           real(ti, kind=8) / ((n - 1) * ndumps)
-
-! open the info file
-!
-    open  (11, file = 'info.txt', form = 'formatted', position = 'append')
-
-! write info about the estimator
-!
-    write(11,"('INFO      : maximum iterations per step = ',a)"      )         &
-          trim(adjustl(str))
-    write(11,"('INFO      : average iterations per step = ',1pe12.6)")         &
-          real(ti, kind=8) / ((n - 1) * ndumps)
-
-! close the info file
-!
-    close(11)
 !
 !-------------------------------------------------------------------------------
 !
@@ -2248,15 +2168,6 @@ module particles
       n = n + 1
 
     end do
-
-! if the convergence was not reached, warn about this
-!
-    if (n >= maxit) then
-      open (11, file = 'info.txt', form = 'formatted', position = 'append')
-      write(11,"('WARNING   : convergence not reached at t =',1pe12.5," //     &
-               "' tol =',1pe12.5)") t, tol
-      close(11)
-    end if
 !
 !-------------------------------------------------------------------------------
 !
@@ -2523,21 +2434,6 @@ module particles
           trim(adjustl(str))
     write(*,"('INFO      : average iterations per step = ',1pe12.6)")          &
           real(ti, kind=8) / ((n - 1) * ndumps)
-
-! open the info file
-!
-    open  (11, file = 'info.txt', form = 'formatted', position = 'append')
-
-! write info about the estimator
-!
-    write(11,"('INFO      : maximum iterations per step = ',a)"      )         &
-          trim(adjustl(str))
-    write(11,"('INFO      : average iterations per step = ',1pe12.6)")         &
-          real(ti, kind=8) / ((n - 1) * ndumps)
-
-! close the info file
-!
-    close(11)
 !
 !-------------------------------------------------------------------------------
 !
@@ -2810,21 +2706,6 @@ module particles
           trim(adjustl(str))
     write(*,"('INFO      : average iterations per step = ',1pe12.6)")          &
           real(ti, kind=8) / ((n - 1) * ndumps)
-
-! open the info file
-!
-    open  (11, file = 'info.txt', form = 'formatted', position = 'append')
-
-! write info about the estimator
-!
-    write(11,"('INFO      : maximum iterations per step = ',a)"      )         &
-          trim(adjustl(str))
-    write(11,"('INFO      : average iterations per step = ',1pe12.6)")         &
-          real(ti, kind=8) / ((n - 1) * ndumps)
-
-! close the info file
-!
-    close(11)
 !
 !-------------------------------------------------------------------------------
 !
@@ -2966,15 +2847,6 @@ module particles
       n = n + 1
 
     end do
-
-! if the convergence was not reached, warn about this
-!
-    if (n >= maxit) then
-      open (11, file = 'info.txt', form = 'formatted', position = 'append')
-      write(11,"('WARNING   : convergence not reached at t =',1pe12.5," //     &
-               "' tol =',1pe12.5)") t, tol
-      close(11)
-    end if
 !
 !-------------------------------------------------------------------------------
 !
