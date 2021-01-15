@@ -67,7 +67,12 @@ module particles
   real(kind=8), save :: dtini  = 1.0d-08  ! the initial time step
   real(kind=8), save :: dtmax  = 1.0d+00  ! maximum allowed step size
   integer     , save :: maxit  = 1000     ! the limit of iterations
-
+  real(kind=8), save :: atol   = 1.0d-06
+  real(kind=8), save :: rtol   = 1.0d-06
+  real(kind=8), save :: safe   = 9.00d-01
+  real(kind=8), save :: beta   = 0.00d+00
+  real(kind=8), save :: facmin = 3.33d-01
+  real(kind=8), save :: facmax = 6.00d+00
 
 ! arrays containing the initial positions and velocities of particle
 !
@@ -146,6 +151,12 @@ module particles
     call get_parameter('dtini' , dtini)
     call get_parameter('dtmax' , dtmax)
     call get_parameter('maxit' , maxit)
+    call get_parameter('atol'  , atol  )
+    call get_parameter('rtol'  , rtol  )
+    call get_parameter('safe'  , safe  )
+    call get_parameter('beta'  , beta  )
+    call get_parameter('facmin', facmin)
+    call get_parameter('facmax', facmax)
 
 ! get time unit in seconds
 !
@@ -779,6 +790,368 @@ module particles
   end subroutine integrate_trajectory_rk4
 !
 !===============================================================================
+! subroutine INTEGRATE_DOP853:
+! ---------------------------
+!
+!   Subroutine integrates particle trajectory using the 8th order explicit
+!   Runge-Kutta method by Dorman & Prince with step control and dense output.
+!
+!   References:
+!
+!   [1] "Solving Ordinary Differential Equations I - Nonstiff Problems",
+!       E. Hairer, S. P. Nørsett, G. Wanner,
+!       Springer-Verlag Berlin Heidelberg, 2008
+!
+!===============================================================================
+!
+  subroutine integrate_trajectory_dop853()
+
+! import required modules
+!
+    use coordinates, only : is_inside
+
+    implicit none
+
+! local variables
+!
+    logical                         :: keepon = .true., rejected = .false.
+    integer                         :: n, m
+    real(kind=8)                    :: gm, en, ek, ba, va, vp, vr, om, tg, rg
+    real(kind=8), dimension(3)      :: x, v, p, s, a, u, b
+
+    real(kind=8)                    :: t, dt, dtn, tt
+    real(kind=8)                    :: err, err3, err5, errold, deno, expo
+    real(kind=8), dimension(3,2)    :: si, ss, sf, sr, er
+    real(kind=8), dimension(3,2,10) :: k
+
+! parameters
+!
+    real(kind=8), parameter :: a0201 =  5.26001519587677318785587544488d-02    &
+                             , a0301 =  1.97250569845378994544595329183d-02    &
+                             , a0302 =  5.91751709536136983633785987549d-02    &
+                             , a0401 =  2.95875854768068491816892993775d-02    &
+                             , a0403 =  8.87627564304205475450678981324d-02    &
+                             , a0501 =  2.41365134159266685502369798665d-01    &
+                             , a0503 = -8.84549479328286085344864962717d-01    &
+                             , a0504 =  9.24834003261792003115737966543d-01    &
+                             , a0601 =  3.70370370370370370370370370370d-02    &
+                             , a0604 =  1.70828608729473871279604482173d-01    &
+                             , a0605 =  1.25467687566822425016691814123d-01    &
+                             , a0701 =  3.71093750000000000000000000000d-02    &
+                             , a0704 =  1.70252211019544039314978060272d-01    &
+                             , a0705 =  6.02165389804559606850219397283d-02    &
+                             , a0706 = -1.75781250000000000000000000000d-02    &
+                             , a0801 =  3.70920001185047927108779319836d-02    &
+                             , a0804 =  1.70383925712239993810214054705d-01    &
+                             , a0805 =  1.07262030446373284651809199168d-01    &
+                             , a0806 = -1.53194377486244017527936158236d-02    &
+                             , a0807 =  8.27378916381402288758473766002d-03    &
+                             , a0901 =  6.24110958716075717114429577812d-01    &
+                             , a0904 = -3.36089262944694129406857109825d+00    &
+                             , a0905 = -8.68219346841726006818189891453d-01    &
+                             , a0906 =  2.75920996994467083049415600797d+01    &
+                             , a0907 =  2.01540675504778934086186788979d+01    &
+                             , a0908 = -4.34898841810699588477366255144d+01    &
+                             , a1001 =  4.77662536438264365890433908527d-01    &
+                             , a1004 = -2.48811461997166764192642586468d+00    &
+                             , a1005 = -5.90290826836842996371446475743d-01    &
+                             , a1006 =  2.12300514481811942347288949897d+01    &
+                             , a1007 =  1.52792336328824235832596922938d+01    &
+                             , a1008 = -3.32882109689848629194453265587d+01    &
+                             , a1009 = -2.03312017085086261358222928593d-02    &
+                             , a1101 = -9.37142430085987325717040216580d-01    &
+                             , a1104 =  5.18637242884406370830023853209d+00    &
+                             , a1105 =  1.09143734899672957818500254654d+00    &
+                             , a1106 = -8.14978701074692612513997267357d+00    &
+                             , a1107 = -1.85200656599969598641566180701d+01    &
+                             , a1108 =  2.27394870993505042818970056734d+01    &
+                             , a1109 =  2.49360555267965238987089396762d+00    &
+                             , a1110 = -3.04676447189821950038236690220d+00    &
+                             , a1201 =  2.27331014751653820792359768449d+00    &
+                             , a1204 = -1.05344954667372501984066689879d+01    &
+                             , a1205 = -2.00087205822486249909675718444d+00    &
+                             , a1206 = -1.79589318631187989172765950534d+01    &
+                             , a1207 =  2.79488845294199600508499808837d+01    &
+                             , a1208 = -2.85899827713502369474065508674d+00    &
+                             , a1209 = -8.87285693353062954433549289258d+00    &
+                             , a1210 =  1.23605671757943030647266201528d+01    &
+                             , a1211 =  6.43392746015763530355970484046d-01
+
+    real(kind=8), parameter :: b01 =  5.42937341165687622380535766363d-02      &
+                             , b06 =  4.45031289275240888144113950566d+00      &
+                             , b07 =  1.89151789931450038304281599044d+00      &
+                             , b08 = -5.80120396001058478146721142270d+00      &
+                             , b09 =  3.11164366957819894408916062370d-01      &
+                             , b10 = -1.52160949662516078556178806805d-01      &
+                             , b11 =  2.01365400804030348374776537501d-01      &
+                             , b12 =  4.47106157277725905176885569043d-02
+
+    real(kind=8), parameter :: bh1 = 0.244094488188976377952755905512d+00      &
+                             , bh2 = 0.733846688281611857341361741547d+00      &
+                             , bh3 = 0.220588235294117647058823529412d-01
+
+    real(kind=8), parameter :: er01 =  0.1312004499419488073250102996d-01      &
+                             , er06 = -0.1225156446376204440720569753d+01      &
+                             , er07 = -0.4957589496572501915214079952d+00      &
+                             , er08 =  0.1664377182454986536961530415d+01      &
+                             , er09 = -0.3503288487499736816886487290d+00      &
+                             , er10 =  0.3341791187130174790297318841d+00      &
+                             , er11 =  0.8192320648511571246570742613d-01      &
+                             , er12 = -0.2235530786388629525884427845d-01
+!
+!-------------------------------------------------------------------------------
+!
+! initialize counters, time and timesteps
+!
+    n  = 0
+    m  = 0
+    t  = 0.0d+00
+    dt = dtini
+    err = 0.0d+00
+
+    expo     = 2.0d-01 * beta - 1.25d-01
+    errold   = 1.0d-04
+
+    keepon   = .true.
+    rejected = .false.
+
+! set the initial position, velocity, and momentum
+!
+    si(:,1) = x0(:)
+    si(:,2) = p0(:)
+    x(:)    = si(:,1)
+    p(:)    = si(:,2)
+
+! determine the initial state of the particle
+!
+    gm = lorentz_factor(p(:))
+    v(:) = p(:) / gm
+    call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
+    call separate_velocity(v(:), b(:), ba, va, vp, vr)
+    call gyro_parameters(gm, ba, vr, om, tg, rg)
+    en = gm * mrest
+    ek = en - mrest
+
+! print the progress
+!
+    write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
+                                             'GPERIOD', 'SPEED (c)',           &
+                                             'ENERGY (MeV)'
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek, term
+
+! open the output file, print headers and the initial values
+!
+    open (10, file = 'output.dat', form = 'formatted', status = 'replace')
+    write(10,"('#',1a20,19a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz',      &
+                                 '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
+                                 'gamma', 'En [MeV]', 'Ek [MeV]',              &
+                                 '<B> [Gs]', 'Omega [1/s]',                    &
+                                 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]',       &
+                                 'Error'
+    write(10,"(20(1es22.14))") t, x(1), x(2), x(3), v(1), v(2), v(3),          &
+                               va, vp, vr, gm, en, ek,                         &
+                               bunit * ba, om / tunit, tg * tunit, rg * lunit, &
+                               tg, rg, err
+
+!== INTEGRATION LOOP ==
+!
+! integrate the trajectory
+!
+    do while (keepon)
+
+! the 12 steps
+!
+      ss(:,:) = si(:,:)
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,1), k(:,2,1), v(:), b(:))
+
+      ss(:,:) = si(:,:) + dt * a0201 * k(:,:,1)
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,2), k(:,2,2), v(:), b(:))
+
+      ss(:,:) = si(:,:) + dt * (a0301 * k(:,:,1) + a0302 * k(:,:,2))
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,3), k(:,2,3), v(:), b(:))
+
+      ss(:,:) = si(:,:) + dt * (a0401 * k(:,:,1) + a0403 * k(:,:,3))
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,4), k(:,2,4), v(:), b(:))
+
+      ss(:,:) = si(:,:) + dt * (a0501 * k(:,:,1) + a0503 * k(:,:,3)            &
+                              + a0504 * k(:,:,4))
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,5), k(:,2,5), v(:), b(:))
+
+      ss(:,:)  = si(:,:) + dt * (a0601 * k(:,:,1) + a0604 * k(:,:,4)           &
+                               + a0605 * k(:,:,5))
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,6), k(:,2,6), v(:), b(:))
+
+      ss(:,:)  = si(:,:) + dt * (a0701 * k(:,:,1) + a0704 * k(:,:,4)           &
+                               + a0705 * k(:,:,5) + a0706 * k(:,:,6))
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,7), k(:,2,7), v(:), b(:))
+
+      ss(:,:)  = si(:,:) + dt * (a0801 * k(:,:,1) + a0804 * k(:,:,4)           &
+                               + a0805 * k(:,:,5) + a0806 * k(:,:,6)           &
+                               + a0807 * k(:,:,7))
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,8), k(:,2,8), v(:), b(:))
+
+      ss(:,:)  = si(:,:) + dt * (a0901 * k(:,:,1) + a0904 * k(:,:,4)           &
+                               + a0905 * k(:,:,5) + a0906 * k(:,:,6)           &
+                               + a0907 * k(:,:,7) + a0908 * k(:,:,8))
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,9), k(:,2,9), v(:), b(:))
+
+      ss(:,:)  = si(:,:) + dt * (a1001 * k(:,:,1) + a1004 * k(:,:,4)           &
+                               + a1005 * k(:,:,5) + a1006 * k(:,:,6)           &
+                               + a1007 * k(:,:,7) + a1008 * k(:,:,8)           &
+                               + a1009 * k(:,:,9))
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,10), k(:,2,10), v(:), b(:))
+
+      ss(:,:)  = si(:,:) + dt * (a1101 * k(:,:,1) + a1104 * k(:,:, 4)          &
+                               + a1105 * k(:,:,5) + a1106 * k(:,:, 6)          &
+                               + a1107 * k(:,:,7) + a1108 * k(:,:, 8)          &
+                               + a1109 * k(:,:,9) + a1110 * k(:,:,10))
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,2), k(:,2,2), v(:), b(:))
+
+      ss(:,:)  = si(:,:) + dt * (a1201 * k(:,:,1) + a1204 * k(:,:, 4)          &
+                               + a1205 * k(:,:,5) + a1206 * k(:,:, 6)          &
+                               + a1207 * k(:,:,7) + a1208 * k(:,:, 8)          &
+                               + a1209 * k(:,:,9) + a1210 * k(:,:,10)          &
+                               + a1211 * k(:,:,2))
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,3), k(:,2,3), v(:), b(:))
+
+      k(:,:,4) = b01 * k(:,:, 1) + b06 * k(:,:, 6) + b07 * k(:,:, 7)           &
+               + b08 * k(:,:, 8) + b09 * k(:,:, 9) + b10 * k(:,:,10)           &
+               + b11 * k(:,:, 2) + b12 * k(:,:, 3)
+      sf(:,:)  = si(:,:) + dt * k(:,:,4)
+
+! error estimation
+!
+      sr(:,:) = atol + rtol * max(abs(si(:,:)), abs(sf(:,:)))
+      er(:,:) = k(:,:,4) - bh1 * k(:,:,1) - bh2 * k(:,:,9) - bh3 * k(:,:,3)
+      err3 = sum((er(:,:) / sr(:,:))**2) ! 3rd order error
+      er(:,:) = er01 * k(:,:,1) + er06 * k(:,:,6) + er07 * k(:,:, 7)           &
+              + er08 * k(:,:,8) + er09 * k(:,:,9) + er10 * k(:,:,10)           &
+              + er11 * k(:,:,2) + er12 * k(:,:,3)
+      err5 = sum((er(:,:) / sr(:,:))**2) ! 5th order error
+      deno = err5 + 1.0d-02 * err3
+      if (deno <= 0.0d+00) then
+        err = abs(dt) * err5 / sqrt(6.0d+00)
+      else
+        err = abs(dt) * err5 / sqrt(6.0d+00 * deno)
+      end if
+
+! verify error
+!
+      if (err <= 1.0d+00) then
+
+! increase time
+!
+        t = t + dt
+
+! store the current particle state
+!
+        if (m == ndumps) then
+
+! determine the current state of the particle
+!
+          x(:) = sf(:,1)
+          p(:) = sf(:,2)
+
+          gm = lorentz_factor(p(:))
+          v(:) = p(:) / gm
+          call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
+          call separate_velocity(v(:), b(:), ba, va, vp, vr)
+          call gyro_parameters(gm, ba, vr, om, tg, rg)
+          en = gm * mrest
+          ek = en - mrest
+
+! print the progress
+!
+          write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va,  &
+                                                            ek, term
+
+! store the particle parameters
+!
+          write(10,"(20(1es22.14))") t, x(1), x(2), x(3), v(1), v(2), v(3),    &
+                                     va, vp, vr, gm, en, ek,                   &
+                                     bunit * ba, om / tunit, tg * tunit,       &
+                                     rg * lunit, tg, rg, err
+
+! update the counters
+!
+          n = n + 1
+          m = 0
+
+        end if ! m == ndumps
+
+! increase the data write counter
+!
+        m = m + 1
+
+! update new state
+!
+        si(:,:) = sf(:,:)
+
+! new time step
+!
+        dtn   = max(facmin, safe * err**expo * errold**beta)
+        if (rejected) then
+          dtn = dt * min(dtn, 1.0d+00)
+        else
+          dtn = dt * min(dtn, facmax)
+        end if
+        errold = max(err, 1.0d-04)
+
+! set rejected flag
+!
+        rejected = .false.
+
+      else
+
+! new time step
+!
+        dtn = dt * max(facmin, safe * err**expo)
+
+! set rejected flag
+!
+        rejected = .true.
+
+      end if
+
+! substitute time step
+!
+      dt = min(dtn, dtmax)
+
+! if the boundaries are not periodic and particle is out of the box, stop
+! the integration
+!
+      keepon = keepon .and. is_inside(si(:,1))
+
+    end do
+
+! determine the final state of the particle
+!
+    gm = lorentz_factor(p(:))
+    v(:) = p(:) / gm
+    call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
+    call separate_velocity(v(:), b(:), ba, va, vp, vr)
+    call gyro_parameters(gm, ba, vr, om, tg, rg)
+    en = gm * mrest
+    ek = en - mrest
+
+! print the progress
+!
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, va, ek
+
+! store the particle parameters
+!
+    write(10,"(20(1es22.14))") t, x(1), x(2), x(3), v(1), v(2), v(3),          &
+                               va, vp, vr, gm, en, ek,                         &
+                               bunit * ba, om / tunit, tg * tunit, rg * lunit, &
+                               tg, rg, err
+    close(10)
+
+!-------------------------------------------------------------------------------
+!
+  end subroutine integrate_trajectory_dop853
+!
+!===============================================================================
+!
 !
 ! integrate_trajectory_si4: subroutine integrates particle trajectory using
 !                           the 4th order simplectic method

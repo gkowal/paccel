@@ -34,6 +34,7 @@ program paccel
   use parameters    , only : read_parameters, get_parameter
   use particles     , only : initialize_particles, generate_particle,          &
                              integrate_trajectory_rk4,                         &
+                             integrate_trajectory_dop853,                      &
                              integrate_trajectory_si4,                         &
                              integrate_trajectory_si6,                         &
                              integrate_trajectory_si8,                         &
@@ -90,6 +91,9 @@ program paccel
   case('rk4')
     write( *, "('INFO      : ',a)" ) "integrating the particle trajectory (RK4 method)"
     call integrate_trajectory_rk4()
+  case('rk8', 'dop853')
+    write( *, "('INFO      : ',a)" ) "integrating the particle trajectory (DOP853 method)"
+    call integrate_trajectory_dop853()
   case('si4')
     write( *, "('INFO      : ',a)" ) "integrating the particle trajectory (SI4 method)"
     call integrate_trajectory_si4()
