@@ -74,9 +74,11 @@ module fields
 !
   subroutine init_fields()
 
-    use fitsio, only : fits_init, fits_get_dims, fits_get_bounds, fits_read_var
+    use dataxml, only : dataxml_init, dataxml_get_dims,                        &
+                        dataxml_get_bounds, dataxml_read_var
+    use fitsio , only : fits_init, fits_get_dims, fits_get_bounds, fits_read_var
 #ifdef HDF5
-    use hdf5io, only : hdf5_init, hdf5_get_dims, hdf5_get_bounds, hdf5_read_var
+    use hdf5io , only : hdf5_init, hdf5_get_dims, hdf5_get_bounds, hdf5_read_var
 #endif /* HDF5 */
     use parameters, only : get_parameter
 
@@ -99,6 +101,10 @@ module fields
 ! obtain array dimensions
 !
     select case(trim(fformat))
+    case('dataxml')
+      call dataxml_init()
+      call dataxml_get_dims(dm)
+      call dataxml_get_bounds(xmin, xmax, ymin, ymax, zmin, zmax)
     case('fits')
       call fits_init('magx')
       call fits_get_dims(dm)
@@ -165,6 +171,19 @@ module fields
 !
     write( *, "('INFO      : ',a)" ) "reading velocity and magnetic field"
     select case(trim(fformat))
+    case('dataxml')
+      call dataxml_read_var('velx', tt)
+      call expand_array(tt, ux)
+      call dataxml_read_var('vely', tt)
+      call expand_array(tt, uy)
+      call dataxml_read_var('velz', tt)
+      call expand_array(tt, uz)
+      call dataxml_read_var('magx', tt)
+      call expand_array(tt, bx)
+      call dataxml_read_var('magy', tt)
+      call expand_array(tt, by)
+      call dataxml_read_var('magz', tt)
+      call expand_array(tt, bz)
     case('fits')
       call fits_read_var('velx', tt)
       call expand_array(tt, ux)
