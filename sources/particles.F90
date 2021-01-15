@@ -87,7 +87,8 @@ module particles
 
 ! global parameters
 !
-  real(kind=8), parameter :: pi2 = 6.2831853071795862319959269370884d+00
+  character(len=1), parameter :: term = char(13)
+  real(kind=8)    , parameter :: pi2 = 6.2831853071795862319959269370884d+00
 !
 !-------------------------------------------------------------------------------
 !
@@ -454,6 +455,12 @@ module particles
 !
     p0(:) = gm * u0(:)
 
+    call get_parameter('px', p0(1))
+    call get_parameter('py', p0(2))
+    call get_parameter('pz', p0(3))
+    gm = lorentz_factor(p0(:))
+    u0(:) = p0(:) / gm
+
 ! calculate particle energy
 !
     en = gm * mrest
@@ -544,25 +551,24 @@ module particles
 
 ! print the progress
 !
-    write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP'       &
-            , 'SPEED (c)', 'ENERGY (MeV)'
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua, ek        &
-            , char(13)
+    write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
+                                             'GPERIOD', 'SPEED (c)',           &
+                                             'ENERGY (MeV)'
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek, term
 
 ! open the output file, print headers and the initial values
 !
-    open  (10, file = 'output.dat', form = 'formatted', status = 'replace')
-    write (10, "('#',1a20,19a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz'     &
-                                 , '|V| [c]', '|Vpar| [c]', '|Vper| [c]'       &
-                                 , 'gamma', 'En [MeV]', 'Ek [MeV]'             &
-                                 , '<B> [Gs]', 'Omega [1/s]'                   &
-                                 , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'      &
-                                 , 'Tolerance'
-    write (10, "(20(1pe22.14))") t                                             &
-                               , x(1), x(2), x(3), u(1), u(2), u(3)            &
-                               , ua, up, ur, gm, en, ek                        &
-                               , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
-                               , tol
+    open (10, file = 'output.dat', form = 'formatted', status = 'replace')
+    write(10,"('#',1a20,19a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz',      &
+                                 '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
+                                 'gamma', 'En [MeV]', 'Ek [MeV]',              &
+                                 '<B> [Gs]', 'Omega [1/s]',                    &
+                                 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]',       &
+                                 'Tolerance'
+    write(10,"(20(1es22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3),          &
+                               ua, up, ur, gm, en, ek,                         &
+                               bunit * ba, om / tunit, tg * tunit, rg * lunit, &
+                               tg, rg, tol
 
 !== INTEGRATION LOOP ==
 !
@@ -757,15 +763,15 @@ module particles
 
 ! print the progress
 !
-          write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua  &
-                  , ek, char(13)
+          write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua,  &
+                                                            ek, term
 
 ! store the particle parameters
 !
-          write (10, "(20(1pe22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3)   &
-                                     , ua, up, ur, gm, en, ek                  &
-                                     , bunit * ba, om, tg * tunit, rg * lunit, tg, rg &
-                                     , tol
+          write(10,"(20(1es22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3),    &
+                                     ua, up, ur, gm, en, ek,                   &
+                                     bunit * ba, om / tunit, tg * tunit,       &
+                                     rg * lunit, tg, rg, tol
 
 ! update the counters
 !
@@ -797,16 +803,14 @@ module particles
 
 ! print the progress
 !
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua, ek
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, ua, ek
 
 ! store the particle parameters
 !
-    write (10, "(20(1pe22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3)         &
-                               , ua, up, ur, gm, en, ek            &
-                               , bunit * ba, om, tg * tunit, rg * lunit, tg, rg, tol
-
-! close the output file
-!
+    write(10,"(20(1es22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3),          &
+                               ua, up, ur, gm, en, ek,                         &
+                               bunit * ba, om / tunit, tg * tunit,             &
+                               rg * lunit, tg, rg, tol
     close (10)
 
 !-------------------------------------------------------------------------------
@@ -843,9 +847,6 @@ module particles
     real(kind=8)                   :: gm, t, dt, tc, te, ts
     real(kind=8)                   :: en, ek, ua, ba, up, ur, om, tg, rg
     real(kind=8)                   :: tol = 0.0d+00
-#ifdef ERRORS
-    real(kind=8)                   :: en0, ek0, ua0, up0, ur0
-#endif
 
 ! local flags
 !
@@ -907,45 +908,25 @@ module particles
     en = gm * mrest
     ek = en - mrest
 
-#ifdef ERRORS
-    en0 = en
-    ek0 = ek
-    ua0 = ua
-    up0 = up
-    ur0 = ur
-#endif
-
-! print the progress information
+! print the progress
 !
-    write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP'       &
-            , 'SPEED (c)', 'ENERGY (MeV)'
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua, ek    &
-            , char(13)
+    write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
+                                             'GPERIOD', 'SPEED (c)',           &
+                                             'ENERGY (MeV)'
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek, term
 
 ! open the output file, print headers and the initial values
 !
-    open  (10, file = 'output.dat', form = 'formatted', status = 'replace')
-    write (10, "('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz'     &
-                                 , '|V| [c]', '|Vpar| [c]', '|Vper| [c]'       &
-                                 , 'gamma', 'En [MeV]', 'Ek [MeV]'             &
-                                 , '<B> [Gs]', 'Omega [1/s]'                   &
-                                 , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'      &
-                                 , 'Tolerance', 'Iterations'
-#ifdef ERRORS
-    write (10, "(20(1pe22.14),i22)") t                                         &
-                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , abs(ua - ua0), abs(up - up0)      &
-                                   , abs(ur - ur0), gm                     &
-                                   , abs(en - en0), abs(ek - ek0)              &
-                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
-                                   , tol, i
-#else
-    write (10, "(20(1pe22.14),i22)") t                                         &
-                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua, up, ur, gm, en, ek        &
-                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
-                                   , tol, i
-#endif
+    open(10, file = 'output.dat', form = 'formatted', status = 'replace')
+    write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz',      &
+                                 '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
+                                 'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
+                                 'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
+                                 'Rg [L]', 'Tolerance', 'Iterations'
+    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),      &
+                                   ua, up, ur, gm, en, ek, bunit * ba,         &
+                                   om / tunit, tg * tunit, rg * lunit, tg, rg, &
+                                   tol, i
 
 !== INTEGRATION LOOP ==
 !
@@ -1055,28 +1036,17 @@ module particles
         en = gm * mrest
         ek = en - mrest
 
-! write the progress
+! print the progress
 !
-        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua    &
-            , ek, char(13)
+        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek,&
+                                                          term
 
 ! write results to the output file
 !
-#ifdef ERRORS
-    write (10, "(20(1pe22.14),i22)") t                                         &
-                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , abs(ua - ua0), abs(up - up0)      &
-                                   , abs(ur - ur0), gm                     &
-                                   , abs(en - en0), abs(ek - ek0)              &
-                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
-                                   , tol, i
-#else
-        write (10, "(20(1pe22.14),i22)") t                                     &
-                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua, up, ur, gm, en, ek        &
-                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
-                                   , tol, i
-#endif
+        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),  &
+                                       ua, up, ur, gm, en, ek, bunit * ba,     &
+                                       om / tunit, tg * tunit, rg * lunit, tg, &
+                                       rg, tol, i
 
         n = n + 1
         m = 0
@@ -1091,13 +1061,11 @@ module particles
 !
     end do
 
-! close the output file
-!
     close(10)
 
-! write the progress
+! print the progress
 !
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua, ek
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, ua, ek
 
 ! write info about the estimator
 !
@@ -1142,9 +1110,6 @@ module particles
     real(kind=8)                   :: gm, t, dt, dtp, tc, te, ts
     real(kind=8)                   :: en, ek, ua, ba, up, ur, om, tg, rg
     real(kind=8)                   :: tol = 0.0d+00
-#ifdef ERRORS
-    real(kind=8)                   :: en0, ek0, ua0, up0, ur0
-#endif
 
 ! local flags
 !
@@ -1206,45 +1171,25 @@ module particles
     en = gm * mrest
     ek = en - mrest
 
-#ifdef ERRORS
-    en0 = en
-    ek0 = ek
-    ua0 = ua
-    up0 = up
-    ur0 = ur
-#endif
-
-! print the progress information
+! print the progress
 !
-    write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP'       &
-            , 'SPEED (c)', 'ENERGY (MeV)'
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua, ek    &
-            , char(13)
+    write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
+                                             'GPERIOD', 'SPEED (c)',           &
+                                             'ENERGY (MeV)'
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek, term
 
 ! open the output file, print headers and the initial values
 !
-    open  (10, file = 'output.dat', form = 'formatted', status = 'replace')
-    write (10, "('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz'     &
-                                 , '|V| [c]', '|Vpar| [c]', '|Vper| [c]'       &
-                                 , 'gamma', 'En [MeV]', 'Ek [MeV]'             &
-                                 , '<B> [Gs]', 'Omega [1/s]'                   &
-                                 , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'      &
-                                 , 'Tolerance', 'Iterations'
-#ifdef ERRORS
-    write (10, "(20(1pe22.14),i22)") t                                         &
-                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , abs(ua - ua0), abs(up - up0)      &
-                                   , abs(ur - ur0), gm                     &
-                                   , abs(en - en0), abs(ek - ek0)              &
-                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
-                                   , tol, i
-#else
-    write (10, "(20(1pe22.14),i22)") t                                         &
-                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua, up, ur, gm, en, ek        &
-                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
-                                   , tol, i
-#endif
+    open(10, file = 'output.dat', form = 'formatted', status = 'replace')
+    write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz',      &
+                                 '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
+                                 'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
+                                 'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
+                                 'Rg [L]', 'Tolerance', 'Iterations'
+    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),      &
+                                   ua, up, ur, gm, en, ek, bunit * ba,         &
+                                   om / tunit, tg * tunit, rg * lunit, tg, rg, &
+                                   tol, i
 
 !== INTEGRATION LOOP ==
 !
@@ -1353,28 +1298,17 @@ module particles
         en = gm * mrest
         ek = en - mrest
 
-! write the progress
+! print the progress
 !
-        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua    &
-            , ek, char(13)
+        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek,&
+                                                          term
 
 ! write results to the output file
 !
-#ifdef ERRORS
-    write (10, "(20(1pe22.14),i22)") t                                         &
-                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , abs(ua - ua0), abs(up - up0)      &
-                                   , abs(ur - ur0), gm                     &
-                                   , abs(en - en0), abs(ek - ek0)              &
-                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
-                                   , tol, i
-#else
-        write (10, "(20(1pe22.14),i22)") t                                     &
-                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua, up, ur, gm, en, ek        &
-                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
-                                   , tol, i
-#endif
+        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),  &
+                                       ua, up, ur, gm, en, ek, bunit * ba,     &
+                                       om / tunit, tg * tunit, rg * lunit, tg, &
+                                       rg, tol, i
 
         n = n + 1
         m = 0
@@ -1395,13 +1329,11 @@ module particles
 !
     end do
 
-! close the output file
-!
     close(10)
 
-! write the progress
+! print the progress
 !
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua, ek
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, ua, ek
 
 ! write info about the estimator
 !
@@ -1613,27 +1545,25 @@ module particles
     en = gm * mrest
     ek = en - mrest
 
-! print the progress information
+! print the progress
 !
-    write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP'       &
-            , 'SPEED (c)', 'ENERGY (MeV)'
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua, ek    &
-            , char(13)
+    write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
+                                             'GPERIOD', 'SPEED (c)',           &
+                                             'ENERGY (MeV)'
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek, term
 
 ! open the output file, print headers and the initial values
 !
-    open  (10, file = 'output.dat', form = 'formatted', status = 'replace')
-    write (10, "('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz'     &
-                                 , '|V| [c]', '|Vpar| [c]', '|Vper| [c]'       &
-                                 , 'gamma', 'En [MeV]', 'Ek [MeV]'             &
-                                 , '<B> [Gs]', 'Omega [1/s]'                   &
-                                 , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'      &
-                                 , 'Tolerance', 'Iterations'
-    write (10, "(20(1pe22.14),i22)") t                                         &
-                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua, up, ur, gm, en, ek        &
-                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
-                                   , tol, i
+    open(10, file = 'output.dat', form = 'formatted', status = 'replace')
+    write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz',      &
+                                 '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
+                                 'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
+                                 'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
+                                 'Rg [L]', 'Tolerance', 'Iterations'
+    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),      &
+                                   ua, up, ur, gm, en, ek, bunit * ba,         &
+                                   om / tunit, tg * tunit, rg * lunit, tg, rg, &
+                                   tol, i
 
 !== INTEGRATION LOOP ==
 !
@@ -1744,18 +1674,17 @@ module particles
         en = gm * mrest
         ek = en - mrest
 
-! write the progress
+! print the progress
 !
-        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua    &
-            , ek, char(13)
+        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek,&
+                                                          term
 
 ! write results to the output file
 !
-        write (10, "(20(1pe22.14),i22)") t                                     &
-                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua, up, ur, gm, en, ek        &
-                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
-                                   , tol, i
+        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),  &
+                                       ua, up, ur, gm, en, ek, bunit * ba,     &
+                                       om / tunit, tg * tunit, rg * lunit, tg, &
+                                       rg, tol, i
 
         n = n + 1
         m = 0
@@ -1770,13 +1699,11 @@ module particles
 !
     end do
 
-! close the output file
-!
     close(10)
 
-! write the progress
+! print the progress
 !
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua, ek
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, ua, ek
 
 ! write info about the estimator
 !
@@ -1878,27 +1805,25 @@ module particles
     en = gm * mrest
     ek = en - mrest
 
-! print the progress information
+! print the progress
 !
-    write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP'       &
-            , 'SPEED (c)', 'ENERGY (MeV)'
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua, ek    &
-            , char(13)
+    write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
+                                             'GPERIOD', 'SPEED (c)',           &
+                                             'ENERGY (MeV)'
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek, term
 
 ! open the output file, print headers and the initial values
 !
-    open  (10, file = 'output.dat', form = 'formatted', status = 'replace')
-    write (10, "('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz'     &
-                                 , '|V| [c]', '|Vpar| [c]', '|Vper| [c]'       &
-                                 , 'gamma', 'En [MeV]', 'Ek [MeV]'             &
-                                 , '<B> [Gs]', 'Omega [1/s]'                   &
-                                 , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'      &
-                                 , 'Tolerance', 'Iterations'
-    write (10, "(20(1pe22.14),i22)") t                                         &
-                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua, up, ur, gm, en, ek        &
-                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
-                                   , tol, i
+    open(10, file = 'output.dat', form = 'formatted', status = 'replace')
+    write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz',      &
+                                 '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
+                                 'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
+                                 'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
+                                 'Rg [L]', 'Tolerance', 'Iterations'
+    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),      &
+                                   ua, up, ur, gm, en, ek, bunit * ba,         &
+                                   om / tunit, tg * tunit, rg * lunit, tg, rg, &
+                                   tol, i
 
 !== INTEGRATION LOOP ==
 !
@@ -2008,18 +1933,17 @@ module particles
         en = gm * mrest
         ek = en - mrest
 
-! write the progress
+! print the progress
 !
-        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua    &
-            , ek, char(13)
+        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek,&
+                                                          term
 
 ! write results to the output file
 !
-        write (10, "(20(1pe22.14),i22)") t                                     &
-                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua, up, ur, gm, en, ek        &
-                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
-                                   , tol, i
+        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),  &
+                                       ua, up, ur, gm, en, ek, bunit * ba,     &
+                                       om / tunit, tg * tunit, rg * lunit, tg, &
+                                       rg, tol, i
 
         n = n + 1
         m = 0
@@ -2040,13 +1964,11 @@ module particles
 !
     end do
 
-! close the output file
-!
     close(10)
 
-! write the progress
+! print the progress
 !
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua, ek
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, ua, ek
 
 ! write info about the estimator
 !
@@ -2270,27 +2192,25 @@ module particles
     en = gm * mrest
     ek = en - mrest
 
-! print the progress information
+! print the progress
 !
-    write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP'       &
-            , 'SPEED (c)', 'ENERGY (MeV)'
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua, ek    &
-            , char(13)
+    write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
+                                             'GPERIOD', 'SPEED (c)',           &
+                                             'ENERGY (MeV)'
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek, term
 
 ! open the output file, print headers and the initial values
 !
-    open  (10, file = 'output.dat', form = 'formatted', status = 'replace')
-    write (10, "('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz'     &
-                                 , '|V| [c]', '|Vpar| [c]', '|Vper| [c]'       &
-                                 , 'gamma', 'En [MeV]', 'Ek [MeV]'             &
-                                 , '<B> [Gs]', 'Omega [1/s]'                   &
-                                 , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'      &
-                                 , 'Tolerance', 'Iterations'
-    write (10, "(20(1pe22.14),i22)") t                                         &
-                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua, up, ur, gm, en, ek        &
-                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
-                                   , tol, i
+    open(10, file = 'output.dat', form = 'formatted', status = 'replace')
+    write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz',      &
+                                 '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
+                                 'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
+                                 'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
+                                 'Rg [L]', 'Tolerance', 'Iterations'
+    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),      &
+                                   ua, up, ur, gm, en, ek, bunit * ba,         &
+                                   om / tunit, tg * tunit, rg * lunit, tg, rg, &
+                                   tol, i
 
 !== INTEGRATION LOOP ==
 !
@@ -2403,18 +2323,17 @@ module particles
         en = gm * mrest
         ek = en - mrest
 
-! write the progress
+! print the progress
 !
-        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua    &
-            , ek, char(13)
+        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek,&
+                                                          term
 
 ! write results to the output file
 !
-        write (10, "(20(1pe22.14),i22)") t                                     &
-                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua, up, ur, gm, en, ek        &
-                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
-                                   , tol, i
+        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),  &
+                                       ua, up, ur, gm, en, ek, bunit * ba,     &
+                                       om / tunit, tg * tunit, rg * lunit, tg, &
+                                       rg, tol, i
 
         n = n + 1
         m = 0
@@ -2429,13 +2348,11 @@ module particles
 !
     end do
 
-! close the output file
-!
     close(10)
 
-! write the progress
+! print the progress
 !
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua, ek
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, ua, ek
 
 ! write info about the estimator
 !
@@ -2537,27 +2454,25 @@ module particles
     en = gm * mrest
     ek = en - mrest
 
-! print the progress information
+! print the progress
 !
-    write (*,"('PROGRESS  : ',a8,2x,4(a14))") 'ITER', 'TIME', 'TIMESTEP'       &
-            , 'SPEED (c)', 'ENERGY (MeV)'
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua, ek    &
-            , char(13)
+    write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
+                                             'GPERIOD', 'SPEED (c)',           &
+                                             'ENERGY (MeV)'
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek, term
 
 ! open the output file, print headers and the initial values
 !
-    open  (10, file = 'output.dat', form = 'formatted', status = 'replace')
-    write (10, "('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz'     &
-                                 , '|V| [c]', '|Vpar| [c]', '|Vper| [c]'       &
-                                 , 'gamma', 'En [MeV]', 'Ek [MeV]'             &
-                                 , '<B> [Gs]', 'Omega [1/s]'                   &
-                                 , 'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]'      &
-                                 , 'Tolerance', 'Iterations'
-    write (10, "(20(1pe22.14),i22)") t                                         &
-                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua, up, ur, gm, en, ek        &
-                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
-                                   , tol, i
+    open(10, file = 'output.dat', form = 'formatted', status = 'replace')
+    write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz',      &
+                                 '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
+                                 'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
+                                 'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
+                                 'Rg [L]', 'Tolerance', 'Iterations'
+    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),      &
+                                   ua, up, ur, gm, en, ek, bunit * ba,         &
+                                   om / tunit, tg * tunit, rg * lunit, tg, rg, &
+                                   tol, i
 
 !== INTEGRATION LOOP ==
 !
@@ -2669,18 +2584,17 @@ module particles
         en = gm * mrest
         ek = en - mrest
 
-! write the progress
+! print the progress
 !
-        write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6),a1,$)") n, t, dt, ua    &
-            , ek, char(13)
+        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek,&
+                                                          term
 
 ! write results to the output file
 !
-        write (10, "(20(1pe22.14),i22)") t                                     &
-                                   , x(1), x(2), x(3), u(1), u(2), u(3)        &
-                                   , ua, up, ur, gm, en, ek        &
-                                   , bunit * ba, om, tg * tunit, rg * lunit, tg, rg   &
-                                   , tol, i
+        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),  &
+                                       ua, up, ur, gm, en, ek, bunit * ba,     &
+                                       om / tunit, tg * tunit, rg * lunit, tg, &
+                                       rg, tol, i
 
         n = n + 1
         m = 0
@@ -2701,13 +2615,11 @@ module particles
 !
     end do
 
-! close the output file
-!
     close(10)
 
-! write the progress
+! print the progress
 !
-    write (*,"('PROGRESS  : ',i8,2x,4(1pe14.6))") n, t, dt, ua, ek
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, ua, ek
 
 ! write info about the estimator
 !

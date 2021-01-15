@@ -125,9 +125,6 @@ endif
 ifeq ($(TEST),ISLAND)
 FFLAGS += -DTEST -DITEST
 endif
-ifeq ($(ERRORS),Y)
-FFLAGS += -DERRORS
-endif
 
 ifeq ($(HDF5),Y)
 FFLAGS   += -DHDF5
