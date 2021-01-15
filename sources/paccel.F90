@@ -26,13 +26,16 @@
 !
 program paccel
 
-  use fields    , only : initialize_fields, finalize_fields, read_fields
-  use parameters, only : read_parameters, get_parameter
-  use particles , only : initialize_particles, generate_particle,              &
-                         integrate_trajectory_rk4,                             &
-                         integrate_trajectory_si4, integrate_trajectory_si4v,  &
-                         integrate_trajectory_si6, integrate_trajectory_si6v,  &
-                         integrate_trajectory_si8, integrate_trajectory_si8v
+! import required modules
+!
+  use coordinates, only : initialize_coordinates
+  use fields     , only : initialize_fields, finalize_fields, read_fields
+  use parameters , only : read_parameters, get_parameter
+  use particles  , only : initialize_particles, generate_particle,             &
+                          integrate_trajectory_rk4,                            &
+                          integrate_trajectory_si4, integrate_trajectory_si4v, &
+                          integrate_trajectory_si6, integrate_trajectory_si6v, &
+                          integrate_trajectory_si8, integrate_trajectory_si8v
 
   implicit none
 
@@ -55,6 +58,8 @@ program paccel
 
 #ifndef TEST
   call initialize_fields(.true., status)
+
+  call initialize_coordinates(.true., status)
 #endif /* !TEST */
 
   call initialize_particles(.true., status)
