@@ -531,6 +531,10 @@ module particles
 !
   subroutine integrate_trajectory_rk4()
 
+! import required modules
+!
+    use coordinates, only : is_inside
+
     implicit none
 
 ! local variables
@@ -768,16 +772,10 @@ module particles
         u(:) = u5(:)
         p(:) = p5(:)
 
-#ifndef PERIODIC
 ! if the boundaries are not periodic and particle is out of the box, stop
 ! the integration
-        if (x(1) < bnds(1,1)) keepon = .false.
-        if (x(1) > bnds(1,2)) keepon = .false.
-        if (x(2) < bnds(2,1)) keepon = .false.
-        if (x(2) > bnds(2,2)) keepon = .false.
-        if (x(3) < bnds(3,1)) keepon = .false.
-        if (x(3) > bnds(3,2)) keepon = .false.
-#endif /* PERIODIC */
+!
+        keepon = keepon .and. is_inside(x)
 
 ! store the current particle state
 !
@@ -866,6 +864,10 @@ module particles
 !===============================================================================
 !
   subroutine integrate_trajectory_si4()
+
+! import required modules
+!
+    use coordinates, only : is_inside
 
     implicit none
 
@@ -1017,16 +1019,11 @@ module particles
       x (1:3) = xs(1:3)
       p (1:3) = ps(1:3)
 
-#ifndef PERIODIC
+
 ! if the boundaries are not periodic and particle is out of the box, stop
 ! the integration
-      if (x(1) < bnds(1,1)) keepon = .false.
-      if (x(1) > bnds(1,2)) keepon = .false.
-      if (x(2) < bnds(2,1)) keepon = .false.
-      if (x(2) > bnds(2,2)) keepon = .false.
-      if (x(3) < bnds(3,1)) keepon = .false.
-      if (x(3) > bnds(3,2)) keepon = .false.
-#endif /* PERIODIC */
+!
+      keepon = keepon .and. is_inside(x)
 
 ! update the integration time
 !
@@ -1128,6 +1125,10 @@ module particles
 !===============================================================================
 !
   subroutine integrate_trajectory_si4v()
+
+! import required modules
+!
+    use coordinates, only : is_inside
 
     implicit none
 
@@ -1279,16 +1280,10 @@ module particles
       x (1:3) = xs(1:3)
       p (1:3) = ps(1:3)
 
-#ifndef PERIODIC
 ! if the boundaries are not periodic and particle is out of the box, stop
 ! the integration
-      if (x(1) < bnds(1,1)) keepon = .false.
-      if (x(1) > bnds(1,2)) keepon = .false.
-      if (x(2) < bnds(2,1)) keepon = .false.
-      if (x(2) > bnds(2,2)) keepon = .false.
-      if (x(3) < bnds(3,1)) keepon = .false.
-      if (x(3) > bnds(3,2)) keepon = .false.
-#endif /* PERIODIC */
+!
+      keepon = keepon .and. is_inside(x)
 
 ! update the integration time
 !
@@ -1508,6 +1503,10 @@ module particles
 !
   subroutine integrate_trajectory_si6()
 
+! import required modules
+!
+    use coordinates, only : is_inside
+
     implicit none
 
 ! local variables
@@ -1655,16 +1654,10 @@ module particles
       x (1:3) = xs(1:3)
       p (1:3) = ps(1:3)
 
-#ifndef PERIODIC
 ! if the boundaries are not periodic and particle is out of the box, stop
 ! the integration
-      if (x(1) < bnds(1,1)) keepon = .false.
-      if (x(1) > bnds(1,2)) keepon = .false.
-      if (x(2) < bnds(2,1)) keepon = .false.
-      if (x(2) > bnds(2,2)) keepon = .false.
-      if (x(3) < bnds(3,1)) keepon = .false.
-      if (x(3) > bnds(3,2)) keepon = .false.
-#endif /* PERIODIC */
+!
+      keepon = keepon .and. is_inside(x)
 
 ! update the integration time
 !
@@ -1766,6 +1759,10 @@ module particles
 !===============================================================================
 !
   subroutine integrate_trajectory_si6v()
+
+! import required modules
+!
+    use coordinates, only : is_inside
 
     implicit none
 
@@ -1914,16 +1911,10 @@ module particles
       x (1:3) = xs(1:3)
       p (1:3) = ps(1:3)
 
-#ifndef PERIODIC
 ! if the boundaries are not periodic and particle is out of the box, stop
 ! the integration
-      if (x(1) < bnds(1,1)) keepon = .false.
-      if (x(1) > bnds(1,2)) keepon = .false.
-      if (x(2) < bnds(2,1)) keepon = .false.
-      if (x(2) > bnds(2,2)) keepon = .false.
-      if (x(3) < bnds(3,1)) keepon = .false.
-      if (x(3) > bnds(3,2)) keepon = .false.
-#endif /* PERIODIC */
+!
+      keepon = keepon .and. is_inside(x)
 
 ! update the integration time
 !
@@ -2155,6 +2146,10 @@ module particles
 !
   subroutine integrate_trajectory_si8()
 
+! import required modules
+!
+    use coordinates, only : is_inside
+
     implicit none
 
 ! local variables
@@ -2304,16 +2299,10 @@ module particles
       x (1:3) = xs(1:3)
       p (1:3) = ps(1:3)
 
-#ifndef PERIODIC
 ! if the boundaries are not periodic and particle is out of the box, stop
 ! the integration
-      if (x(1) < bnds(1,1)) keepon = .false.
-      if (x(1) > bnds(1,2)) keepon = .false.
-      if (x(2) < bnds(2,1)) keepon = .false.
-      if (x(2) > bnds(2,2)) keepon = .false.
-      if (x(3) < bnds(3,1)) keepon = .false.
-      if (x(3) > bnds(3,2)) keepon = .false.
-#endif /* PERIODIC */
+!
+      keepon = keepon .and. is_inside(x)
 
 ! update the integration time
 !
@@ -2415,6 +2404,10 @@ module particles
 !===============================================================================
 !
   subroutine integrate_trajectory_si8v()
+
+! import required modules
+!
+    use coordinates, only : is_inside
 
     implicit none
 
@@ -2565,16 +2558,10 @@ module particles
       x (1:3) = xs(1:3)
       p (1:3) = ps(1:3)
 
-#ifndef PERIODIC
 ! if the boundaries are not periodic and particle is out of the box, stop
 ! the integration
-      if (x(1) < bnds(1,1)) keepon = .false.
-      if (x(1) > bnds(1,2)) keepon = .false.
-      if (x(2) < bnds(2,1)) keepon = .false.
-      if (x(2) > bnds(2,2)) keepon = .false.
-      if (x(3) < bnds(3,1)) keepon = .false.
-      if (x(3) > bnds(3,2)) keepon = .false.
-#endif /* PERIODIC */
+!
+      keepon = keepon .and. is_inside(x)
 
 ! update the integration time
 !
