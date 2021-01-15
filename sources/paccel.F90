@@ -107,12 +107,6 @@ program paccel
   timer = secnds(timer)
   write( *, "('COMPUTED  : ',a,1pe12.5,a)" ) 'computing done in ', timer, ' seconds'
 
-! write parameters to info.txt
-!
-  open  (10, file = 'info.txt', form = 'formatted', access = 'append')
-  write (10, "('COMPUTED  : ',a,1pe12.5,a)" ) 'computing done in ', timer, ' seconds'
-  close (10)
-
 ! deallocate particles
 !
   write( *, "('INFO      : ',a)" ) "deallocating the particle"
