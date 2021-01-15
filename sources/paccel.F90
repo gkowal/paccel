@@ -28,11 +28,11 @@ program paccel
 
   use fields    , only : initialize_fields, finalize_fields, read_fields
   use parameters, only : read_parameters, get_parameter
-  use particles , only : init_particle, finit_particle                         &
-                       , integrate_trajectory_rk4                              &
-                       , integrate_trajectory_si4, integrate_trajectory_si4v   &
-                       , integrate_trajectory_si6, integrate_trajectory_si6v   &
-                       , integrate_trajectory_si8, integrate_trajectory_si8v
+  use particles , only : initialize_particles, generate_particle,              &
+                         integrate_trajectory_rk4,                             &
+                         integrate_trajectory_si4, integrate_trajectory_si4v,  &
+                         integrate_trajectory_si6, integrate_trajectory_si6v,  &
+                         integrate_trajectory_si8, integrate_trajectory_si8v
 
   implicit none
 
@@ -52,26 +52,23 @@ program paccel
   write( *, "('TASK      : ',a)" ) "integrating the trajectory of a charged particle"
   write( *, "('INFO      : ',a)" ) "reading parameters"
 
-! read parameters
-!
   call read_parameters(.true., status)
 
 #ifndef TEST
-! initialize field variables
-!
-  write( *, "('INFO      : ',a)" ) "initializing the field components"
   call initialize_fields(.true., status)
+#endif /* !TEST */
 
-! read field variables
-!
-  write( *, "('INFO      : ',a)" ) "reading the field components"
+  write( *, "('INFO      : ',a)" ) "initializing particle parameters"
+  call initialize_particles(.true., status)
+
+#ifndef TEST
   call read_fields(.true., status)
 #endif /* !TEST */
 
-! initiate particle
+! initiate particles module
 !
   write( *, "('INFO      : ',a)" ) "initializing the particle positions and velocities"
-  call init_particle()
+  call generate_particle(.true., status)
 
 ! get the integration method
 !
@@ -111,11 +108,6 @@ program paccel
 !
   timer = secnds(timer)
   write( *, "('COMPUTED  : ',a,1pe12.5,a)" ) 'computing done in ', timer, ' seconds'
-
-! deallocate particles
-!
-  write( *, "('INFO      : ',a)" ) "deallocating the particle"
-  call finit_particle()
 
 ! deallocate field variables
 !

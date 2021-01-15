@@ -89,6 +89,7 @@ module particles
 !
   character(len=1), parameter :: term = char(13)
   real(kind=8)    , parameter :: pi2 = 6.2831853071795862319959269370884d+00
+  real(kind=8)    , parameter :: c   = 2.99792458d+08 ! the speed of light [m/s]
 !
 !-------------------------------------------------------------------------------
 !
@@ -96,75 +97,54 @@ module particles
 !
 !===============================================================================
 !
-! init_particle: subroutine initializes the particle position and momentum
+! subroutine INITIALIZE_PARTICLES:
+! -------------------------------
+!
+!   Subroutine initializes the module.
+!
+!   Arguments:
+!
+!     verbose - indicates if it should print any messages;
+!     status  - the status value: 0 - success, otherwise there was a problem;
 !
 !===============================================================================
 !
-  subroutine init_particle()
+  subroutine initialize_particles(verbose, status)
 
-    use fields    , only : ux, uy, uz, bx, by, bz
-    use fields    , only : get_domain_dimensions, get_domain_bounds
+! import required modules
+!
+    use fields    , only : ufac, bfac
     use parameters, only : get_parameter
 
     implicit none
 
-! local variables
+! subroutine arguments
 !
-    character(len= 1) :: ptype  = 'p' ! particle type: 'p' - proton, 'e' - electron
-    character(len=16) :: stunit = 's'
-    real(kind=8)      :: tmulti = 1.0d+00
-    real(kind=8)      :: vpar  = 0.0d+00  ! the parallel component of the initial speed in c
-    real(kind=8)      :: vper  = 1.0d-02  ! the perpendicular component of the initial speed in c
-    integer      :: p, n
-    real(kind=8) :: vp, vr, vv
-    real(kind=8) :: gm, mu0, om, tg, rg, mu, mp, en, ek, ba
-    real(kind=8) :: bb, ub, uu
-#ifdef ITEST
-    real(kind=8) :: xt, yt, rt, dl, ra, rb, ec
-#endif /* ITEST */
+    logical, intent(in)    :: verbose
+    integer, intent(inout) :: status
 
-! arrays
+! particle parameters
 !
-    real(kind=8), dimension(3) :: r0
-    real(kind=8), dimension(3) :: b, u, w
-
-! position indices
-!
-    integer     , dimension(4) :: ii, jj, kk
-    real(kind=8), dimension(4) :: cx, cy, cz
-    real(kind=8), dimension(3) :: dr
-
-! parameters
-!
-    real(kind=8) :: cc = 2.99792458d+08 ! the speed of light [m/s]
-    real(kind=8) :: pc = 1.0d+00 / 3.0856775814671916d+16 ! 1 meter [pc]
-    real(kind=8) :: sc = 3.168876464084018437308447107767d-08 ! 1 second [yr]
+    character(len= 1) :: ptype  = 'p'     ! particle type: 'p' - proton,
+!                                                          'e' - electron
+    character(len=16) :: stunit = 's'     ! time unit:     'u' - microsecond,
+!                                                          's' - second,
+!                                                          'm' - minute,
+!                                                          'h' - hour
+!                                                          'd' - dat, etc.
+    real(kind=8)      :: tmulti = 1.0d+00 ! the factor multiplying time unit
 !
 !-------------------------------------------------------------------------------
 !
-! get parameters
+    status = 0
+
+! get input parameters
 !
     call get_parameter('vunit' , vunit)
     call get_parameter('bunit' , bunit)
     call get_parameter('tunit' , stunit)
     call get_parameter('tmulti', tmulti)
     call get_parameter('ptype' , ptype)
-    call get_parameter('xc'    , x0(1))
-    call get_parameter('yc'    , x0(2))
-    call get_parameter('zc'    , x0(3))
-    call get_parameter('vpar'  , vpar)
-    call get_parameter('vper'  , vper)
-#ifdef TEST
-    call get_parameter('bini'  , bini)
-    call get_parameter('bamp'  , bamp)
-    call get_parameter('vamp'  , vamp)
-    call get_parameter('freq'  , freq)
-#ifdef ITEST
-    call get_parameter('bshr'  , bshr)
-    call get_parameter('vrat'  , vrat)
-    call get_parameter('epar'  , epar)
-#endif /* ITEST */
-#endif /* TEST */
     call get_parameter('ndumps', ndumps)
     call get_parameter('tmin'  , tmin)
     call get_parameter('tmax'  , tmax)
@@ -197,96 +177,135 @@ module particles
     end select
     tunit = tmulti * tunit
     lunit = vunit * tunit
+    vunit = vunit / c
 
 ! print geometry parameters
 !
-    write( *, "('INFO      : geometry parameters:')" )
-    write( *, "('INFO      : T     =',1es15.8,' [s]   =',1es15.8,' [yr]')" ) tunit, sc * tunit
-    write( *, "('INFO      : L     =',1es15.8,' [m]   =',1es15.8,' [pc]')" ) lunit, pc * lunit
+    write(*,"('INFO',6x,': geometry parameters:')"  )
+    write(*,"('INFO',6x,': T     =',1es15.8,' [s]')") tunit
+    write(*,"('INFO',6x,': L     =',1es15.8,' [m]')") lunit
 
-! print plasma parametes
+! print plasma parameters
 !
-    write( *, "('INFO      : plasma parameters:')" )
-    write( *, "('INFO      : V     =',1es15.8,' [m/s] =',1es15.8,' [c]')") vunit, vunit / cc
-    write( *, "('INFO      : B     =',1es15.8,' [G]')") bunit
+    write(*,"('INFO',6x,': plasma parameters:')")
+    write(*,"('INFO',6x,': V     =',1es15.8,' [m/s] =',1es15.8,' [c]')")       &
+                                                      vunit * c, vunit
+    write(*,"('INFO',6x,': B     =',1es15.8,' [G]')") bunit
 
 ! initialize particle parameters
 !
     select case(ptype)
     case ('e')
       mrest =  5.10998949998580864751d-01  ! rest energy of electron [MeV]
-      mp    =  9.10938370154308020807d-31  ! electron mass [kg]
       qom   = -1.75882001076384559274d+07  ! e/m [1 / Gs s]
     case default
       mrest =  9.38272088161040869636d+02  ! rest energy of proton   [MeV]
-      mp    =  1.67262192369098122997d-27  ! proton mass [kg]
       qom   =  9.57883315593801671639d+03  ! e/m [1 / Gs s]
     end select
-    vp = cc * vpar                                       ! parallel particle speed
-    vr = cc * vper                                       ! perpendicular particle speed
-    vv = sqrt(vpar**2 + vper**2)         ! absolute velocity
-    gm = 1.0d+00 / sqrt(1.0d+00 - vv * vv)
-    rg = gm * vper * cc / (abs(qom) * bunit)
-    tg = pi2 * rg / (vper * cc)
-    om = abs(qom) * bunit
 
 ! print particle parameters
 !
-    write( *, "('INFO      : particle parameters:')" )
+    write(*,"('INFO',6x,': particle parameters:')")
     select case(ptype)
     case ('e')
-      write( *, "('INFO      : trajectory for electron')" )
+      write(*,"('INFO',6x,': trajectory for electron')")
     case default
-      write( *, "('INFO      : trajectory for proton')" )
+      write(*,"('INFO',6x,': trajectory for proton')")
     end select
-    write( *, "('INFO      : e/m   =',1pe15.8,' [1 / G s]')" ) qom
-    write( *, "('INFO      : Vpar  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vpar, vpar * cc
-    write( *, "('INFO      : Vper  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vper, vper * cc
-    write( *, "('INFO      : |V|   =',1pe15.8,' [c] =',1pe15.8,' [m / s]')" ) vv  , vv * cc
-    write( *, "('INFO      : gamma =',1pe15.8)"              ) gm
-    write( *, "('INFO      : Om    =',1pe15.8,' [1 / s]')"   ) om
-    write( *, "('INFO      : Tg    =',1pe15.8,' [s]')"       ) tg
-    write( *, "('INFO      : Rg    =',1pe15.8,' [m] =',1pe15.8,' [pc]')" ) rg, pc * rg
-    write( *, "('INFO      : E0    =',1pe15.8,' [MeV]')"     ) mrest
-    write( *, "('INFO      : Rg/L  =',1pe15.8)" ) rg / lunit
-    write( *, "('INFO      : Tg/T  =',1pe15.8)" ) tg / tunit
-    write( *, "('INFO      : code units:')" )
-    write( *, "('INFO      : e/m   =',1pe15.8)" ) qom * bunit
+    write(*,"('INFO',6x,': q/m   =',1pe15.8,' [1/G·s] =',1pe15.8,' [1/G·T]')" )&
+                                                        qom, qom * tunit
 
-! convert units
+! convert q/m to the desired time units
 !
     qom   = qom * tunit
-    vunit = vunit / cc
 
-! convert plasma fields to desired units
+! set factors for the plasma velocity and magnetic field
 !
-    ux = vunit * ux
-    uy = vunit * uy
-    uz = vunit * uz
-    bx = bunit * bx
-    by = bunit * by
-    bz = bunit * bz
-
-! get domain dimensions
+    ufac  = vunit
+    bfac  = bunit
 !
-    call get_domain_dimensions(dm)
-
-#ifdef TRICUB
-    qm(:) = dm(:) + 2
-#else /* TRUCUB */
-    qm(:) = dm(:) + 1
-#endif /* TRUCUB */
-    if (dm(3) .eq. 1) qm(:) = 1
-
-! get domain bounds
+!-------------------------------------------------------------------------------
 !
-    call get_domain_bounds(bnds)
-
-! calculate the domain size
+  end subroutine initialize_particles
 !
-    do p = 1, 3
-      bsiz(p) = bnds(p,2) - bnds(p,1)
-    end do
+!===============================================================================
+!
+! subroutine GENERATE_PARTICLE:
+! ----------------------------
+!
+!   Subroutine generate the particle initial state (position and moment).
+!
+!   Arguments:
+!
+!     verbose - indicates if it should print any messages;
+!     status  - the status value: 0 - success, otherwise there was a problem;
+!
+!===============================================================================
+!
+  subroutine generate_particle(verbose, status)
+
+! import required modules
+!
+    use fields    , only : ux, uy, uz, bx, by, bz
+    use fields    , only : get_domain_dimensions, get_domain_bounds
+    use parameters, only : get_parameter
+
+    implicit none
+
+! subroutine arguments
+!
+    logical, intent(in)    :: verbose
+    integer, intent(inout) :: status
+
+! local variables
+!
+    real(kind=8) :: vpar  = 0.0d+00  ! the parallel component of the initial speed in c
+    real(kind=8) :: vper  = 1.0d-02  ! the perpendicular component of the initial speed in c
+    integer      :: p!, n
+
+! local variables
+!
+    real(kind=8) :: babs, vabs, lfac, grad, gper, gfrq, ener, ekin
+#ifdef ITEST
+    real(kind=8) :: xt, yt, rt, dl, ra, rb, ec
+#endif /* ITEST */
+    real(kind=8) :: bb, ub, uu, ww
+    real(kind=8), dimension(3) :: r, b, u, w
+
+! position indices
+!
+    integer     , dimension(4) :: ii, jj, kk
+    real(kind=8), dimension(4) :: cx, cy, cz
+    real(kind=8), dimension(3) :: dr
+!
+!-------------------------------------------------------------------------------
+!
+! get parameters
+!
+    call get_parameter('xc'    , x0(1))
+    call get_parameter('yc'    , x0(2))
+    call get_parameter('zc'    , x0(3))
+    call get_parameter('vpar'  , vpar)
+    call get_parameter('vper'  , vper)
+#ifdef TEST
+    call get_parameter('bini'  , bini)
+    call get_parameter('bamp'  , bamp)
+    call get_parameter('vamp'  , vamp)
+    call get_parameter('freq'  , freq)
+#ifdef ITEST
+    call get_parameter('bshr'  , bshr)
+    call get_parameter('vrat'  , vrat)
+    call get_parameter('epar'  , epar)
+#endif /* ITEST */
+#endif /* TEST */
+
+! calculate the particle initial parameters
+!
+    vabs = sqrt(vpar**2 + vper**2)
+    lfac = 1.0d+00 / sqrt(1.0d+00 - vabs**2)
+    grad = lfac * vper * c / (abs(qom) * bunit)
+    gper = pi2 * grad / (vper * c)
+    gfrq = abs(qom) * bunit
 
 #ifdef TEST
 #ifdef WTEST
@@ -384,13 +403,34 @@ module particles
 
 #endif /* ITEST */
 #else /* TEST */
+! get domain dimensions
+!
+    call get_domain_dimensions(dm)
+
+#ifdef TRICUB
+    qm(:) = dm(:) + 2
+#else /* TRUCUB */
+    qm(:) = dm(:) + 1
+#endif /* TRUCUB */
+    if (dm(3) .eq. 1) qm(:) = 1
+
+! get domain bounds
+!
+    call get_domain_bounds(bnds)
+
+! calculate the domain size
+!
+    do p = 1, 3
+      bsiz(p) = bnds(p,2) - bnds(p,1)
+    end do
+
 ! convert position to index
 !
-    call pos2index(x0, r0)
+    call pos2index(x0, r)
 
 ! prepare coefficients for interpolation
 !
-    call prepare_interpolation(r0, ii, jj, kk, dr, cx, cy, cz)
+    call prepare_interpolation(r, ii, jj, kk, dr, cx, cy, cz)
 
 ! interpolate field components at the particle position
 !
@@ -401,30 +441,28 @@ module particles
 
 ! calculate the direction of the local magnetic field
 !
-    bb = sqrt(dot_product(b, b))
-    ba = bb
-    if (bb .gt. 0.0d0) then
-      b(:) = b(:) / bb
+    babs = sqrt(dot_product(b, b))
+    if (babs > 0.0d+00) then
+      b(:) = b(:) / babs
     else
       write( *, "('ERROR     : ',a)" ) "B=0 at the initial position! Choose another one."
       stop
     endif
 
-#ifndef TEST
-! calculate the perpendicular unit vector
+! calculate a unit vector perpendicular to B
 !
-    if (dm(3) .eq. 1) then
-      w(1) = 0.0
-      w(2) = 0.0
-      w(3) = 1.0
+    if (dm(3) == 1) then
+      w(1) = 0.0d+00
+      w(2) = 0.0d+00
+      w(3) = 1.0d+00
     else
       call random_number(w)
-      w = w - 0.5
+      w = w - 0.5d+00
     end if
 
-    bb = sqrt(dot_product(w, w))
-    if (bb .gt. 0.0d0) then
-      w(:) = w(:) / bb
+    ww = sqrt(dot_product(w, w))
+    if (ww > 0.0d+00) then
+      w(:) = w(:) / ww
     else
       write( *, "('ERROR     : ',a)" ) "V=0 at the initial position! Choose another one."
       stop
@@ -434,26 +472,22 @@ module particles
     u(2) = w(3) * b(1) - w(1) * b(3)
     u(3) = w(1) * b(2) - w(2) * b(1)
 
-    bb = sqrt(dot_product(u, u))
-    if (bb .gt. 0.0d0) then
-      u(:) = u(:) / bb
+    uu = sqrt(dot_product(u, u))
+    if (uu > 0.0d+00) then
+      u(:) = u(:) / uu
     else
       write( *, "('ERROR     : ',a)" ) "V=0 at the initial position! Choose another one."
       stop
     end if
-#endif /* !TEST */
 
-! calculate the initial velocity
+! calculate the initial particle velocity vector
 !
     u0(:) = (vpar * b(:) + vper * u(:))
 
-! calculate the Lorentz factor of the initial state
-!
-    gm = 1.0d+00 / sqrt(1.0d+00 - dot_product(u0, u0))
-
 ! calculate the initial particle momentuum
 !
-    p0(:) = gm * u0(:)
+    lfac = 1.0d+00 / sqrt(1.0d+00 - dot_product(u0, u0))
+    p0(:) = lfac * u0(:)
 
 ! allow to set the particle moment explicitely
 !
@@ -461,34 +495,31 @@ module particles
     call get_parameter('py', p0(2))
     call get_parameter('pz', p0(3))
 
-    gm = lorentz_factor(p0(:))
-    u0(:) = p0(:) / gm
+    lfac = lorentz_factor(p0(:))
+    u0(:) = p0(:) / lfac
 
 ! calculate particle energy
 !
-    en = gm * mrest
-    ek = (gm - 1.0d+00) * mrest
-!
-!-------------------------------------------------------------------------------
-!
-  end subroutine init_particle
-!
-!===============================================================================
-!
-! finit_particle: subroutine deallocates the particle variables
-!
-!===============================================================================
-!
-  subroutine finit_particle()
+    ener = lfac * mrest
+    ekin = (lfac - 1.0d+00) * mrest
 
-    implicit none
+! print the particle initial parameters
+!
+    write(*,"('INFO',6x,': Vpar  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')") vpar, vpar * c
+    write(*,"('INFO',6x,': Vper  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')") vper, vper * c
+    write(*,"('INFO',6x,': |V|   =',1pe15.8,' [c] =',1pe15.8,' [m / s]')") vabs, vabs * c
+    write(*,"('INFO',6x,': gamma =',1pe15.8)"           ) lfac
+    write(*,"('INFO',6x,': Om    =',1pe15.8,' [1 / s]')") gfrq
+    write(*,"('INFO',6x,': Tg    =',1pe15.8,' [s]')"    ) gper
+    write(*,"('INFO',6x,': Rg    =',1pe15.8,' [m]')"    ) grad
+    write(*,"('INFO',6x,': E0    =',1pe15.8,' [MeV]')"  ) ener
+    write(*,"('INFO',6x,': Ek    =',1pe15.8,' [MeV]')"  ) ekin
+    write(*,"('INFO',6x,': Rg/L  =',1pe15.8)" ) grad / lunit
+    write(*,"('INFO',6x,': Tg/T  =',1pe15.8)" ) gper / tunit
 !
 !-------------------------------------------------------------------------------
 !
-
-!-------------------------------------------------------------------------------
-!
-  end subroutine finit_particle
+  end subroutine generate_particle
 !
 !===============================================================================
 !
