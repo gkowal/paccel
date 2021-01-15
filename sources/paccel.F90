@@ -50,7 +50,6 @@ program paccel
   write (*,'(a)') '===  Copyright (C) 2008-2021 Grzegorz Kowal =================================='
   write (*,*)
   write( *, "('TASK      : ',a)" ) "integrating the trajectory of a charged particle"
-  write( *, "('INFO      : ',a)" ) "reading parameters"
 
   call read_parameters(.true., status)
 
@@ -58,16 +57,12 @@ program paccel
   call initialize_fields(.true., status)
 #endif /* !TEST */
 
-  write( *, "('INFO      : ',a)" ) "initializing particle parameters"
   call initialize_particles(.true., status)
 
 #ifndef TEST
   call read_fields(.true., status)
 #endif /* !TEST */
 
-! initiate particles module
-!
-  write( *, "('INFO      : ',a)" ) "initializing the particle positions and velocities"
   call generate_particle(.true., status)
 
 ! get the integration method
@@ -111,7 +106,8 @@ program paccel
 
 ! deallocate field variables
 !
-  write( *, "('INFO      : ',a)" ) "deallocating the field components"
   call finalize_fields(.true.)
+
+!===============================================================================
 !
 end program paccel

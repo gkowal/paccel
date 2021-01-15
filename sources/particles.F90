@@ -138,6 +138,10 @@ module particles
 !
     status = 0
 
+! print info
+!
+    if (verbose) write(*,"('INFO',6x,': initializing particles')")
+
 ! get input parameters
 !
     call get_parameter('vunit' , vunit)
@@ -259,9 +263,10 @@ module particles
 
 ! local variables
 !
-    real(kind=8) :: vpar  = 0.0d+00  ! the parallel component of the initial speed in c
-    real(kind=8) :: vper  = 1.0d-02  ! the perpendicular component of the initial speed in c
-    integer      :: p!, n
+    real(kind=8) :: vpar  = 0.0d+00  ! the parallel and
+    real(kind=8) :: vper  = 1.0d-02  ! perpendicular component of
+                                     ! the initial speed in c
+    integer      :: p
 
 ! local variables
 !
@@ -280,6 +285,12 @@ module particles
 !
 !-------------------------------------------------------------------------------
 !
+    status = 0
+
+! print info
+!
+    if (verbose) write(*,"('INFO',6x,': initializing particle initial state')")
+
 ! get parameters
 !
     call get_parameter('xc'    , x0(1))

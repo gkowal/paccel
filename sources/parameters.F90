@@ -125,6 +125,10 @@ module parameters
 !
 !-------------------------------------------------------------------------------
 !
+! print info
+!
+    if (verbose) write(*,"('INFO',6x,': reading parameters')")
+
 ! parse the command line to check if a different parameter file has been
 ! provided
 !
