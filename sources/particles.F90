@@ -71,7 +71,7 @@ module particles
 
 ! arrays containing the initial positions and velocities of particle
 !
-  real(kind=8), dimension(3), save :: x0, u0, p0
+  real(kind=8), dimension(3), save :: x0, p0
 
 ! global parameters
 !
@@ -263,7 +263,7 @@ module particles
     real(kind=8) :: xt, yt, rt, dl, ra, rb, ec
 #endif /* ITEST */
     real(kind=8) :: bb, ub, uu, ww
-    real(kind=8), dimension(3) :: r, b, u, w
+    real(kind=8), dimension(3) :: r, b, u, w, v0
 !
 !-------------------------------------------------------------------------------
 !
@@ -444,12 +444,12 @@ module particles
 
 ! calculate the initial particle velocity vector
 !
-    u0(:) = (vpar * b(:) + vper * u(:))
+    v0(:) = (vpar * b(:) + vper * u(:))
 
 ! calculate the initial particle momentuum
 !
-    lfac = 1.0d+00 / sqrt(1.0d+00 - dot_product(u0, u0))
-    p0(:) = lfac * u0(:)
+    lfac = 1.0d+00 / sqrt(1.0d+00 - dot_product(v0, v0))
+    p0(:) = lfac * v0(:)
 
 ! allow to set the particle moment explicitely
 !
@@ -458,7 +458,6 @@ module particles
     call get_parameter('pz', p0(3))
 
     lfac = lorentz_factor(p0(:))
-    u0(:) = p0(:) / lfac
 
 ! calculate particle energy
 !
@@ -504,13 +503,12 @@ module particles
     integer                    :: n, m
     real(kind=8)               ::    t1, t2, t3, t4, t5
     real(kind=8), dimension(3) :: x, x1, x2, x3, x4, x5
-    real(kind=8), dimension(3) :: u, u1, u2, u3, u4, u5
     real(kind=8), dimension(3) :: p, p1, p2, p3, p4, p5
     real(kind=8), dimension(3) ::    k1, k2, k3, k4, k5
     real(kind=8), dimension(3) ::    l1, l2, l3, l4, l5
-    real(kind=8), dimension(3) :: s, a, v, b
+    real(kind=8), dimension(3) :: s, a, v, u, b
     real(kind=8)               :: gm, t, dt, dtn
-    real(kind=8)               :: en, ek, ua, ba, up, ur, om, tg, rg
+    real(kind=8)               :: ba, va, vp, vr, om, tg, rg, en, ek
     real(kind=8)               :: tol = 0.0d+00
 !
 !-------------------------------------------------------------------------------
@@ -522,27 +520,27 @@ module particles
     t  = 0.0d0
     dt = dtini
 
-! set the initial position, velocity, and momentum
+! set the initial position and momentum
 !
     x(:) = x0(:)
-    u(:) = u0(:)
     p(:) = p0(:)
+
+! calculate the Lorentz factor and particle speed
+!
+    gm = lorentz_factor(p(:))
+    v(:) = p(:) / gm
 
 ! calculate the acceleration at the initial position
 !
-    call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
+    call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
 
 ! separate the particle velocity into parallel and perpendicular components
 !
-    call separate_velocity(u(:), b(:), ba, ua, up, ur)
-
-! calculate the Lorentz factor
-!
-    gm = lorentz_factor(p(:))
+    call separate_velocity(v(:), b(:), ba, va, vp, vr)
 
 ! calculate the particle gyroperiod and gyroradius
 !
-    call gyro_parameters(gm, ba, ur, om, tg, rg)
+    call gyro_parameters(gm, ba, vr, om, tg, rg)
 
 ! calculate the particle energies
 !
@@ -554,7 +552,7 @@ module particles
     write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
                                              'GPERIOD', 'SPEED (c)',           &
                                              'ENERGY (MeV)'
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek, term
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek, term
 
 ! open the output file, print headers and the initial values
 !
@@ -565,8 +563,8 @@ module particles
                                  '<B> [Gs]', 'Omega [1/s]',                    &
                                  'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]',       &
                                  'Tolerance'
-    write(10,"(20(1es22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3),          &
-                               ua, up, ur, gm, en, ek,                         &
+    write(10,"(20(1es22.14))") t, x(1), x(2), x(3), v(1), v(2), v(3),          &
+                               va, vp, vr, gm, en, ek,                         &
                                bunit * ba, om / tunit, tg * tunit, rg * lunit, &
                                tg, rg, tol
 
@@ -584,17 +582,9 @@ module particles
       x1(:) = x(:)
       p1(:) = p(:)
 
-! calculate the Lorentz factor
-!
-      gm = lorentz_factor(p1(:))
-
-! calculate the velocity
-!
-      u1(:) = p1(:) / gm
-
 ! calculate the acceleration for the location x1 and velocity u1
 !
-      call acceleration(t1, x1(:), u1(:), s(:), a(:), v(:), b(:))
+      call acceleration(t1, x1(:), p1(:), s(:), a(:), u(:), b(:))
 
 ! calculate the first term
 !
@@ -609,17 +599,9 @@ module particles
       x2(:) = x(:) + 0.5d0 * l1(:)
       p2(:) = p(:) + 0.5d0 * k1(:)
 
-! calculate the Lorentz factor
-!
-      gm = lorentz_factor(p2(:))
-
-! calculate the velocity
-!
-      u2(:) = p2(:) / gm
-
 ! calculate the acceleration for the location x2 and velocity u2
 !
-      call acceleration(t2, x2(:), u2(:), s(:), a(:), v(:), b(:))
+      call acceleration(t2, x2(:), p2(:), s(:), a(:), u(:), b(:))
 
 ! calculate the second term
 !
@@ -634,17 +616,9 @@ module particles
       x3(:) = x(:) + 0.5d0 * l2(:)
       p3(:) = p(:) + 0.5d0 * k2(:)
 
-! calculate the Lorentz factor
-!
-      gm = lorentz_factor(p3(:))
-
-! calculate the velocity
-!
-      u3(:) = p3(:) / gm
-
 ! calculate the acceleration for the location x3 and velocity u3
 !
-      call acceleration(t3, x3(:), u3(:), s(:), a(:), v(:), b(:))
+      call acceleration(t3, x3(:), p3(:), s(:), a(:), u(:), b(:))
 
 ! calculate the third term
 !
@@ -659,17 +633,9 @@ module particles
       x4(:) = x(:) + l3(:)
       p4(:) = p(:) + k3(:)
 
-! calculate the Lorentz factor
-!
-      gm = lorentz_factor(p4(:))
-
-! calculate the velocity
-!
-      u4(:) = p4(:) / gm
-
 ! calculate the acceleration for the location x4 and velocity u4
 !
-      call acceleration(t4, x4(:), u4(:), s(:), a(:), v(:), b(:))
+      call acceleration(t4, x4(:), p4(:), s(:), a(:), u(:), b(:))
 
 ! calculate the third term
 !
@@ -682,17 +648,9 @@ module particles
       x5(:) = x(:) + ( l1(:) + 2.0d0 * ( l2(:) + l3(:) ) + l4(:) ) / 6.0d0
       p5(:) = p(:) + ( k1(:) + 2.0d0 * ( k2(:) + k3(:) ) + k4(:) ) / 6.0d0
 
-! calculate the Lorentz factor
-!
-      gm = lorentz_factor(p5(:))
-
-! calculate the velocity
-!
-      u5(:) = p5(:) / gm
-
 ! calculate the acceleration at the updated location
 !
-      call acceleration(t5, x5(:), u5(:), s(:), a(:), v(:), b(:))
+      call acceleration(t5, x5(:), p5(:), s(:), a(:), u(:), b(:))
 
 ! estimate the error for timestep control
 !
@@ -707,7 +665,7 @@ module particles
 
 ! check if the error is below desired tolerance
 !
-      if (tol .gt. maxtol) then
+      if (tol > maxtol) then
 
 ! repeat the integration with a new timestep
 !
@@ -727,10 +685,9 @@ module particles
 !
         dt = min(2.0d0 * dt, dtn, dtmax)
 
-! update the position, velocity and momentum
+! update the position and momentum
 !
         x(:) = x5(:)
-        u(:) = u5(:)
         p(:) = p5(:)
 
 ! if the boundaries are not periodic and particle is out of the box, stop
@@ -740,15 +697,20 @@ module particles
 
 ! store the current particle state
 !
-        if (m .eq. ndumps) then
+        if (m == ndumps) then
+
+! calculate the particle Lorentz factor and speed
+!
+          gm   = lorentz_factor(p(:))
+          v(:) = p(:) / gm
 
 ! separate the particle velocity into the parallel and perpendicular components
 !
-          call separate_velocity(u(:), b(:), ba, ua, up, ur)
+          call separate_velocity(v(:), b(:), ba, va, vp, vr)
 
 ! calculate the particle gyroperiod and gyroradius
 !
-          call gyro_parameters(gm, ba, ur, om, tg, rg)
+          call gyro_parameters(gm, ba, vr, om, tg, rg)
 
 ! calculate the particle energies
 !
@@ -757,13 +719,13 @@ module particles
 
 ! print the progress
 !
-          write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua,  &
+          write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va,  &
                                                             ek, term
 
 ! store the particle parameters
 !
-          write(10,"(20(1es22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3),    &
-                                     ua, up, ur, gm, en, ek,                   &
+          write(10,"(20(1es22.14))") t, x(1), x(2), x(3), v(1), v(2), v(3),    &
+                                     va, vp, vr, gm, en, ek,                   &
                                      bunit * ba, om / tunit, tg * tunit,       &
                                      rg * lunit, tg, rg, tol
 
@@ -782,13 +744,18 @@ module particles
 
     end do
 
+! calculate the particle Lorentz factor and speed
+!
+    gm   = lorentz_factor(p(:))
+    v(:) = p(:) / gm
+
 ! separate the particle velocity into the parallel and perpendicular components
 !
-    call separate_velocity(u(:), b(:), ba, ua, up, ur)
+    call separate_velocity(v(:), b(:), ba, va, vp, vr)
 
 ! calculate the particle gyroperiod and gyroradius
 !
-    call gyro_parameters(gm, ba, ur, om, tg, rg)
+    call gyro_parameters(gm, ba, vr, om, tg, rg)
 
 ! calculate the particle energies
 !
@@ -797,12 +764,12 @@ module particles
 
 ! print the progress
 !
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, ua, ek
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, va, ek
 
 ! store the particle parameters
 !
-    write(10,"(20(1es22.14))") t, x(1), x(2), x(3), u(1), u(2), u(3),          &
-                               ua, up, ur, gm, en, ek,                         &
+    write(10,"(20(1es22.14))") t, x(1), x(2), x(3), v(1), v(2), v(3),          &
+                               va, vp, vr, gm, en, ek,                         &
                                bunit * ba, om / tunit, tg * tunit,             &
                                rg * lunit, tg, rg, tol
     close (10)
@@ -838,12 +805,11 @@ module particles
     integer                        :: n, m, i = 0, mi, ti, k
     real(kind=8), dimension(2,6)   :: z
     real(kind=8), dimension(5,2,6) :: zp
-    real(kind=8), dimension(3)     :: x, u, p, s, a
+    real(kind=8), dimension(3)     :: x, v, p, s, a, u, b
     real(kind=8), dimension(3)     :: xc, xe, xs
     real(kind=8), dimension(3)     :: pc, pe, ps
-    real(kind=8), dimension(3)     :: v, b
     real(kind=8)                   :: gm, t, dt, tc, te, ts
-    real(kind=8)                   :: en, ek, ua, ba, up, ur, om, tg, rg
+    real(kind=8)                   :: ba, va, vp, vr, om, tg, rg, en, ek
     real(kind=8)                   :: tol = 0.0d+00
 
 ! local flags
@@ -882,26 +848,26 @@ module particles
 ! substitute the initial position, velocity, and momentum
 !
     x(:) = x0(:)
-    u(:) = u0(:)
     p(:) = p0(:)
 
-! calculate the acceleration at the starting point
-!
-    call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
-
-! separate particle velocity into parallel and perpendicular components
-!
-    call separate_velocity(u(:), b(:), ba, ua, up, ur)
-
-! calculate the Lorentz factor
+! calculate the Lorentz factor and particle speed
 !
     gm = lorentz_factor(p(:))
+    v(:) = p(:) / gm
+
+! calculate the acceleration at the initial position
+!
+    call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
+
+! separate the particle velocity into parallel and perpendicular components
+!
+    call separate_velocity(v(:), b(:), ba, va, vp, vr)
 
 ! calculate the particle gyroperiod and gyroradius
 !
-    call gyro_parameters(gm, ba, ur, om, tg, rg)
+    call gyro_parameters(gm, ba, vr, om, tg, rg)
 
-! calculate the particle energy
+! calculate the particle energies
 !
     en = gm * mrest
     ek = en - mrest
@@ -911,7 +877,7 @@ module particles
     write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
                                              'GPERIOD', 'SPEED (c)',           &
                                              'ENERGY (MeV)'
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek, term
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek, term
 
 ! open the output file, print headers and the initial values
 !
@@ -921,8 +887,8 @@ module particles
                                  'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
                                  'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
                                  'Rg [L]', 'Tolerance', 'Iterations'
-    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),      &
-                                   ua, up, ur, gm, en, ek, bunit * ba,         &
+    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),      &
+                                   va, vp, vr, gm, en, ek, bunit * ba,         &
                                    om / tunit, tg * tunit, rg * lunit, tg, rg, &
                                    tol, i
 
@@ -1010,19 +976,19 @@ module particles
 ! calculate the Lorentz factor and particle velocity
 !
         gm   = lorentz_factor(p(:))
-        u(:) = p(:) / gm
+        v(:) = p(:) / gm
 
 ! calculate the acceleration at the locations x1 and x2
 !
-        call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
+        call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
 
 ! separate particle velocity into parallel and perpendicular components
 !
-        call separate_velocity(u(:), b(:), ba, ua, up, ur)
+        call separate_velocity(v(:), b(:), ba, va, vp, vr)
 
 ! calculate the particle gyroperiod and gyroradius
 !
-        call gyro_parameters(gm, ba, ur, om, tg, rg)
+        call gyro_parameters(gm, ba, vr, om, tg, rg)
 
 ! calculate particle energy
 !
@@ -1031,13 +997,13 @@ module particles
 
 ! print the progress
 !
-        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek,&
+        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek,&
                                                           term
 
 ! write results to the output file
 !
-        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),  &
-                                       ua, up, ur, gm, en, ek, bunit * ba,     &
+        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),  &
+                                       va, vp, vr, gm, en, ek, bunit * ba,     &
                                        om / tunit, tg * tunit, rg * lunit, tg, &
                                        rg, tol, i
 
@@ -1058,7 +1024,7 @@ module particles
 
 ! print the progress
 !
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, ua, ek
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, va, ek
 
 ! write info about the estimator
 !
@@ -1100,12 +1066,11 @@ module particles
     real(kind=8), dimension(2,6)   :: z
     real(kind=8), dimension(5,2,6) :: zp
     real(kind=8), dimension(5)     :: hp
-    real(kind=8), dimension(3)     :: x, u, p, s, a
+    real(kind=8), dimension(3)     :: x, v, p, s, a, u, b
     real(kind=8), dimension(3)     :: xc, xe, xs
     real(kind=8), dimension(3)     :: pc, pe, ps
-    real(kind=8), dimension(3)     :: v, b
     real(kind=8)                   :: gm, t, dt, dtp, tc, te, ts
-    real(kind=8)                   :: en, ek, ua, ba, up, ur, om, tg, rg
+    real(kind=8)                   :: ba, va, vp, vr, om, tg, rg, en, ek
     real(kind=8)                   :: tol = 0.0d+00
 
 ! local flags
@@ -1144,26 +1109,26 @@ module particles
 ! substitute the initial position, velocity, and momentum
 !
     x(:) = x0(:)
-    u(:) = u0(:)
     p(:) = p0(:)
 
-! calculate the acceleration at the starting point
-!
-    call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
-
-! separate particle velocity into parallel and perpendicular components
-!
-    call separate_velocity(u(:), b(:), ba, ua, up, ur)
-
-! calculate the Lorentz factor
+! calculate the Lorentz factor and particle speed
 !
     gm = lorentz_factor(p(:))
+    v(:) = p(:) / gm
+
+! calculate the acceleration at the initial position
+!
+    call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
+
+! separate the particle velocity into parallel and perpendicular components
+!
+    call separate_velocity(v(:), b(:), ba, va, vp, vr)
 
 ! calculate the particle gyroperiod and gyroradius
 !
-    call gyro_parameters(gm, ba, ur, om, tg, rg)
+    call gyro_parameters(gm, ba, vr, om, tg, rg)
 
-! calculate the particle energy
+! calculate the particle energies
 !
     en = gm * mrest
     ek = en - mrest
@@ -1173,7 +1138,7 @@ module particles
     write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
                                              'GPERIOD', 'SPEED (c)',           &
                                              'ENERGY (MeV)'
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek, term
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek, term
 
 ! open the output file, print headers and the initial values
 !
@@ -1183,8 +1148,8 @@ module particles
                                  'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
                                  'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
                                  'Rg [L]', 'Tolerance', 'Iterations'
-    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),      &
-                                   ua, up, ur, gm, en, ek, bunit * ba,         &
+    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),      &
+                                   va, vp, vr, gm, en, ek, bunit * ba,         &
                                    om / tunit, tg * tunit, rg * lunit, tg, rg, &
                                    tol, i
 
@@ -1270,19 +1235,19 @@ module particles
 ! calculate the Lorentz factor and particle velocity
 !
         gm   = lorentz_factor(p(:))
-        u(:) = p(:) / gm
+        v(:) = p(:) / gm
 
 ! calculate the acceleration at the locations x1 and x2
 !
-        call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
+        call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
 
 ! separate particle velocity into parallel and perpendicular components
 !
-        call separate_velocity(u(:), b(:), ba, ua, up, ur)
+        call separate_velocity(v(:), b(:), ba, va, vp, vr)
 
 ! calculate the particle gyroperiod and gyroradius
 !
-        call gyro_parameters(gm, ba, ur, om, tg, rg)
+        call gyro_parameters(gm, ba, vr, om, tg, rg)
 
 ! calculate particle energy
 !
@@ -1291,13 +1256,13 @@ module particles
 
 ! print the progress
 !
-        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek,&
+        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek,&
                                                           term
 
 ! write results to the output file
 !
-        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),  &
-                                       ua, up, ur, gm, en, ek, bunit * ba,     &
+        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),  &
+                                       va, vp, vr, gm, en, ek, bunit * ba,     &
                                        om / tunit, tg * tunit, rg * lunit, tg, &
                                        rg, tol, i
 
@@ -1324,7 +1289,7 @@ module particles
 
 ! print the progress
 !
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, ua, ek
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, va, ek
 
 ! write info about the estimator
 !
@@ -1367,8 +1332,8 @@ module particles
 !
     integer                      :: i
     real(kind=8), dimension(2,6) :: zn
-    real(kind=8), dimension(2,3) :: ui, si, ai
-    real(kind=8), dimension(3)   :: xi, pi, xm, pm, v, b
+    real(kind=8), dimension(2,3) :: si, ai
+    real(kind=8), dimension(3)   :: xi, pi, xm, pm, u, b
     real(kind=8), dimension(2)   :: ti
     real(kind=8)                 :: lf
 
@@ -1409,14 +1374,9 @@ module particles
         xi(1:3) = x(:) + z(i,1:3)
         pi(1:3) = p(:) + z(i,4:6)
 
-! convert particle momentum to velocity
-!
-        lf        = lorentz_factor(pi(1:3))
-        ui(i,1:3) = pi(1:3) / lf
-
 ! get acceleration for the current state
 !
-        call acceleration(ti(i), xi(1:3), ui(i,1:3), si(i,1:3), ai(i,1:3), v(:), b(:))
+        call acceleration(ti(i), xi(1:3), pi(1:3), si(i,1:3), ai(i,1:3), u(:), b(:))
 
       end do
 
@@ -1477,12 +1437,11 @@ module particles
     integer                        :: n, m, i = 0, mi, ti, k
     real(kind=8), dimension(3,6)   :: z
     real(kind=8), dimension(5,3,6) :: zp
-    real(kind=8), dimension(3)     :: x, u, p, s, a
+    real(kind=8), dimension(3)     :: x, v, p, s, a, u, b
     real(kind=8), dimension(3)     :: xc, xe, xs
     real(kind=8), dimension(3)     :: pc, pe, ps
-    real(kind=8), dimension(3)     :: v, b
     real(kind=8)                   :: gm, t, dt, tc, te, ts
-    real(kind=8)                   :: en, ek, ua, ba, up, ur, om, tg, rg
+    real(kind=8)                   :: ba, va, vp, vr, om, tg, rg, en, ek
     real(kind=8)                   :: tol = 0.0d+00
 
 ! local parameters
@@ -1516,26 +1475,26 @@ module particles
 ! substitute the initial position, velocity, and momentum
 !
     x(:) = x0(:)
-    u(:) = u0(:)
     p(:) = p0(:)
 
-! calculate the acceleration at the starting point
-!
-    call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
-
-! separate particle velocity into parallel and perpendicular components
-!
-    call separate_velocity(u(:), b(:), ba, ua, up, ur)
-
-! calculate the Lorentz factor
+! calculate the Lorentz factor and particle speed
 !
     gm = lorentz_factor(p(:))
+    v(:) = p(:) / gm
+
+! calculate the acceleration at the initial position
+!
+    call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
+
+! separate the particle velocity into parallel and perpendicular components
+!
+    call separate_velocity(v(:), b(:), ba, va, vp, vr)
 
 ! calculate the particle gyroperiod and gyroradius
 !
-    call gyro_parameters(gm, ba, ur, om, tg, rg)
+    call gyro_parameters(gm, ba, vr, om, tg, rg)
 
-! calculate the particle energy
+! calculate the particle energies
 !
     en = gm * mrest
     ek = en - mrest
@@ -1545,7 +1504,7 @@ module particles
     write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
                                              'GPERIOD', 'SPEED (c)',           &
                                              'ENERGY (MeV)'
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek, term
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek, term
 
 ! open the output file, print headers and the initial values
 !
@@ -1555,8 +1514,8 @@ module particles
                                  'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
                                  'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
                                  'Rg [L]', 'Tolerance', 'Iterations'
-    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),      &
-                                   ua, up, ur, gm, en, ek, bunit * ba,         &
+    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),      &
+                                   va, vp, vr, gm, en, ek, bunit * ba,         &
                                    om / tunit, tg * tunit, rg * lunit, tg, rg, &
                                    tol, i
 
@@ -1644,19 +1603,19 @@ module particles
 ! calculate the Lorentz factor and particle velocity
 !
         gm   = lorentz_factor(p(:))
-        u(:) = p(:) / gm
+        v(:) = p(:) / gm
 
 ! calculate the acceleration at the locations x1 and x2
 !
-        call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
+        call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
 
 ! separate particle velocity into parallel and perpendicular components
 !
-        call separate_velocity(u(:), b(:), ba, ua, up, ur)
+        call separate_velocity(v(:), b(:), ba, va, vp, vr)
 
 ! calculate the particle gyroperiod and gyroradius
 !
-        call gyro_parameters(gm, ba, ur, om, tg, rg)
+        call gyro_parameters(gm, ba, vr, om, tg, rg)
 
 ! calculate particle energy
 !
@@ -1665,13 +1624,13 @@ module particles
 
 ! print the progress
 !
-        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek,&
+        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek,&
                                                           term
 
 ! write results to the output file
 !
-        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),  &
-                                       ua, up, ur, gm, en, ek, bunit * ba,     &
+        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),  &
+                                       va, vp, vr, gm, en, ek, bunit * ba,     &
                                        om / tunit, tg * tunit, rg * lunit, tg, &
                                        rg, tol, i
 
@@ -1692,7 +1651,7 @@ module particles
 
 ! print the progress
 !
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, ua, ek
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, va, ek
 
 ! write info about the estimator
 !
@@ -1735,12 +1694,11 @@ module particles
     real(kind=8), dimension(3,6)   :: z
     real(kind=8), dimension(5,3,6) :: zp
     real(kind=8), dimension(5)     :: hp
-    real(kind=8), dimension(3)     :: x, u, p, s, a
+    real(kind=8), dimension(3)     :: x, v, p, s, a, u, b
     real(kind=8), dimension(3)     :: xc, xe, xs
     real(kind=8), dimension(3)     :: pc, pe, ps
-    real(kind=8), dimension(3)     :: v, b
     real(kind=8)                   :: gm, t, dt, dtp, tc, te, ts
-    real(kind=8)                   :: en, ek, ua, ba, up, ur, om, tg, rg
+    real(kind=8)                   :: ba, va, vp, vr, om, tg, rg, en, ek
     real(kind=8)                   :: tol = 0.0d+00
 
 ! local parameters
@@ -1774,26 +1732,26 @@ module particles
 ! substitute the initial position, velocity, and momentum
 !
     x(:) = x0(:)
-    u(:) = u0(:)
     p(:) = p0(:)
 
-! calculate the acceleration at the starting point
-!
-    call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
-
-! separate particle velocity into parallel and perpendicular components
-!
-    call separate_velocity(u(:), b(:), ba, ua, up, ur)
-
-! calculate the Lorentz factor
+! calculate the Lorentz factor and particle speed
 !
     gm = lorentz_factor(p(:))
+    v(:) = p(:) / gm
+
+! calculate the acceleration at the initial position
+!
+    call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
+
+! separate the particle velocity into parallel and perpendicular components
+!
+    call separate_velocity(v(:), b(:), ba, va, vp, vr)
 
 ! calculate the particle gyroperiod and gyroradius
 !
-    call gyro_parameters(gm, ba, ur, om, tg, rg)
+    call gyro_parameters(gm, ba, vr, om, tg, rg)
 
-! calculate the particle energy
+! calculate the particle energies
 !
     en = gm * mrest
     ek = en - mrest
@@ -1803,7 +1761,7 @@ module particles
     write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
                                              'GPERIOD', 'SPEED (c)',           &
                                              'ENERGY (MeV)'
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek, term
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek, term
 
 ! open the output file, print headers and the initial values
 !
@@ -1813,8 +1771,8 @@ module particles
                                  'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
                                  'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
                                  'Rg [L]', 'Tolerance', 'Iterations'
-    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),      &
-                                   ua, up, ur, gm, en, ek, bunit * ba,         &
+    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),      &
+                                   va, vp, vr, gm, en, ek, bunit * ba,         &
                                    om / tunit, tg * tunit, rg * lunit, tg, rg, &
                                    tol, i
 
@@ -1901,19 +1859,19 @@ module particles
 ! calculate the Lorentz factor and particle velocity
 !
         gm   = lorentz_factor(p(:))
-        u(:) = p(:) / gm
+        v(:) = p(:) / gm
 
 ! calculate the acceleration at the locations x1 and x2
 !
-        call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
+        call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
 
 ! separate particle velocity into parallel and perpendicular components
 !
-        call separate_velocity(u(:), b(:), ba, ua, up, ur)
+        call separate_velocity(v(:), b(:), ba, va, vp, vr)
 
 ! calculate the particle gyroperiod and gyroradius
 !
-        call gyro_parameters(gm, ba, ur, om, tg, rg)
+        call gyro_parameters(gm, ba, vr, om, tg, rg)
 
 ! calculate particle energy
 !
@@ -1922,13 +1880,13 @@ module particles
 
 ! print the progress
 !
-        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek,&
+        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek,&
                                                           term
 
 ! write results to the output file
 !
-        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),  &
-                                       ua, up, ur, gm, en, ek, bunit * ba,     &
+        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),  &
+                                       va, vp, vr, gm, en, ek, bunit * ba,     &
                                        om / tunit, tg * tunit, rg * lunit, tg, &
                                        rg, tol, i
 
@@ -1955,7 +1913,7 @@ module particles
 
 ! print the progress
 !
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, ua, ek
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, va, ek
 
 ! write info about the estimator
 !
@@ -1998,8 +1956,8 @@ module particles
 !
     integer                      :: i
     real(kind=8), dimension(3,6) :: zn
-    real(kind=8), dimension(3,3) :: ui, si, ai
-    real(kind=8), dimension(3)   :: xi, pi, xm, pm, v, b
+    real(kind=8), dimension(3,3) :: si, ai
+    real(kind=8), dimension(3)   :: xi, pi, xm, pm, u, b
     real(kind=8), dimension(3)   :: ti
     real(kind=8)                 :: lf
 
@@ -2050,14 +2008,9 @@ module particles
         xi(1:3) = x(:) + z(i,1:3)
         pi(1:3) = p(:) + z(i,4:6)
 
-! convert particle momentum to velocity
-!
-        lf        = lorentz_factor(pi(1:3))
-        ui(i,1:3) = pi(1:3) / lf
-
 ! get acceleration for the current state
 !
-        call acceleration(ti(i), xi(1:3), ui(i,1:3), si(i,1:3), ai(i,1:3), v(:), b(:))
+        call acceleration(ti(i), xi(1:3), pi(1:3), si(i,1:3), ai(i,1:3), u(:), b(:))
 
       end do
 
@@ -2120,12 +2073,11 @@ module particles
     integer                        :: n, m, i = 0, mi, ti, k
     real(kind=8), dimension(4,6)   :: z
     real(kind=8), dimension(5,4,6) :: zp
-    real(kind=8), dimension(3)     :: x, u, p, s, a
+    real(kind=8), dimension(3)     :: x, v, p, s, a, u, b
     real(kind=8), dimension(3)     :: xc, xe, xs
     real(kind=8), dimension(3)     :: pc, pe, ps
-    real(kind=8), dimension(3)     :: v, b
     real(kind=8)                   :: gm, t, dt, tc, te, ts
-    real(kind=8)                   :: en, ek, ua, ba, up, ur, om, tg, rg
+    real(kind=8)                   :: ba, va, vp, vr, om, tg, rg, en, ek
     real(kind=8)                   :: tol = 0.0d+00
 
 ! local parameters, Butcher's coefficients c_i and Sans-Serna & Calvo's
@@ -2159,26 +2111,26 @@ module particles
 ! substitute the initial position, velocity, and momentum
 !
     x(:) = x0(:)
-    u(:) = u0(:)
     p(:) = p0(:)
 
-! calculate the acceleration at the starting point
-!
-    call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
-
-! separate particle velocity into parallel and perpendicular components
-!
-    call separate_velocity(u(:), b(:), ba, ua, up, ur)
-
-! calculate the Lorentz factor
+! calculate the Lorentz factor and particle speed
 !
     gm = lorentz_factor(p(:))
+    v(:) = p(:) / gm
+
+! calculate the acceleration at the initial position
+!
+    call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
+
+! separate the particle velocity into parallel and perpendicular components
+!
+    call separate_velocity(v(:), b(:), ba, va, vp, vr)
 
 ! calculate the particle gyroperiod and gyroradius
 !
-    call gyro_parameters(gm, ba, ur, om, tg, rg)
+    call gyro_parameters(gm, ba, vr, om, tg, rg)
 
-! calculate the particle energy
+! calculate the particle energies
 !
     en = gm * mrest
     ek = en - mrest
@@ -2188,7 +2140,7 @@ module particles
     write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
                                              'GPERIOD', 'SPEED (c)',           &
                                              'ENERGY (MeV)'
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek, term
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek, term
 
 ! open the output file, print headers and the initial values
 !
@@ -2198,8 +2150,8 @@ module particles
                                  'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
                                  'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
                                  'Rg [L]', 'Tolerance', 'Iterations'
-    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),      &
-                                   ua, up, ur, gm, en, ek, bunit * ba,         &
+    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),      &
+                                   va, vp, vr, gm, en, ek, bunit * ba,         &
                                    om / tunit, tg * tunit, rg * lunit, tg, rg, &
                                    tol, i
 
@@ -2289,19 +2241,19 @@ module particles
 ! calculate the Lorentz factor and particle velocity
 !
         gm   = lorentz_factor(p(:))
-        u(:) = p(:) / gm
+        v(:) = p(:) / gm
 
 ! calculate the acceleration at the locations x1 and x2
 !
-        call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
+        call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
 
 ! separate particle velocity into parallel and perpendicular components
 !
-        call separate_velocity(u(:), b(:), ba, ua, up, ur)
+        call separate_velocity(v(:), b(:), ba, va, vp, vr)
 
 ! calculate the particle gyroperiod and gyroradius
 !
-        call gyro_parameters(gm, ba, ur, om, tg, rg)
+        call gyro_parameters(gm, ba, vr, om, tg, rg)
 
 ! calculate particle energy
 !
@@ -2310,13 +2262,13 @@ module particles
 
 ! print the progress
 !
-        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek,&
+        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek,&
                                                           term
 
 ! write results to the output file
 !
-        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),  &
-                                       ua, up, ur, gm, en, ek, bunit * ba,     &
+        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),  &
+                                       va, vp, vr, gm, en, ek, bunit * ba,     &
                                        om / tunit, tg * tunit, rg * lunit, tg, &
                                        rg, tol, i
 
@@ -2337,7 +2289,7 @@ module particles
 
 ! print the progress
 !
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, ua, ek
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, va, ek
 
 ! write info about the estimator
 !
@@ -2380,12 +2332,11 @@ module particles
     real(kind=8), dimension(4,6)   :: z
     real(kind=8), dimension(5,4,6) :: zp
     real(kind=8), dimension(5)     :: hp
-    real(kind=8), dimension(3)     :: x, u, p, s, a
+    real(kind=8), dimension(3)     :: x, v, p, s, a, u, b
     real(kind=8), dimension(3)     :: xc, xe, xs
     real(kind=8), dimension(3)     :: pc, pe, ps
-    real(kind=8), dimension(3)     :: v, b
     real(kind=8)                   :: gm, t, dt, dtp, tc, te, ts
-    real(kind=8)                   :: en, ek, ua, ba, up, ur, om, tg, rg
+    real(kind=8)                   :: ba, va, vp, vr, om, tg, rg, en, ek
     real(kind=8)                   :: tol = 0.0d+00
 
 ! local parameters, Butcher's coefficients c_i and Sans-Serna & Calvo's
@@ -2419,26 +2370,26 @@ module particles
 ! substitute the initial position, velocity, and momentum
 !
     x(:) = x0(:)
-    u(:) = u0(:)
     p(:) = p0(:)
 
-! calculate the acceleration at the starting point
-!
-    call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
-
-! separate particle velocity into parallel and perpendicular components
-!
-    call separate_velocity(u(:), b(:), ba, ua, up, ur)
-
-! calculate the Lorentz factor
+! calculate the Lorentz factor and particle speed
 !
     gm = lorentz_factor(p(:))
+    v(:) = p(:) / gm
+
+! calculate the acceleration at the initial position
+!
+    call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
+
+! separate the particle velocity into parallel and perpendicular components
+!
+    call separate_velocity(v(:), b(:), ba, va, vp, vr)
 
 ! calculate the particle gyroperiod and gyroradius
 !
-    call gyro_parameters(gm, ba, ur, om, tg, rg)
+    call gyro_parameters(gm, ba, vr, om, tg, rg)
 
-! calculate the particle energy
+! calculate the particle energies
 !
     en = gm * mrest
     ek = en - mrest
@@ -2448,7 +2399,7 @@ module particles
     write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
                                              'GPERIOD', 'SPEED (c)',           &
                                              'ENERGY (MeV)'
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek, term
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek, term
 
 ! open the output file, print headers and the initial values
 !
@@ -2458,8 +2409,8 @@ module particles
                                  'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
                                  'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
                                  'Rg [L]', 'Tolerance', 'Iterations'
-    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),      &
-                                   ua, up, ur, gm, en, ek, bunit * ba,         &
+    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),      &
+                                   va, vp, vr, gm, en, ek, bunit * ba,         &
                                    om / tunit, tg * tunit, rg * lunit, tg, rg, &
                                    tol, i
 
@@ -2548,19 +2499,19 @@ module particles
 ! calculate the Lorentz factor and particle velocity
 !
         gm   = lorentz_factor(p(:))
-        u(:) = p(:) / gm
+        v(:) = p(:) / gm
 
 ! calculate the acceleration at the locations x1 and x2
 !
-        call acceleration(t, x(:), u(:), s(:), a(:), v(:), b(:))
+        call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
 
 ! separate particle velocity into parallel and perpendicular components
 !
-        call separate_velocity(u(:), b(:), ba, ua, up, ur)
+        call separate_velocity(v(:), b(:), ba, va, vp, vr)
 
 ! calculate the particle gyroperiod and gyroradius
 !
-        call gyro_parameters(gm, ba, ur, om, tg, rg)
+        call gyro_parameters(gm, ba, vr, om, tg, rg)
 
 ! calculate particle energy
 !
@@ -2569,13 +2520,13 @@ module particles
 
 ! print the progress
 !
-        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, ua, ek,&
+        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek,&
                                                           term
 
 ! write results to the output file
 !
-        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), u(1), u(2), u(3),  &
-                                       ua, up, ur, gm, en, ek, bunit * ba,     &
+        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),  &
+                                       va, vp, vr, gm, en, ek, bunit * ba,     &
                                        om / tunit, tg * tunit, rg * lunit, tg, &
                                        rg, tol, i
 
@@ -2602,7 +2553,7 @@ module particles
 
 ! print the progress
 !
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, ua, ek
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, va, ek
 
 ! write info about the estimator
 !
@@ -2645,8 +2596,8 @@ module particles
 !
     integer                      :: i
     real(kind=8), dimension(4,6) :: zn
-    real(kind=8), dimension(4,3) :: ui, si, ai
-    real(kind=8), dimension(3)   :: xi, pi, xm, pm, v, b
+    real(kind=8), dimension(4,3) :: si, ai
+    real(kind=8), dimension(3)   :: xi, pi, xm, pm, u, b
     real(kind=8), dimension(4)   :: ti
     real(kind=8)                 :: lf
 
@@ -2705,14 +2656,9 @@ module particles
         xi(1:3) = x(:) + z(i,1:3)
         pi(1:3) = p(:) + z(i,4:6)
 
-! convert particle momentum to velocity
-!
-        lf        = lorentz_factor(pi(1:3))
-        ui(i,1:3) = pi(1:3) / lf
-
 ! get acceleration for the current state
 !
-        call acceleration(ti(i), xi(1:3), ui(i,1:3), si(i,1:3), ai(i,1:3), v(:), b(:))
+        call acceleration(ti(i), xi(1:3), pi(1:3), si(i,1:3), ai(i,1:3), u(:), b(:))
 
       end do
 
@@ -2759,25 +2705,33 @@ module particles
 !
 !===============================================================================
 !
-! acceleration: subroutine calculates acceleration vector at a given location
+! subroutine ACCELERATION:
+! -----------------------
+!
+!   Subroutine calculates the acceleration terms for a given state.
+!
+!   Arguments:
+!
+!     t    - the time;
+!     x, p - the particle state (position and momentum);
+!     s, a - the acceleration terms;
+!     u, b - the interpolated values of plasma velocity and magnetic field;
 !
 !===============================================================================
 !
-  subroutine acceleration(t, x, v, s, a, u, b)
-
-    use fields, only : ux, uy, uz, bx, by, bz
+  subroutine acceleration(t, x, p, s, a, u, b)
 
     implicit none
 
-! input and output arguments
+! subroutine arguments
 !
     real(kind=8)              , intent(in)  :: t
-    real(kind=8), dimension(3), intent(in)  :: x, v
+    real(kind=8), dimension(3), intent(in)  :: x, p
     real(kind=8), dimension(3), intent(out) :: s, a, u, b
 
 ! local variables
 !
-    real(kind=8), dimension(3) :: w
+    real(kind=8), dimension(3) :: v, w
 #ifdef ITEST
     real(kind=8)               :: dl, ra, rb, xt, yt, rt
 #endif /* ITEST */
@@ -2786,62 +2740,66 @@ module particles
 !
 #ifdef TEST
 #ifdef WTEST
-        u(1) =   0.0d+00
-        u(2) = - vamp * sin(pi2 * freq * x(1))
-        u(3) =   0.0d+00
+    u(1) =   0.0d+00
+    u(2) = - vamp * sin(pi2 * freq * x(1))
+    u(3) =   0.0d+00
 
-        b(1) =   bpar
-        b(2) =   bamp * cos(pi2 * freq * x(1))
-        b(3) =   bamp * sin(pi2 * freq * x(1))
+    b(1) =   bpar
+    b(2) =   bamp * cos(pi2 * freq * x(1))
+    b(3) =   bamp * sin(pi2 * freq * x(1))
 #endif /* WTEST */
 #ifdef ITEST
 ! calculate the local velocity
 !
-        u(1) =      - vamp * x(1)
-        u(2) = vrat * vamp * x(2)
-        u(3) = 0.0d0
+    u(1) =      - vamp * x(1)
+    u(2) = vrat * vamp * x(2)
+    u(3) = 0.0d0
 
 ! calculate the local magnetic field
 !
-        dl   = bamp / bini
-        ra   = 1.0d0 + dl
-        rb   = 1.0d0 - dl
+    dl   = bamp / bini
+    ra   = 1.0d0 + dl
+    rb   = 1.0d0 - dl
 
-        xt   = x(1) / ra
-        yt   = x(2) / rb
+    xt   = x(1) / ra
+    yt   = x(2) / rb
 
-        rt   = dsqrt(xt * xt + yt * yt)
+    rt   = dsqrt(xt * xt + yt * yt)
 
-        if (rt .gt. 0.0d0) then
-          b(1) =   yt / rb / rt * bini
-          b(2) = - xt / ra / rt * bini
-          b(3) = bshr
-        else
-          b(1) = 0.0d0
-          b(2) = 0.0d0
-          b(3) = bshr
-        end if
+    if (rt .gt. 0.0d0) then
+      b(1) =   yt / rb / rt * bini
+      b(2) = - xt / ra / rt * bini
+      b(3) = bshr
+    else
+      b(1) = 0.0d0
+      b(2) = 0.0d0
+      b(3) = bshr
+    end if
 #endif /* ITEST */
 #else /* TEST */
 ! get plasma field components
 !
-        call fields(x(:), u(:), b(:))
+    call fields(x(:), u(:), b(:))
 #endif /* TEST */
+
+! get the particle speed from its momentum
+!
+    v(:) = p(:) / lorentz_factor(p(:))
+
+! normalize the speed to get position in the code units
+!
+    s(:) = v(:) / vunit
 
 ! subtract the fluid velocity
 !
-        w(:) = v(:) - u(:)
-
-! normalize the speed
-!
-        s(:) = v(:) / vunit
+    w(:) = v(:) - u(:)
 
 ! compute the acceleration
 !
-        a(1) = qom * (w(2) * b(3) - w(3) * b(2))
-        a(2) = qom * (w(3) * b(1) - w(1) * b(3))
-        a(3) = qom * (w(1) * b(2) - w(2) * b(1))
-!
+    a(1) = qom * (w(2) * b(3) - w(3) * b(2))
+    a(2) = qom * (w(3) * b(1) - w(1) * b(3))
+    a(3) = qom * (w(1) * b(2) - w(2) * b(1))
+
 !-------------------------------------------------------------------------------
 !
   end subroutine acceleration
