@@ -435,19 +435,9 @@ module particles
       bsiz(p) = bnds(p,2) - bnds(p,1)
     end do
 
-! convert position to index
+! get plasma field components
 !
-    call pos2index(x0, r)
-
-! prepare coefficients for interpolation
-!
-    call prepare_interpolation(r, ii, jj, kk, dr, cx, cy, cz)
-
-! interpolate field components at the particle position
-!
-    b(1) = interpolate(bx, ii, jj, kk, dr, cx, cy, cz)
-    b(2) = interpolate(by, ii, jj, kk, dr, cx, cy, cz)
-    b(3) = interpolate(bz, ii, jj, kk, dr, cx, cy, cz)
+    call fields(x0(:), u(:), b(:))
 #endif /* TEST */
 
 ! calculate the direction of the local magnetic field
@@ -3245,25 +3235,12 @@ module particles
     real(kind=8), dimension(3), intent(in)  :: x, v
     real(kind=8), dimension(3), intent(out) :: s, a, u, b
 
-#ifdef TEST
 ! local variables
 !
     real(kind=8), dimension(3) :: w
 #ifdef ITEST
     real(kind=8)               :: dl, ra, rb, xt, yt, rt
 #endif /* ITEST */
-#else /* TEST */
-! local variables
-!
-    real(kind=8), dimension(3) :: r, w
-
-! position indices
-!
-    integer                    :: dist
-    integer     , dimension(4) :: ii, jj, kk
-    real(kind=8), dimension(4) :: cx, cy, cz
-    real(kind=8), dimension(3) :: dr
-#endif /* TEST */
 !
 !-------------------------------------------------------------------------------
 !
@@ -3306,27 +3283,9 @@ module particles
         end if
 #endif /* ITEST */
 #else /* TEST */
-! convert position to index
+! get plasma field components
 !
-      call pos2index(x, r)
-
-#ifdef BNDRY
-      dist = min(minval(dm(1:DIMS) - r(1:DIMS)), minval(r(1:DIMS)))
-      if (dist .gt. nghost) then
-#endif /* BNDRY */
-
-! prepare coefficients for interpolation
-!
-        call prepare_interpolation(r, ii, jj, kk, dr, cx, cy, cz)
-
-! interpolate field components at the particle position
-!
-        u(1) = interpolate(ux, ii, jj, kk, dr, cx, cy, cz)
-        u(2) = interpolate(uy, ii, jj, kk, dr, cx, cy, cz)
-        u(3) = interpolate(uz, ii, jj, kk, dr, cx, cy, cz)
-        b(1) = interpolate(bx, ii, jj, kk, dr, cx, cy, cz)
-        b(2) = interpolate(by, ii, jj, kk, dr, cx, cy, cz)
-        b(3) = interpolate(bz, ii, jj, kk, dr, cx, cy, cz)
+        call fields(x(:), u(:), b(:))
 #endif /* TEST */
 
 ! subtract the fluid velocity
@@ -3342,11 +3301,6 @@ module particles
         a(1) = qom * (w(2) * b(3) - w(3) * b(2))
         a(2) = qom * (w(3) * b(1) - w(1) * b(3))
         a(3) = qom * (w(1) * b(2) - w(2) * b(1))
-#if !defined TEST && defined BNDRY
-      else
-        a(:) = 0.0
-      endif
-#endif /* !TEST & BNDRY */
 !
 !-------------------------------------------------------------------------------
 !
