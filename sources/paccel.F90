@@ -26,7 +26,7 @@
 !
 program paccel
 
-  use fields    , only : init_fields, finit_fields
+  use fields    , only : initialize_fields, finalize_fields, read_fields
   use parameters, only : read_parameters, get_parameter
   use particles , only : init_particle, finit_particle                         &
                        , integrate_trajectory_rk4                              &
@@ -59,8 +59,13 @@ program paccel
 #ifndef TEST
 ! initialize field variables
 !
-  write( *, "('INFO      : ',a)" ) "initializing and reading the field components"
-  call init_fields()
+  write( *, "('INFO      : ',a)" ) "initializing the field components"
+  call initialize_fields(.true., status)
+
+! read field variables
+!
+  write( *, "('INFO      : ',a)" ) "reading the field components"
+  call read_fields(.true., status)
 #endif /* !TEST */
 
 ! initiate particle
@@ -115,6 +120,6 @@ program paccel
 ! deallocate field variables
 !
   write( *, "('INFO      : ',a)" ) "deallocating the field components"
-  call finit_fields()
+  call finalize_fields(.true.)
 !
 end program paccel

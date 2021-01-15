@@ -1,19 +1,17 @@
 !!******************************************************************************
 !!
-!! module: fields - subroutines to access velocity and magnetic fields
+!!  This file is part of the PACCEL source code, a program to integrate
+!!  test particle trajectories in fields obtained from Newtonian or
+!!  relativistic magnetohydrodynamical simulations.
 !!
-!! Copyright (C) 2009-2021 Grzegorz Kowal <grzegorz@gkowal.info>
+!!  Copyright (C) 2009-2021 Grzegorz Kowal <grzegorz@amuncode.org>
 !!
-!!******************************************************************************
-!!
-!!  This file is part of PAccel.
-!!
-!!  PAccel is free software; you can redistribute it and/or modify
+!!  This program is free software: you can redistribute it and/or modify
 !!  it under the terms of the GNU General Public License as published by
-!!  the Free Software Foundation; either version 3 of the License, or
+!!  the Free Software Foundation, either version 3 of the License, or
 !!  (at your option) any later version.
 !!
-!!  PAccel is distributed in the hope that it will be useful,
+!!  This program is distributed in the hope that it will be useful,
 !!  but WITHOUT ANY WARRANTY; without even the implied warranty of
 !!  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !!  GNU General Public License for more details.
@@ -23,44 +21,89 @@
 !!
 !!******************************************************************************
 !!
+!! module: FIELDS
+!!
+!!  This module provides allocates field variables and read them from
+!!  the data snapshots.
+!!
+!!******************************************************************************
 !
 module fields
 
+! module variables are not implicit by default
+!
   implicit none
 
-! the format of the input data
+! file format
 !
-  character(len=32), save :: fformat = 'fits'
+  character(len=32)     , save :: fformat = "fits"
 
-! the dimesion of the field components
+! field component dimensions
 !
-  integer, dimension(3), save :: dm, qm
-
-! the domain bounds
-!
-  real            , save :: xmin, xmax, ymin, ymax, zmin, zmax
-
-! the indices needed to extend arrays
-!
-  integer, private, save :: ib, jb, kb, ie, je, ke
-  integer, private, save :: il, jl, kl, iu, ju, ku
-  integer, private, save :: is, js, ks, it, jt, kt
-
-! the allocatable arrays for storing the electric and magnetic field components
-!
-  real, dimension(:,:,:), allocatable, save :: ux, uy, uz, bx, by, bz
+  integer, dimension(3) , save :: dm = (/ 1, 1, 1 /)
+  integer, dimension(3) , save :: lm = (/ 1, 1, 1 /)
+  integer, dimension(3) , save :: um = (/ 1, 1, 1 /)
 
 ! the number of ghost layers for interpolation
 !
-#ifdef TRICUB
-  integer, parameter :: ng = 3
-#else /* TRICUB */
-#ifdef TRILIN
-  integer, parameter :: ng = 2
-#else /* TRILIN */
-  integer, parameter :: ng = 1
-#endif /* TRILIN */
-#endif /* TRICUB */
+  integer               , save :: nghosts = 4
+
+! domain bounds
+!
+  real                  , save :: xmin = 0.0e+00, xmax = 1.0e+00
+  real                  , save :: ymin = 0.0e+00, ymax = 1.0e+00
+  real                  , save :: zmin = 0.0e+00, zmax = 1.0e+00
+
+! resistivity
+!
+  real(kind=8)          , save :: ufac = 1.0d+00
+  real(kind=8)          , save :: bfac = 1.0d+00
+  real(kind=8)          , save :: ueta = 0.0d+00
+
+! boundary conditions
+!
+  character(len=64)     , save :: xbndry = "periodic"
+  character(len=64)     , save :: ybndry = "periodic"
+  character(len=64)     , save :: zbndry = "periodic"
+
+! the domain size
+!
+  real   , dimension(3), save :: ln = (/ 1.0, 1.0, 1.0 /)
+
+! the cell size
+!
+  real   , dimension(3), save :: dh = (/ 1.0, 1.0, 1.0 /)
+
+! arrays for storing the field components
+!
+  real, dimension(:,:,:), save, allocatable :: ux, uy, uz
+  real, dimension(:,:,:), save, allocatable :: bx, by, bz
+#ifdef CURRENT
+  real, dimension(:,:,:), save, allocatable :: jx, jy, jz
+#endif /* CURRENT */
+
+! arrays for acceleration rate
+!
+  integer     , dimension(:,:,:), save, allocatable :: cn
+  real(kind=8), dimension(:,:,:), save, allocatable :: ar, mr
+
+! by default everything is private
+!
+  private
+
+! declare public subroutines
+!
+  public :: initialize_fields, finalize_fields, read_fields
+  public :: get_domain_dimensions, get_domain_bounds, get_domain_sizes
+  public :: get_cell_sizes
+  public :: nghosts
+  public :: ufac, bfac
+  public :: ux, uy, uz
+  public :: bx, by, bz
+#ifdef CURRENT
+  public :: jx, jy, jz
+#endif /* CURRENT */
+  public :: cn, ar, mr
 !
 !-------------------------------------------------------------------------------
 !
@@ -68,39 +111,67 @@ module fields
 !
 !===============================================================================
 !
-! init_fields: subroutine initializes the field variables
+! subroutine INITIALIZE_FIELDS:
+! ----------------------------
+!
+!   Subroutine reads variable dimensions and allocates memory to store
+!   variables.
+!
+!   Arguments:
+!
+!     verbose - indicates if it should print any messages;
+!     iret    - the return value; if it is 0 everything went successfully,
+!               otherwise there was a problem;
 !
 !===============================================================================
 !
-  subroutine init_fields()
+  subroutine initialize_fields(verbose, iret)
 
-    use dataxml, only : dataxml_init, dataxml_get_dims,                        &
-                        dataxml_get_bounds, dataxml_read_var
-    use fitsio , only : fits_init, fits_get_dims, fits_get_bounds, fits_read_var
+! include subroutines and variables from other modules
+!
+    use dataxml   , only : dataxml_init, dataxml_get_dims, dataxml_get_bounds
+    use fitsio    , only : fits_init, fits_get_dims, fits_get_bounds
 #ifdef HDF5
-    use hdf5io , only : hdf5_init, hdf5_get_dims, hdf5_get_bounds, hdf5_read_var
+    use hdf5io    , only : hdf5_init, hdf5_get_dims, hdf5_get_bounds
 #endif /* HDF5 */
     use parameters, only : get_parameter
 
+! local variables are not implicit by default
+!
     implicit none
 
-! the local temporary allocatable arrays
+! subroutine arguments
 !
-    real, dimension(:,:,:), allocatable :: tt
+    logical, intent(in)    :: verbose
+    integer, intent(inout) :: iret
 !
 !-------------------------------------------------------------------------------
 !
-! get the input data file format
+! print information
+!
+    if (verbose) then
+      write( *, "('INFO      : ',a)" ) "initializing field components"
+    end if
+
+! get module parameters
 !
     call get_parameter('fformat', fformat)
+    call get_parameter("nghosts", nghosts)
+    call get_parameter('ueta'   , ueta   )
 
-! initialize dimensions
+! get the type of boundaries along each direction
+!
+    call get_parameter("xbndry", xbndry)
+    call get_parameter("ybndry", ybndry)
+    call get_parameter("zbndry", zbndry)
+
+! initialize component dimensions
 !
     dm(:) = 1
 
 ! obtain array dimensions
 !
-    select case(trim(fformat))
+    select case(fformat)
     case('dataxml')
       call dataxml_init()
       call dataxml_get_dims(dm)
@@ -116,123 +187,240 @@ module fields
       call hdf5_get_bounds(xmin, xmax, ymin, ymax, zmin, zmax)
 #endif /* HDF5 */
     case default
-      write( *, "('ERROR     : ',a,1x,a)" ) "unsupported data format:", trim(fformat)
+      write( *, "('ERROR     : ',a,1x,a)" ) "unsupported data format:", fformat
       stop
     end select
 
-! prepare extended dimensions
+! prepare lower and upper indices
 !
-    qm(:) = dm(:) + 2 * ng
-    if (dm(3) .eq. 1) qm(3) = 1
+    lm(:) =     1 - nghosts
+    um(:) = dm(:) + nghosts
 
-! prepare indices for array extension
+! calculate the domain size
 !
-    ib =  1 + ng
-    ie = ib + dm(1) - 1
-    il = ib + ng - 1
-    iu = ie - ng + 1
-    is = ib - 1
-    it = ie + 1
+    ln(1) = xmax - xmin
+    ln(2) = ymax - ymin
+    ln(3) = zmax - zmin
 
-    jb =  1 + ng
-    je = jb + dm(2) - 1
-    jl = jb + ng - 1
-    ju = je - ng + 1
-    js = jb - 1
-    jt = je + 1
+! calculate the cell sizes
+!
+    dh(:) = ln(:) / dm(:)
 
-    if (dm(3) .gt. 1) then
-      kb =  1 + ng
-      ke = kb + dm(3) - 1
-      kl = kb + ng - 1
-      ku = ke - ng + 1
-      ks = kb - 1
-      kt = ke + 1
-    else
-      kb = 1
-      ke = 1
-      kl = 1
-      ku = 1
-      ks = 1
-      kt = 1
+! allocate space for field components
+!
+    allocate(ux(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
+    allocate(uy(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
+    allocate(uz(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
+    allocate(bx(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
+    allocate(by(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
+    allocate(bz(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
+#ifdef CURRENT
+    allocate(jx(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
+    allocate(jy(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
+    allocate(jz(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
+#endif /* CURRENT */
+
+! allocate space for acceleration rate distribution
+!
+    allocate(cn(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
+    allocate(ar(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
+    allocate(mr(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
+
+    cn = 0
+    ar = 0.0d+00
+    mr = 0.0d+00
+
+!-------------------------------------------------------------------------------
+!
+  end subroutine initialize_fields
+!
+!===============================================================================
+!
+! subroutine READ_FIELDS:
+! ----------------------
+!
+!   Subroutine reads variables.
+!
+!   Arguments:
+!
+!     verbose - indicates if it should print any messages;
+!     iret    - the return value; if it is 0 everything went successfully,
+!               otherwise there was a problem;
+!
+!===============================================================================
+!
+  subroutine read_fields(verbose, iret)
+
+! include subroutines and variables from other modules
+!
+    use dataxml, only : dataxml_read_var
+    use fitsio , only : fits_read_var
+#ifdef HDF5
+    use hdf5io , only : hdf5_read_var
+#endif /* HDF5 */
+
+! local variables are not implicit by default
+!
+    implicit none
+
+! subroutine arguments
+!
+    logical, intent(in)    :: verbose
+    integer, intent(inout) :: iret
+
+    character(len=90) :: fmt
+    real(kind=8)      :: um, bm
+!
+!-------------------------------------------------------------------------------
+!
+! print information
+!
+    if (verbose) then
+      write( *, "('INFO      : ',a)" ) "reading field components"
     end if
 
-! allocate space for the field components
+! read field components from the file
 !
-    allocate(tt(dm(1),dm(2),dm(3)))
-    allocate(ux(qm(1),qm(2),qm(3)))
-    allocate(uy(qm(1),qm(2),qm(3)))
-    allocate(uz(qm(1),qm(2),qm(3)))
-    allocate(bx(qm(1),qm(2),qm(3)))
-    allocate(by(qm(1),qm(2),qm(3)))
-    allocate(bz(qm(1),qm(2),qm(3)))
-
-! read the field components from the file
-!
-    write( *, "('INFO      : ',a)" ) "reading velocity and magnetic field"
-    select case(trim(fformat))
+    select case(fformat)
     case('dataxml')
-      call dataxml_read_var('velx', tt)
-      call expand_array(tt, ux)
-      call dataxml_read_var('vely', tt)
-      call expand_array(tt, uy)
-      call dataxml_read_var('velz', tt)
-      call expand_array(tt, uz)
-      call dataxml_read_var('magx', tt)
-      call expand_array(tt, bx)
-      call dataxml_read_var('magy', tt)
-      call expand_array(tt, by)
-      call dataxml_read_var('magz', tt)
-      call expand_array(tt, bz)
+      call dataxml_read_var('velx', ux(1:dm(1),1:dm(2),1:dm(3)))
+      call dataxml_read_var('vely', uy(1:dm(1),1:dm(2),1:dm(3)))
+      call dataxml_read_var('velz', uz(1:dm(1),1:dm(2),1:dm(3)))
+      call dataxml_read_var('magx', bx(1:dm(1),1:dm(2),1:dm(3)))
+      call dataxml_read_var('magy', by(1:dm(1),1:dm(2),1:dm(3)))
+      call dataxml_read_var('magz', bz(1:dm(1),1:dm(2),1:dm(3)))
+#ifdef CURRENT
+      call dataxml_read_var('curx', jx(1:dm(1),1:dm(2),1:dm(3)))
+      call dataxml_read_var('cury', jy(1:dm(1),1:dm(2),1:dm(3)))
+      call dataxml_read_var('curz', jz(1:dm(1),1:dm(2),1:dm(3)))
+#endif /* CURRENT */
     case('fits')
-      call fits_read_var('velx', tt)
-      call expand_array(tt, ux)
-      call fits_read_var('vely', tt)
-      call expand_array(tt, uy)
-      call fits_read_var('velz', tt)
-      call expand_array(tt, uz)
-      call fits_read_var('magx', tt)
-      call expand_array(tt, bx)
-      call fits_read_var('magy', tt)
-      call expand_array(tt, by)
-      call fits_read_var('magz', tt)
-      call expand_array(tt, bz)
+      call fits_read_var('velx', ux(1:dm(1),1:dm(2),1:dm(3)))
+      call fits_read_var('vely', uy(1:dm(1),1:dm(2),1:dm(3)))
+      call fits_read_var('velz', uz(1:dm(1),1:dm(2),1:dm(3)))
+      call fits_read_var('magx', bx(1:dm(1),1:dm(2),1:dm(3)))
+      call fits_read_var('magy', by(1:dm(1),1:dm(2),1:dm(3)))
+      call fits_read_var('magz', bz(1:dm(1),1:dm(2),1:dm(3)))
+#ifdef CURRENT
+      call fits_read_var('curx', jx(1:dm(1),1:dm(2),1:dm(3)))
+      call fits_read_var('cury', jy(1:dm(1),1:dm(2),1:dm(3)))
+      call fits_read_var('curz', jz(1:dm(1),1:dm(2),1:dm(3)))
+#endif /* CURRENT */
 #ifdef HDF5
     case('hdf5')
-      call hdf5_read_var('velx', tt)
-      call expand_array(tt, ux)
-      call hdf5_read_var('vely', tt)
-      call expand_array(tt, uy)
-      call hdf5_read_var('velz', tt)
-      call expand_array(tt, uz)
-      call hdf5_read_var('magx', tt)
-      call expand_array(tt, bx)
-      call hdf5_read_var('magy', tt)
-      call expand_array(tt, by)
-      call hdf5_read_var('magz', tt)
-      call expand_array(tt, bz)
+      call hdf5_read_var(verbose, 'velx', ux(1:dm(1),1:dm(2),1:dm(3)))
+      call hdf5_read_var(verbose, 'vely', uy(1:dm(1),1:dm(2),1:dm(3)))
+      call hdf5_read_var(verbose, 'velz', uz(1:dm(1),1:dm(2),1:dm(3)))
+      call hdf5_read_var(verbose, 'magx', bx(1:dm(1),1:dm(2),1:dm(3)))
+      call hdf5_read_var(verbose, 'magy', by(1:dm(1),1:dm(2),1:dm(3)))
+      call hdf5_read_var(verbose, 'magz', bz(1:dm(1),1:dm(2),1:dm(3)))
+#ifdef CURRENT
+      call hdf5_read_var(verbose, 'curx', jx(1:dm(1),1:dm(2),1:dm(3)))
+      call hdf5_read_var(verbose, 'cury', jy(1:dm(1),1:dm(2),1:dm(3)))
+      call hdf5_read_var(verbose, 'curz', jz(1:dm(1),1:dm(2),1:dm(3)))
+#endif /* CURRENT */
 #endif /* HDF5 */
     end select
 
-! deallocate the temporary local array
+#ifdef CURRENT
+! multiply the current density by resistivity
 !
-    if (allocated(tt)) deallocate(tt)
-!
-!-------------------------------------------------------------------------------
-!
-  end subroutine init_fields
-!
-!===============================================================================
-!
-! finit_fields: subroutine deallocates the field variables
-!
-!===============================================================================
-!
-  subroutine finit_fields()
+    jx(:,:,:) = ueta * jx(:,:,:)
+    jy(:,:,:) = ueta * jy(:,:,:)
+    jz(:,:,:) = ueta * jz(:,:,:)
+#endif /* CURRENT */
 
+! update the ghosts cells
+!
+    call expand_array(ux)
+    call expand_array(uy)
+    call expand_array(uz)
+    call expand_array(bx)
+    call expand_array(by)
+    call expand_array(bz)
+#ifdef CURRENT
+    call expand_array(jx)
+    call expand_array(jy)
+    call expand_array(jz)
+#endif /* CURRENT */
+
+! renormalize velocity field components to [c]
+!
+    if (ufac /= 1.0d+00) then
+      ux(:,:,:) = ufac * ux(:,:,:)
+      uy(:,:,:) = ufac * uy(:,:,:)
+      uz(:,:,:) = ufac * uz(:,:,:)
+    end if
+
+! renormalize magnetic field components to [Gs]
+!
+    if (bfac /= 1.0d+00) then
+      bx(:,:,:) = bfac * bx(:,:,:)
+      by(:,:,:) = bfac * by(:,:,:)
+      bz(:,:,:) = bfac * bz(:,:,:)
+#ifdef CURRENT
+      jx(:,:,:) = bfac * jx(:,:,:)
+      jy(:,:,:) = bfac * jy(:,:,:)
+      jz(:,:,:) = bfac * jz(:,:,:)
+#endif /* CURRENT */
+    end if
+
+! get the maximum of velocity and magnetic field
+!
+    um = sqrt(maxval(ux(:,:,:)**2 + uy(:,:,:)**2 + uz(:,:,:)**2))
+    bm = sqrt(maxval(bx(:,:,:)**2 + by(:,:,:)**2 + bz(:,:,:)**2))
+
+! print information about maximum velocity and magnetic field
+!
+    fmt = "('INFO      : maximum plasma velocity is ', 1es12.6,' [c]')"
+    if (verbose) write(*, fmt) um
+    fmt = "('INFO      : maximum magnetic field is ', 1es12.6,' [Gs]')"
+    if (verbose) write(*, fmt) bm
+
+! check if velocity is physical
+!
+    if (um >= 1.0d+00) then
+      if (verbose) &
+        write( *, "('WARNING   : ',a)" ) "non-physical plasma velocities!"
+      iret = 111
+    end if
+
+!-------------------------------------------------------------------------------
+!
+  end subroutine read_fields
+!
+!===============================================================================
+!
+! subroutine FINALIZE_FIELDS:
+! --------------------------
+!
+!   Subroutine finalizes the fields module.
+!
+!   Arguments:
+!
+!     verbose - indicates if it should print any messages;
+!
+!===============================================================================
+!
+  subroutine finalize_fields(verbose)
+
+! local variables are not implicit by default
+!
     implicit none
+
+! subroutine arguments
+!
+    logical, intent(in) :: verbose
 !
 !-------------------------------------------------------------------------------
+!
+! print information
+!
+    if (verbose) then
+      write( *, "('INFO      : ',a)" ) "deallocating field components"
+    end if
+
+! deallocate field arrays
 !
     if (allocated(ux)) deallocate(ux)
     if (allocated(uy)) deallocate(uy)
@@ -240,22 +428,39 @@ module fields
     if (allocated(bx)) deallocate(bx)
     if (allocated(by)) deallocate(by)
     if (allocated(bz)) deallocate(bz)
-!
+#ifdef CURRENT
+    if (allocated(jx)) deallocate(jx)
+    if (allocated(jy)) deallocate(jy)
+    if (allocated(jz)) deallocate(jz)
+#endif /* CURRENT */
+    if (allocated(cn)) deallocate(cn)
+    if (allocated(ar)) deallocate(ar)
+    if (allocated(mr)) deallocate(mr)
+
 !-------------------------------------------------------------------------------
 !
-  end subroutine finit_fields
+  end subroutine finalize_fields
 !
 !===============================================================================
 !
-! get_dimensions: subroutine returns the array dimensions
+! subroutine GET_DOMAIN_DIMENSIONS:
+! --------------------------------
+!
+!   Subroutine returns domain dimensions.
+!
+!   Arguments:
+!
+!     dims - domain dimensions;
 !
 !===============================================================================
 !
-  subroutine get_dimensions(dims)
+  subroutine get_domain_dimensions(dims)
 
+! local variables are not implicit by default
+!
     implicit none
 
-! output arguments
+! subroutine arguments
 !
     integer, dimension(3), intent(out) :: dims
 !
@@ -265,21 +470,30 @@ module fields
 !
 !-------------------------------------------------------------------------------
 !
-  end subroutine get_dimensions
+  end subroutine get_domain_dimensions
 !
 !===============================================================================
 !
-! get_domain_bounds: subroutine returns the domain bounds
+! subroutine GET_DOMAIN_BOUNDS:
+! ----------------------------
+!
+!   Subroutine returns domain bounds.
+!
+!   Arguments:
+!
+!     bounds - domain bounds;
 !
 !===============================================================================
 !
   subroutine get_domain_bounds(bounds)
 
+! local variables are not implicit by default
+!
     implicit none
 
-! output arguments
+! subroutine arguments
 !
-    real, dimension(3,2), intent(out) :: bounds
+    real(kind=8), dimension(3,2), intent(out) :: bounds
 !
 !-------------------------------------------------------------------------------
 !
@@ -296,44 +510,160 @@ module fields
 !
 !===============================================================================
 !
-! expand_array: subroutine expands an input array by adding the boundary layers
+! subroutine GET_DOMAIN_SIZES:
+! ----------------------------
+!
+!   Subroutine returns the domain sizes.
+!
+!   Arguments:
+!
+!     ds(:) - the domain sizes in all directions;
 !
 !===============================================================================
 !
-  subroutine expand_array(a, b)
+  subroutine get_domain_sizes(ds)
 
+! local variables are not implicit by default
+!
     implicit none
 
-! output arguments
+! subroutine arguments
 !
-    real, dimension(dm(1),dm(2),dm(3)), intent(in)  :: a
-    real, dimension(qm(1),qm(2),qm(3)), intent(out) :: b
+    real, dimension(3), intent(out) :: ds
 !
 !-------------------------------------------------------------------------------
 !
-! copy the interior
-!
-    b(ib:ie,jb:je,kb:ke) = a(1:dm(1),1:dm(2),1:dm(3))
+    ds(:) = ln(:)
 
-! copy the X boundaries
+!-------------------------------------------------------------------------------
 !
-    b( 1:is   ,jb:je,kb:ke) = b(iu:ie,jb:je,kb:ke)
-    b(it:qm(1),jb:je,kb:ke) = b(ib:il,jb:je,kb:ke)
+  end subroutine get_domain_sizes
+!
+!===============================================================================
+!
+! subroutine GET_CELL_SIZES:
+! -------------------------
+!
+!   Subroutine returns the cell sizes.
+!
+!   Arguments:
+!
+!     cs(:) - the domain sizes in all directions;
+!
+!===============================================================================
+!
+  subroutine get_cell_sizes(cs)
 
-! copy the Y boundaries
+! local variables are not implicit by default
 !
-    b(1:qm(1), 1:js   ,kb:ke) = b(1:qm(1),ju:je,kb:ke)
-    b(1:qm(1),jt:qm(2),kb:ke) = b(1:qm(1),jb:jl,kb:ke)
+    implicit none
 
-! copy the Z boundaries
+! subroutine arguments
 !
-    if (dm(3) .gt. 1) then
-      b(1:qm(1),1:qm(2), 1:ks   ) = b(1:qm(1),1:qm(2),ku:ke)
-      b(1:qm(1),1:qm(2),kt:qm(3)) = b(1:qm(1),1:qm(2),kb:kl)
+    real, dimension(3), intent(out) :: cs
+!
+!-------------------------------------------------------------------------------
+!
+    cs(:) = dh(:)
+
+!-------------------------------------------------------------------------------
+!
+  end subroutine get_cell_sizes
+!
+!===============================================================================
+!
+! subroutine EXPAND_ARRAY:
+! -----------------------
+!
+!   Subroutine expands array by filling its ghost zones depending on the type
+!   of the boundary condition.
+!
+!   Arguments:
+!
+!     u - the expanded array;
+!
+!===============================================================================
+!
+  subroutine expand_array(u)
+
+! local variables are not implicit by default
+!
+    implicit none
+
+! subroutine arguments
+!
+    real, dimension(lm(1):um(1),lm(2):um(2),lm(3):um(3)), intent(inout) :: u
+
+! local variables
+!
+    integer :: l, ls, lt
+!
+!-------------------------------------------------------------------------------
+!
+! update the ghosts cells depending on the boundary type
+!
+    if (trim(xbndry) == "periodic") then
+      do l = 1, nghosts
+        ls =         l
+        lt = dm(1) + l
+        u(lt,1:dm(2),1:dm(3)) = u(ls,1:dm(2),1:dm(3))
+        ls = dm(1) + 1 - l
+        lt =         1 - l
+        u(lt,1:dm(2),1:dm(3)) = u(ls,1:dm(2),1:dm(3))
+      end do
+    else
+      do l = 1, nghosts
+        ls = dm(1)
+        lt = dm(1) + l
+        u(lt,1:dm(2),1:dm(3)) = u(ls,1:dm(2),1:dm(3))
+        ls = 1
+        lt = 1 - l
+        u(lt,1:dm(2),1:dm(3)) = u(ls,1:dm(2),1:dm(3))
+      end do
     end if
-!
+    if (trim(ybndry) == "periodic") then
+      do l = 1, nghosts
+        ls =         l
+        lt = dm(2) + l
+        u(lm(1):um(1),lt,1:dm(3)) = u(lm(1):um(1),ls,1:dm(3))
+        ls = dm(2) + 1 - l
+        lt =         1 - l
+        u(lm(1):um(1),lt,1:dm(3)) = u(lm(1):um(1),ls,1:dm(3))
+      end do
+    else
+      do l = 1, nghosts
+        ls = dm(2)
+        lt = dm(2) + l
+        u(lm(1):um(1),lt,1:dm(3)) = u(lm(1):um(1),ls,1:dm(3))
+        ls = 1
+        lt = 1 - l
+        u(lm(1):um(1),lt,1:dm(3)) = u(lm(1):um(1),ls,1:dm(3))
+      end do
+    end if
+    if (trim(zbndry) == "periodic") then
+      do l = 1, nghosts
+        ls =         l
+        lt = dm(3) + l
+        u(lm(1):um(1),lm(2):um(2),lt) = u(lm(1):um(1),lm(2):um(2),ls)
+        ls = dm(3) + 1 - l
+        lt =         1 - l
+        u(lm(1):um(1),lm(2):um(2),lt) = u(lm(1):um(1),lm(2):um(2),ls)
+      end do
+    else
+      do l = 1, nghosts
+        ls = dm(3)
+        lt = dm(3) + l
+        u(lm(1):um(1),lm(2):um(2),lt) = u(lm(1):um(1),lm(2):um(2),ls)
+        ls = 1
+        lt = 1 - l
+        u(lm(1):um(1),lm(2):um(2),lt) = u(lm(1):um(1),lm(2):um(2),ls)
+      end do
+    end if
+
 !-------------------------------------------------------------------------------
 !
   end subroutine expand_array
+
+!===============================================================================
 !
 end module fields

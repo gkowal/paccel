@@ -34,11 +34,11 @@ module particles
 
 ! domain bounds
 !
-  real   , dimension(3,2), save :: bnds
+  real(kind=8), dimension(3,2), save :: bnds
 
 ! domain size
 !
-  real   , dimension(3)  , save :: bsiz
+  real(kind=8), dimension(3)  , save :: bsiz
 
 ! the units of time, length, velocity and magnetic field
 !
@@ -103,7 +103,7 @@ module particles
   subroutine init_particle()
 
     use fields    , only : ux, uy, uz, bx, by, bz
-    use fields    , only : get_dimensions, get_domain_bounds
+    use fields    , only : get_domain_dimensions, get_domain_bounds
     use parameters, only : get_parameter
 
     implicit none
@@ -269,7 +269,7 @@ module particles
 
 ! get domain dimensions
 !
-    call get_dimensions(dm)
+    call get_domain_dimensions(dm)
 
 #ifdef TRICUB
     qm(:) = dm(:) + 2
@@ -2785,7 +2785,7 @@ module particles
 !
   subroutine pos2index(x, r)
 
-    use fields, only : ng
+    use fields, only : nghosts
 
     implicit none
 
@@ -2804,7 +2804,7 @@ module particles
     do i = 1, DIMS
       t    = (x(i) - bnds(i,1)) / bsiz(i) + 0.5 / dm(i)
       t    = t - floor(t)
-      r(i) = dm(i) * t + ng
+      r(i) = dm(i) * t + nghosts
     end do
 !
 !------------------------------------------------------------------------------
