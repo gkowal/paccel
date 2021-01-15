@@ -3354,6 +3354,73 @@ module particles
 !
 !===============================================================================
 !
+! subroutine FIELDS:
+! -----------------
+!
+!   Subroutine returns plasma fields for a given position.
+!
+!   Arguments:
+!
+!     x  - the particle position (in code units), input;
+!     u  - the local plasma velocity (in units of c), output;
+!     b  - the local magnetic field (renormalized by q/m), output;
+!     j  - the local current density (renormalized by q/m), output, optional;
+!
+!===============================================================================
+!
+  subroutine fields(x, u, b)
+
+! import required modules
+!
+    use coordinates   , only : map_position_to_index
+    use fields        , only : nghosts
+    use fields        , only : ux, uy, uz
+    use fields        , only : bx, by, bz
+    use interpolations, only : prepare_interpolation, interpolate
+
+    implicit none
+
+! subroutine arguments
+!
+    real(kind=8), dimension(3), intent(in)            :: x
+    real(kind=8), dimension(3), intent(out)           :: u, b
+
+! local variables
+!
+    integer     , dimension(4,3) :: ip
+    real(kind=8), dimension(4,3) :: cc
+    real(kind=8), dimension(3)   :: dr
+    real(kind=8), dimension(3)   :: r
+!
+!-------------------------------------------------------------------------------
+!
+! map position to domain index
+!
+    call map_position_to_index(x(:), r(:))
+
+! shift the position to domain interior
+!
+    r(:) = r(:) + nghosts
+
+! prepare interpolation coefficients
+!
+    call prepare_interpolation(r(:), ip(:,:), dr(:), cc(:,:))
+
+! interpolate plasma field components
+!
+    u(1) = interpolate(ux(:,:,:), ip(:,:), dr(:), cc(:,:))
+    u(2) = interpolate(uy(:,:,:), ip(:,:), dr(:), cc(:,:))
+    u(3) = interpolate(uz(:,:,:), ip(:,:), dr(:), cc(:,:))
+    b(1) = interpolate(bx(:,:,:), ip(:,:), dr(:), cc(:,:))
+    b(2) = interpolate(by(:,:,:), ip(:,:), dr(:), cc(:,:))
+    b(3) = interpolate(bz(:,:,:), ip(:,:), dr(:), cc(:,:))
+
+!-------------------------------------------------------------------------------
+!
+  end subroutine fields
+!
+!===============================================================================
+!
 ! separate_velocity: subroutine separates velocity into two components, parallel
 !                    and perpendicular to the local magnetic field
 !
