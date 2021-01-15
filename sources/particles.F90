@@ -468,7 +468,11 @@ module particles
     call get_parameter('py', p0(2))
     call get_parameter('pz', p0(3))
 
-    lfac = lorentz_factor(p0(:))
+    lfac  = lorentz_factor(p0(:))
+    v0(:) = p0(:) / lfac
+    vabs  = sqrt(dot_product(v0(:), v0(:)))
+    vpar  = abs(dot_product(v0(:), b(:)))
+    vper  = sqrt(vabs**2 - vpar**2)
 
 ! calculate particle energy
 !
