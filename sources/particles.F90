@@ -966,57 +966,57 @@ module particles
 ! the 12 steps
 !
       ss(:,:) = si(:,:)
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,1), k(:,2,1), v(:), b(:))
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,1), k(:,2,1), u(:), b(:))
 
       ss(:,:) = si(:,:) + dt * a0201 * k(:,:,1)
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,2), k(:,2,2), v(:), b(:))
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,2), k(:,2,2), u(:), b(:))
 
       ss(:,:) = si(:,:) + dt * (a0301 * k(:,:,1) + a0302 * k(:,:,2))
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,3), k(:,2,3), v(:), b(:))
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,3), k(:,2,3), u(:), b(:))
 
       ss(:,:) = si(:,:) + dt * (a0401 * k(:,:,1) + a0403 * k(:,:,3))
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,4), k(:,2,4), v(:), b(:))
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,4), k(:,2,4), u(:), b(:))
 
       ss(:,:) = si(:,:) + dt * (a0501 * k(:,:,1) + a0503 * k(:,:,3)            &
                               + a0504 * k(:,:,4))
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,5), k(:,2,5), v(:), b(:))
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,5), k(:,2,5), u(:), b(:))
 
       ss(:,:)  = si(:,:) + dt * (a0601 * k(:,:,1) + a0604 * k(:,:,4)           &
                                + a0605 * k(:,:,5))
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,6), k(:,2,6), v(:), b(:))
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,6), k(:,2,6), u(:), b(:))
 
       ss(:,:)  = si(:,:) + dt * (a0701 * k(:,:,1) + a0704 * k(:,:,4)           &
                                + a0705 * k(:,:,5) + a0706 * k(:,:,6))
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,7), k(:,2,7), v(:), b(:))
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,7), k(:,2,7), u(:), b(:))
 
       ss(:,:)  = si(:,:) + dt * (a0801 * k(:,:,1) + a0804 * k(:,:,4)           &
                                + a0805 * k(:,:,5) + a0806 * k(:,:,6)           &
                                + a0807 * k(:,:,7))
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,8), k(:,2,8), v(:), b(:))
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,8), k(:,2,8), u(:), b(:))
 
       ss(:,:)  = si(:,:) + dt * (a0901 * k(:,:,1) + a0904 * k(:,:,4)           &
                                + a0905 * k(:,:,5) + a0906 * k(:,:,6)           &
                                + a0907 * k(:,:,7) + a0908 * k(:,:,8))
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,9), k(:,2,9), v(:), b(:))
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,9), k(:,2,9), u(:), b(:))
 
       ss(:,:)  = si(:,:) + dt * (a1001 * k(:,:,1) + a1004 * k(:,:,4)           &
                                + a1005 * k(:,:,5) + a1006 * k(:,:,6)           &
                                + a1007 * k(:,:,7) + a1008 * k(:,:,8)           &
                                + a1009 * k(:,:,9))
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,10), k(:,2,10), v(:), b(:))
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,10), k(:,2,10), u(:), b(:))
 
       ss(:,:)  = si(:,:) + dt * (a1101 * k(:,:,1) + a1104 * k(:,:, 4)          &
                                + a1105 * k(:,:,5) + a1106 * k(:,:, 6)          &
                                + a1107 * k(:,:,7) + a1108 * k(:,:, 8)          &
                                + a1109 * k(:,:,9) + a1110 * k(:,:,10))
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,2), k(:,2,2), v(:), b(:))
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,2), k(:,2,2), u(:), b(:))
 
       ss(:,:)  = si(:,:) + dt * (a1201 * k(:,:,1) + a1204 * k(:,:, 4)          &
                                + a1205 * k(:,:,5) + a1206 * k(:,:, 6)          &
                                + a1207 * k(:,:,7) + a1208 * k(:,:, 8)          &
                                + a1209 * k(:,:,9) + a1210 * k(:,:,10)          &
                                + a1211 * k(:,:,2))
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,3), k(:,2,3), v(:), b(:))
+      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,3), k(:,2,3), u(:), b(:))
 
       k(:,:,4) = b01 * k(:,:, 1) + b06 * k(:,:, 6) + b07 * k(:,:, 7)           &
                + b08 * k(:,:, 8) + b09 * k(:,:, 9) + b10 * k(:,:,10)           &
