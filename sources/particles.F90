@@ -567,7 +567,8 @@ module particles
     write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
                                              'GPERIOD', 'SPEED (c)',           &
                                              'ENERGY (MeV)'
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek, term
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')            &
+                                                    n, t, dt, tg, va, ek, term
 
 ! open the output file, print headers and the initial values
 !
@@ -734,8 +735,8 @@ module particles
 
 ! print the progress
 !
-          write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va,  &
-                                                            ek, term
+          write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')      &
+                                                    n, t, dt, tg, va, ek, term
 
 ! store the particle parameters
 !
@@ -794,6 +795,7 @@ module particles
   end subroutine integrate_trajectory_rk4
 !
 !===============================================================================
+!
 ! subroutine INTEGRATE_DOP853:
 ! ---------------------------
 !
@@ -941,7 +943,8 @@ module particles
     write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
                                              'GPERIOD', 'SPEED (c)',           &
                                              'ENERGY (MeV)'
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek, term
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')            &
+                                                    n, t, dt, tg, va, ek, term
 
 ! open the output file, print headers and the initial values
 !
@@ -1066,8 +1069,8 @@ module particles
 
 ! print the progress
 !
-          write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va,  &
-                                                            ek, term
+          write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')      &
+                                                    n, t, dt, tg, va, ek, term
 
 ! store the particle parameters
 !
@@ -1254,7 +1257,8 @@ module particles
     write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
                                              'GPERIOD', 'SPEED (c)',           &
                                              'ENERGY (MeV)'
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek, term
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')            &
+                                                    n, t, dt, tg, va, ek, term
 
 ! open the output file, print headers and the initial values
 !
@@ -1374,8 +1378,8 @@ module particles
 
 ! print the progress
 !
-        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek,&
-                                                          term
+        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')        &
+                                                    n, t, dt, tg, va, ek, term
 
 ! write results to the output file
 !
@@ -1515,7 +1519,8 @@ module particles
     write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
                                              'GPERIOD', 'SPEED (c)',           &
                                              'ENERGY (MeV)'
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek, term
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')            &
+                                                    n, t, dt, tg, va, ek, term
 
 ! open the output file, print headers and the initial values
 !
@@ -1633,8 +1638,8 @@ module particles
 
 ! print the progress
 !
-        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek,&
-                                                          term
+        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')        &
+                                                    n, t, dt, tg, va, ek, term
 
 ! write results to the output file
 !
@@ -1881,7 +1886,8 @@ module particles
     write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
                                              'GPERIOD', 'SPEED (c)',           &
                                              'ENERGY (MeV)'
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek, term
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')            &
+                                                    n, t, dt, tg, va, ek, term
 
 ! open the output file, print headers and the initial values
 !
@@ -2001,8 +2007,8 @@ module particles
 
 ! print the progress
 !
-        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek,&
-                                                          term
+        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')        &
+                                                    n, t, dt, tg, va, ek, term
 
 ! write results to the output file
 !
@@ -2138,7 +2144,8 @@ module particles
     write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
                                              'GPERIOD', 'SPEED (c)',           &
                                              'ENERGY (MeV)'
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek, term
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')            &
+                                                    n, t, dt, tg, va, ek, term
 
 ! open the output file, print headers and the initial values
 !
@@ -2257,8 +2264,8 @@ module particles
 
 ! print the progress
 !
-        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek,&
-                                                          term
+        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')        &
+                                                    n, t, dt, tg, va, ek, term
 
 ! write results to the output file
 !
@@ -2517,7 +2524,8 @@ module particles
     write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
                                              'GPERIOD', 'SPEED (c)',           &
                                              'ENERGY (MeV)'
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek, term
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')            &
+                                                    n, t, dt, tg, va, ek, term
 
 ! open the output file, print headers and the initial values
 !
@@ -2639,8 +2647,8 @@ module particles
 
 ! print the progress
 !
-        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek,&
-                                                          term
+        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')        &
+                                                    n, t, dt, tg, va, ek, term
 
 ! write results to the output file
 !
@@ -2776,7 +2784,8 @@ module particles
     write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
                                              'GPERIOD', 'SPEED (c)',           &
                                              'ENERGY (MeV)'
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek, term
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')            &
+                                                    n, t, dt, tg, va, ek, term
 
 ! open the output file, print headers and the initial values
 !
@@ -2897,8 +2906,8 @@ module particles
 
 ! print the progress
 !
-        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1,$)") n, t, dt, tg, va, ek,&
-                                                          term
+        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')        &
+                                                    n, t, dt, tg, va, ek, term
 
 ! write results to the output file
 !
