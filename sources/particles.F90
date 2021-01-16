@@ -1050,6 +1050,10 @@ module particles
 !
         t = t + dt
 
+! check if time exceeded the maximum time
+!
+        if (t >= tmax) keepon = .false.
+
 ! store the current particle state
 !
         if (m == ndumps) then
