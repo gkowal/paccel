@@ -29,6 +29,8 @@
 !
 module coordinates
 
+! module variables are not implicit by default
+!
   implicit none
 
 ! field component dimensions
@@ -54,7 +56,7 @@ module coordinates
 
 ! declare public subroutines
 !
-  public :: initialize_coordinates
+  public :: initialize_coordinates, finalize_coordinates
   public :: map_position_to_index, map_normalized_to_position
   public :: is_inside
 !
@@ -79,7 +81,7 @@ module coordinates
 !
   subroutine initialize_coordinates(verbose, status)
 
-! import required modules
+! include subroutines and variables from other modules
 !
     use fields    , only : get_domain_dimensions, get_domain_bounds
     use parameters, only : get_parameter
@@ -95,7 +97,6 @@ module coordinates
 
 ! local variables
 !
-    integer                :: i
     character(len=255)     :: xbndry = "periodic"
     character(len=255)     :: ybndry = "periodic"
     character(len=255)     :: zbndry = "periodic"
@@ -106,9 +107,9 @@ module coordinates
 
 ! print info
 !
-    if (verbose) write(*, "('INFO',6x,': initializing coordinates')")
+    if (verbose) write(*,"('INFO',6x,': ',a)") "initializing coordinates"
 
-! get the domain dimensions
+! get domain dimensions
 !
     call get_domain_dimensions(dm(:))
 
@@ -138,17 +139,50 @@ module coordinates
     pbnd(2) = trim(ybndry) == "periodic"
     pbnd(3) = trim(zbndry) == "periodic"
 
-! print information about the coordinates
+! print information about the boundary conditions
 !
     if (verbose) then
-      write( *, "('INFO',6x,': x-boundary = ', a)" ) trim(xbndry)
-      write( *, "('INFO',6x,': y-boundary = ', a)" ) trim(ybndry)
-      write( *, "('INFO',6x,': z-boundary = ', a)" ) trim(zbndry)
+      write(*,"('INFO',6x,': x-boundary = ', a)") trim(xbndry)
+      write(*,"('INFO',6x,': y-boundary = ', a)") trim(ybndry)
+      write(*,"('INFO',6x,': z-boundary = ', a)") trim(zbndry)
     end if
 
 !-------------------------------------------------------------------------------
 !
   end subroutine initialize_coordinates
+!
+!===============================================================================
+!
+! subroutine FINALIZE_COORDINATES:
+! -------------------------------
+!
+!   Subroutine finalizes the coordinate module.
+!
+!   Arguments:
+!
+!     verbose - indicates if it should print any messages;
+!
+!===============================================================================
+!
+  subroutine finalize_coordinates(verbose)
+
+! local variables are not implicit by default
+!
+    implicit none
+
+! subroutine arguments
+!
+    logical, intent(in) :: verbose
+!
+!-------------------------------------------------------------------------------
+!
+! print info
+!
+    if (verbose) write(*,"('INFO',6x,': ',a)") "finalizing coordinates"
+
+!-------------------------------------------------------------------------------
+!
+  end subroutine finalize_coordinates
 !
 !===============================================================================
 !
@@ -167,6 +201,8 @@ module coordinates
 !
   subroutine map_position_to_index(x, p)
 
+! local variables are not implicit by default
+!
     implicit none
 
 ! subroutine arguments
@@ -212,6 +248,8 @@ module coordinates
 !
   subroutine map_normalized_to_position(r, x)
 
+! local variables are not implicit by default
+!
     implicit none
 
 ! output arguments
@@ -242,6 +280,8 @@ module coordinates
 !
   logical function is_inside(x) result(inside)
 
+! local variables are not implicit by default
+!
     implicit none
 
 ! subroutine arguments

@@ -36,7 +36,7 @@ module fields
 
 ! file format
 !
-  character(len=32)     , save :: fformat = "fits"
+  character(len=32), save :: fformat = "fits"
 
 ! field component dimensions
 !
@@ -46,43 +46,43 @@ module fields
 
 ! the number of ghost layers for interpolation
 !
-  integer               , save :: nghosts = 4
+  integer, save :: nghosts = 4
 
 ! domain bounds
 !
-  real                  , save :: xmin = 0.0e+00, xmax = 1.0e+00
-  real                  , save :: ymin = 0.0e+00, ymax = 1.0e+00
-  real                  , save :: zmin = 0.0e+00, zmax = 1.0e+00
+  real(kind=8), save :: xmin = 0.0d+00, xmax = 1.0d+00
+  real(kind=8), save :: ymin = 0.0d+00, ymax = 1.0d+00
+  real(kind=8), save :: zmin = 0.0d+00, zmax = 1.0d+00
 
 ! resistivity
 !
-  real(kind=8)          , save :: ufac = 1.0d+00
-  real(kind=8)          , save :: bfac = 1.0d+00
-  real(kind=8)          , save :: ueta = 0.0d+00
+  real(kind=8), save :: ufac = 1.0d+00
+  real(kind=8), save :: bfac = 1.0d+00
+  real(kind=8), save :: ueta = 0.0d+00
 
 ! boundary conditions
 !
-  character(len=64)     , save :: xbndry = "periodic"
-  character(len=64)     , save :: ybndry = "periodic"
-  character(len=64)     , save :: zbndry = "periodic"
+  character(len=64), save :: xbndry = "periodic"
+  character(len=64), save :: ybndry = "periodic"
+  character(len=64), save :: zbndry = "periodic"
 
 ! the domain size
 !
-  real   , dimension(3), save :: ln = (/ 1.0, 1.0, 1.0 /)
+  real(kind=8), dimension(3), save :: ln = (/ 1.0d+00, 1.0d+00, 1.0d+00 /)
 
 ! the cell size
 !
-  real   , dimension(3), save :: dh = (/ 1.0, 1.0, 1.0 /)
+  real(kind=8), dimension(3), save :: dh = (/ 1.0d+00, 1.0d+00, 1.0d+00 /)
 
 ! arrays for storing the field components
 !
-  real, dimension(:,:,:), save, allocatable :: ux, uy, uz
-  real, dimension(:,:,:), save, allocatable :: bx, by, bz
+  real(kind=8), dimension(:,:,:), save, allocatable :: ux, uy, uz
+  real(kind=8), dimension(:,:,:), save, allocatable :: bx, by, bz
 #ifdef CURRENT
-  real, dimension(:,:,:), save, allocatable :: jx, jy, jz
+  real(kind=8), dimension(:,:,:), save, allocatable :: jx, jy, jz
 #endif /* CURRENT */
 
-! arrays for acceleration rate
+! arrays for acceleration rates
 !
   integer     , dimension(:,:,:), save, allocatable :: cn
   real(kind=8), dimension(:,:,:), save, allocatable :: ar, mr
@@ -120,12 +120,12 @@ module fields
 !   Arguments:
 !
 !     verbose - indicates if it should print any messages;
-!     iret    - the return value; if it is 0 everything went successfully,
+!     status  - the return value; if it is 0 everything went successfully,
 !               otherwise there was a problem;
 !
 !===============================================================================
 !
-  subroutine initialize_fields(verbose, iret)
+  subroutine initialize_fields(verbose, status)
 
 ! include subroutines and variables from other modules
 !
@@ -140,15 +140,15 @@ module fields
 ! subroutine arguments
 !
     logical, intent(in)    :: verbose
-    integer, intent(inout) :: iret
+    integer, intent(inout) :: status
 !
 !-------------------------------------------------------------------------------
 !
-! print information
+    status = 0
+
+! print info
 !
-    if (verbose) then
-      write( *, "('INFO      : ',a)" ) "initializing field components"
-    end if
+    if (verbose) write(*,"('INFO',6x,': ',a)") "initializing field components"
 
 ! get module parameters
 !
@@ -168,7 +168,7 @@ module fields
 
 ! obtain array dimensions
 !
-    select case(fformat)
+    select case(trim(fformat))
     case('dataxml')
       call dataxml_init()
       call dataxml_get_dims(dm)
@@ -178,7 +178,8 @@ module fields
       call fits_get_dims(dm)
       call fits_get_bounds(xmin, xmax, ymin, ymax, zmin, zmax)
     case default
-      write( *, "('ERROR     : ',a,1x,a)" ) "unsupported data format:", fformat
+      write(*,"('ERROR',5x,': ',a,1x,a)") "unsupported data format:",          &
+                                                                 trim(fformat)
       stop
     end select
 
@@ -199,23 +200,35 @@ module fields
 
 ! allocate space for field components
 !
-    allocate(ux(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
-    allocate(uy(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
-    allocate(uz(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
-    allocate(bx(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
-    allocate(by(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
-    allocate(bz(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
+    allocate(ux(lm(1):um(1),lm(2):um(2),lm(3):um(3)), stat = status)
+    if (status /= 0) return
+    allocate(uy(lm(1):um(1),lm(2):um(2),lm(3):um(3)), stat = status)
+    if (status /= 0) return
+    allocate(uz(lm(1):um(1),lm(2):um(2),lm(3):um(3)), stat = status)
+    if (status /= 0) return
+    allocate(bx(lm(1):um(1),lm(2):um(2),lm(3):um(3)), stat = status)
+    if (status /= 0) return
+    allocate(by(lm(1):um(1),lm(2):um(2),lm(3):um(3)), stat = status)
+    if (status /= 0) return
+    allocate(bz(lm(1):um(1),lm(2):um(2),lm(3):um(3)), stat = status)
+    if (status /= 0) return
 #ifdef CURRENT
-    allocate(jx(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
-    allocate(jy(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
-    allocate(jz(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
+    allocate(jx(lm(1):um(1),lm(2):um(2),lm(3):um(3)), stat = status)
+    if (status /= 0) return
+    allocate(jy(lm(1):um(1),lm(2):um(2),lm(3):um(3)), stat = status)
+    if (status /= 0) return
+    allocate(jz(lm(1):um(1),lm(2):um(2),lm(3):um(3)), stat = status)
+    if (status /= 0) return
 #endif /* CURRENT */
 
 ! allocate space for acceleration rate distribution
 !
-    allocate(cn(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
-    allocate(ar(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
-    allocate(mr(lm(1):um(1),lm(2):um(2),lm(3):um(3)))
+    allocate(cn(lm(1):um(1),lm(2):um(2),lm(3):um(3)), stat = status)
+    if (status /= 0) return
+    allocate(ar(lm(1):um(1),lm(2):um(2),lm(3):um(3)), stat = status)
+    if (status /= 0) return
+    allocate(mr(lm(1):um(1),lm(2):um(2),lm(3):um(3)), stat = status)
+    if (status /= 0) return
 
     cn = 0
     ar = 0.0d+00
@@ -235,12 +248,12 @@ module fields
 !   Arguments:
 !
 !     verbose - indicates if it should print any messages;
-!     iret    - the return value; if it is 0 everything went successfully,
+!     status  - the return value; if it is 0 everything went successfully,
 !               otherwise there was a problem;
 !
 !===============================================================================
 !
-  subroutine read_fields(verbose, iret)
+  subroutine read_fields(verbose, status)
 
 ! include subroutines and variables from other modules
 !
@@ -254,22 +267,22 @@ module fields
 ! subroutine arguments
 !
     logical, intent(in)    :: verbose
-    integer, intent(inout) :: iret
+    integer, intent(inout) :: status
 
     character(len=90) :: fmt
     real(kind=8)      :: um, bm
 !
 !-------------------------------------------------------------------------------
 !
-! print information
+    status = 0
+
+! print info
 !
-    if (verbose) then
-      write( *, "('INFO      : ',a)" ) "reading field components"
-    end if
+    if (verbose) write(*,"('INFO',6x,': ',a)") "reading field components"
 
 ! read field components from the file
 !
-    select case(fformat)
+    select case(trim(fformat))
     case('dataxml')
       call dataxml_read_var('velx', ux(1:dm(1),1:dm(2),1:dm(3)))
       call dataxml_read_var('vely', uy(1:dm(1),1:dm(2),1:dm(3)))
@@ -346,17 +359,19 @@ module fields
 
 ! print information about maximum velocity and magnetic field
 !
-    fmt = "('INFO      : maximum plasma velocity is ', 1es12.6,' [c]')"
-    if (verbose) write(*, fmt) um
-    fmt = "('INFO      : maximum magnetic field is ', 1es12.6,' [Gs]')"
-    if (verbose) write(*, fmt) bm
+    if (verbose) then
+      fmt = "('INFO',6x,': maximum plasma velocity is ', 1es12.6,' [c]')"
+      write(*,fmt) um
+      fmt = "('INFO',6x,': maximum magnetic field is ', 1es12.6,' [Gs]')"
+      write(*,fmt) bm
+    end if
 
 ! check if velocity is physical
 !
     if (um >= 1.0d+00) then
       if (verbose) &
-        write( *, "('WARNING   : ',a)" ) "non-physical plasma velocities!"
-      iret = 111
+        write(*,"('WARNING   : ',a)") "non-physical plasma velocities!"
+      status = 111
     end if
 
 !-------------------------------------------------------------------------------
@@ -388,7 +403,7 @@ module fields
 !
 !-------------------------------------------------------------------------------
 !
-! print information
+! print info
 !
     if (verbose) then
       write( *, "('INFO      : ',a)" ) "deallocating field components"
@@ -503,7 +518,7 @@ module fields
 
 ! subroutine arguments
 !
-    real, dimension(3), intent(out) :: ds
+    real(kind=8), dimension(3), intent(out) :: ds
 !
 !-------------------------------------------------------------------------------
 !
@@ -534,7 +549,7 @@ module fields
 
 ! subroutine arguments
 !
-    real, dimension(3), intent(out) :: cs
+    real(kind=8), dimension(3), intent(out) :: cs
 !
 !-------------------------------------------------------------------------------
 !
@@ -566,7 +581,7 @@ module fields
 
 ! subroutine arguments
 !
-    real, dimension(lm(1):um(1),lm(2):um(2),lm(3):um(3)), intent(inout) :: u
+    real(kind=8), dimension(lm(1):um(1),lm(2):um(2),lm(3):um(3)), intent(inout) :: u
 
 ! local variables
 !

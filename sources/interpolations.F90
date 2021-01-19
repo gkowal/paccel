@@ -30,6 +30,8 @@
 !
 module interpolations
 
+! module variables are not implicit by default
+!
   implicit none
 
 ! interfaces for procedure pointers
@@ -42,7 +44,7 @@ module interpolations
       real(kind=8), dimension(4,3), intent(out) :: cc
     end subroutine
     function interpolate_iface(f, pi, dr, cc) result(q)
-      real(kind=4), dimension(:,:,:), intent(in) :: f
+      real(kind=8), dimension(:,:,:), intent(in) :: f
       integer     , dimension(4,3)  , intent(in) :: pi
       real(kind=8), dimension(3)    , intent(in) :: dr
       real(kind=8), dimension(4,3)  , intent(in) :: cc
@@ -54,7 +56,7 @@ module interpolations
     end subroutine
     function pcubic_iface(c, fk, fl, fr, fq) result(q)
       real(kind=8), dimension(4), intent(in)  :: c
-      real(kind=4)              , intent(in)  :: fk, fl, fr, fq
+      real(kind=8)              , intent(in)  :: fk, fl, fr, fq
       real(kind=8)                            :: q
     end function
   end interface
@@ -72,7 +74,7 @@ module interpolations
 
 ! declare public subroutines
 !
-  public :: initialize_interpolations
+  public :: initialize_interpolations, finalize_interpolations
   public :: prepare_interpolation, interpolate
 !
 !-------------------------------------------------------------------------------
@@ -96,10 +98,12 @@ module interpolations
 !
   subroutine initialize_interpolations(verbose, status)
 
-! import required modules
+! include external procedures
 !
     use parameters, only : get_parameter
 
+! local variables are not implicit by default
+!
     implicit none
 
 ! subroutine arguments
@@ -117,9 +121,11 @@ module interpolations
 !
     status = 0
 
-! print info
+! print information
 !
-    if (verbose) write(*,"('INFO',6x,': initializing interpolations')")
+    if (verbose) then
+      write( *, "('INFO      : ',a)" ) "initializing interpolations"
+    end if
 
 ! get module parameters
 !
@@ -142,7 +148,7 @@ module interpolations
       prepare_interpolation => prepare_cubic
       interpolate           => interpolate_cubic
     case default
-      write(*,"('ERROR',5x,': ',a)") "unsupported interpolation method"
+      write( *, "('ERROR     : ',a)" ) "unsupported interpolation method"
       status = 100
       return
     end select
@@ -163,13 +169,48 @@ module interpolations
 ! print information about the interpolation method
 !
     if (verbose) then
-      write(*,"('INFO',6x,': ', a, ' interpolation')") trim(method_name)
-      write(*,"('INFO',6x,': TVD limiting is ' ,a)"  ) trim(tvd)
+      write( *, "('INFO      : ', a, ' interpolation')" ) trim(method_name)
+      write( *, "('INFO      : TVD limiting is ' ,a)"   ) trim(tvd)
     end if
 
 !-------------------------------------------------------------------------------
 !
   end subroutine initialize_interpolations
+!
+!===============================================================================
+!
+! subroutine FINALIZE_INTERPOLATIONS:
+! ----------------------------------
+!
+!   Subroutine finalizes the interpolation module.
+!
+!   Arguments:
+!
+!     verbose - indicates if it should print any messages;
+!
+!===============================================================================
+!
+  subroutine finalize_interpolations(verbose)
+
+! local variables are not implicit by default
+!
+    implicit none
+
+! subroutine arguments
+!
+    logical, intent(in) :: verbose
+!
+!-------------------------------------------------------------------------------
+!
+! print information
+!
+    if (verbose) then
+      write( *, "('INFO      : ',a)" ) "finalizing interpolations"
+    end if
+
+!-------------------------------------------------------------------------------
+!
+  end subroutine finalize_interpolations
 !
 !===============================================================================
 !
@@ -189,6 +230,8 @@ module interpolations
 !
   subroutine prepare_nearest(pr, pi, dr, cc)
 
+! local variables are not implicit by default
+!
     implicit none
 
 ! subroutine arguments
@@ -209,6 +252,11 @@ module interpolations
 #else /* DIMS == 3 */
     pi(1,3) = 1
 #endif /* DIMS == 3 */
+
+! reset remaining output parameters
+!
+    dr = 0.0d+00
+    cc = 0.0d+00
 
 !-------------------------------------------------------------------------------
 !
@@ -232,6 +280,8 @@ module interpolations
 !
   subroutine prepare_linear(pr, pi, dr, cc)
 
+! local variables are not implicit by default
+!
     implicit none
 
 ! subroutine arguments
@@ -262,6 +312,10 @@ module interpolations
     dr(3) = pr(3) - pi(1,3)
 #endif /* DIMS == 3 */
 
+! reset remaining output parameters
+!
+    cc = 0.0d+00
+
 !-------------------------------------------------------------------------------
 !
   end subroutine prepare_linear
@@ -284,6 +338,8 @@ module interpolations
 !
   subroutine prepare_cubic(pr, pi, dr, cc)
 
+! local variables are not implicit by default
+!
     implicit none
 
 ! subroutine arguments
@@ -351,11 +407,13 @@ module interpolations
 !
   function interpolate_nearest(f, pi, dr, cc) result(q)
 
+! local variables are not implicit by default
+!
     implicit none
 
 ! subroutine arguments
 !
-    real(kind=4), dimension(:,:,:), intent(in) :: f
+    real(kind=8), dimension(:,:,:), intent(in) :: f
     integer     , dimension(4,3)  , intent(in) :: pi
     real(kind=8), dimension(3)    , intent(in) :: dr
     real(kind=8), dimension(4,3)  , intent(in) :: cc
@@ -388,11 +446,13 @@ module interpolations
 !
   function interpolate_linear(f, pi, dr, cc) result(q)
 
+! local variables are not implicit by default
+!
     implicit none
 
 ! subroutine arguments
 !
-    real(kind=4), dimension(:,:,:), intent(in) :: f
+    real(kind=8), dimension(:,:,:), intent(in) :: f
     integer     , dimension(4,3)  , intent(in) :: pi
     real(kind=8), dimension(3)    , intent(in) :: dr
     real(kind=8), dimension(4,3)  , intent(in) :: cc
@@ -400,7 +460,10 @@ module interpolations
 
 ! local variables
 !
-    real(kind=4) :: q11, q12, q21, q22, q1, q2
+#if DIMS == 3
+    real(kind=8) :: q11, q12, q21, q22
+#endif /* DIMS == 3 */
+    real(kind=8) :: q1, q2
 !
 !-------------------------------------------------------------------------------
 !
@@ -454,11 +517,13 @@ module interpolations
 !
   function interpolate_cubic(f, pi, dr, cc) result(q)
 
+! local variables are not implicit by default
+!
     implicit none
 
 ! subroutine arguments
 !
-    real(kind=4), dimension(:,:,:), intent(in) :: f
+    real(kind=8), dimension(:,:,:), intent(in) :: f
     integer     , dimension(4,3)  , intent(in) :: pi
     real(kind=8), dimension(3)    , intent(in) :: dr
     real(kind=8), dimension(4,3)  , intent(in) :: cc
@@ -466,8 +531,11 @@ module interpolations
 
 ! local variables
 !
-    real(kind=4) :: q11, q12, q13, q14, q21, q22, q23, q24                     &
-                  , q31, q32, q33, q34, q41, q42, q43, q44, q1, q2, q3, q4
+#if DIMS == 3
+    real(kind=8) :: q11, q12, q13, q14, q21, q22, q23, q24                     &
+                  , q31, q32, q33, q34, q41, q42, q43, q44
+#endif /* DIMS == 3 */
+    real(kind=8) :: q1, q2, q3, q4
 !
 !-------------------------------------------------------------------------------
 !
@@ -476,54 +544,86 @@ module interpolations
 !
 ! interpolate along the Y direction
 !
-    q1  = pcubic(cc(:,2), f(pi(1,1),pi(1,2),1), f(pi(1,1),pi(2,2),1)           &
-                   , f(pi(1,1),pi(3,2),1), f(pi(1,1),pi(4,2),1))
-    q2  = pcubic(cc(:,2), f(pi(2,1),pi(1,2),1), f(pi(2,1),pi(2,2),1)           &
-                   , f(pi(2,1),pi(3,2),1), f(pi(2,1),pi(4,2),1))
-    q3  = pcubic(cc(:,2), f(pi(3,1),pi(1,2),1), f(pi(3,1),pi(2,2),1)           &
-                   , f(pi(3,1),pi(3,2),1), f(pi(3,1),pi(4,2),1))
-    q4  = pcubic(cc(:,2), f(pi(4,1),pi(1,2),1), f(pi(4,1),pi(2,2),1)           &
-                   , f(pi(4,1),pi(3,2),1), f(pi(4,1),pi(4,2),1))
+    q1  = pcubic(cc(:,2), f(pi(1,1),pi(1,2),1), f(pi(1,1),pi(2,2),1),          &
+                          f(pi(1,1),pi(3,2),1), f(pi(1,1),pi(4,2),1))
+    q2  = pcubic(cc(:,2), f(pi(2,1),pi(1,2),1), f(pi(2,1),pi(2,2),1),          &
+                          f(pi(2,1),pi(3,2),1), f(pi(2,1),pi(4,2),1))
+    q3  = pcubic(cc(:,2), f(pi(3,1),pi(1,2),1), f(pi(3,1),pi(2,2),1),          &
+                          f(pi(3,1),pi(3,2),1), f(pi(3,1),pi(4,2),1))
+    q4  = pcubic(cc(:,2), f(pi(4,1),pi(1,2),1), f(pi(4,1),pi(2,2),1),          &
+                          f(pi(4,1),pi(3,2),1), f(pi(4,1),pi(4,2),1))
 #else /* DIMS == 2 */
 != tricubic interpolation =
 !
 ! interpolate along the Z direction
 !
-    q11 = pcubic(cc(:,3), f(pi(1,1),pi(1,2),pi(1,3)), f(pi(1,1),pi(1,2),pi(2,3))&
-                        , f(pi(1,1),pi(1,2),pi(3,3)), f(pi(1,1),pi(1,2),pi(4,3)))
-    q12 = pcubic(cc(:,3), f(pi(1,1),pi(2,2),pi(1,3)), f(pi(1,1),pi(2,2),pi(2,3))&
-                        , f(pi(1,1),pi(2,2),pi(3,3)), f(pi(1,1),pi(2,2),pi(4,3)))
-    q13 = pcubic(cc(:,3), f(pi(1,1),pi(3,2),pi(1,3)), f(pi(1,1),pi(3,2),pi(2,3))&
-                        , f(pi(1,1),pi(3,2),pi(3,3)), f(pi(1,1),pi(3,2),pi(4,3)))
-    q14 = pcubic(cc(:,3), f(pi(1,1),pi(4,2),pi(1,3)), f(pi(1,1),pi(4,2),pi(2,3))&
-                        , f(pi(1,1),pi(4,2),pi(3,3)), f(pi(1,1),pi(4,2),pi(4,3)))
+    q11 = pcubic(cc(:,3), f(pi(1,1),pi(1,2),pi(1,3)),                          &
+                          f(pi(1,1),pi(1,2),pi(2,3)),                          &
+                          f(pi(1,1),pi(1,2),pi(3,3)),                          &
+                          f(pi(1,1),pi(1,2),pi(4,3)))
+    q12 = pcubic(cc(:,3), f(pi(1,1),pi(2,2),pi(1,3)),                          &
+                          f(pi(1,1),pi(2,2),pi(2,3)),                          &
+                          f(pi(1,1),pi(2,2),pi(3,3)),                          &
+                          f(pi(1,1),pi(2,2),pi(4,3)))
+    q13 = pcubic(cc(:,3), f(pi(1,1),pi(3,2),pi(1,3)),                          &
+                          f(pi(1,1),pi(3,2),pi(2,3)),                          &
+                          f(pi(1,1),pi(3,2),pi(3,3)),                          &
+                          f(pi(1,1),pi(3,2),pi(4,3)))
+    q14 = pcubic(cc(:,3), f(pi(1,1),pi(4,2),pi(1,3)),                          &
+                          f(pi(1,1),pi(4,2),pi(2,3)),                          &
+                          f(pi(1,1),pi(4,2),pi(3,3)),                          &
+                          f(pi(1,1),pi(4,2),pi(4,3)))
 
-    q21 = pcubic(cc(:,3), f(pi(2,1),pi(1,2),pi(1,3)), f(pi(2,1),pi(1,2),pi(2,3))&
-                        , f(pi(2,1),pi(1,2),pi(3,3)), f(pi(2,1),pi(1,2),pi(4,3)))
-    q22 = pcubic(cc(:,3), f(pi(2,1),pi(2,2),pi(1,3)), f(pi(2,1),pi(2,2),pi(2,3))&
-                        , f(pi(2,1),pi(2,2),pi(3,3)), f(pi(2,1),pi(2,2),pi(4,3)))
-    q23 = pcubic(cc(:,3), f(pi(2,1),pi(3,2),pi(1,3)), f(pi(2,1),pi(3,2),pi(2,3))&
-                        , f(pi(2,1),pi(3,2),pi(3,3)), f(pi(2,1),pi(3,2),pi(4,3)))
-    q24 = pcubic(cc(:,3), f(pi(2,1),pi(4,2),pi(1,3)), f(pi(2,1),pi(4,2),pi(2,3))&
-                        , f(pi(2,1),pi(4,2),pi(3,3)), f(pi(2,1),pi(4,2),pi(4,3)))
+    q21 = pcubic(cc(:,3), f(pi(2,1),pi(1,2),pi(1,3)),                          &
+                          f(pi(2,1),pi(1,2),pi(2,3)),                          &
+                          f(pi(2,1),pi(1,2),pi(3,3)),                          &
+                          f(pi(2,1),pi(1,2),pi(4,3)))
+    q22 = pcubic(cc(:,3), f(pi(2,1),pi(2,2),pi(1,3)),                          &
+                          f(pi(2,1),pi(2,2),pi(2,3)),                          &
+                          f(pi(2,1),pi(2,2),pi(3,3)),                          &
+                          f(pi(2,1),pi(2,2),pi(4,3)))
+    q23 = pcubic(cc(:,3), f(pi(2,1),pi(3,2),pi(1,3)),                          &
+                          f(pi(2,1),pi(3,2),pi(2,3)),                          &
+                          f(pi(2,1),pi(3,2),pi(3,3)),                          &
+                          f(pi(2,1),pi(3,2),pi(4,3)))
+    q24 = pcubic(cc(:,3), f(pi(2,1),pi(4,2),pi(1,3)),                          &
+                          f(pi(2,1),pi(4,2),pi(2,3)),                          &
+                          f(pi(2,1),pi(4,2),pi(3,3)),                          &
+                          f(pi(2,1),pi(4,2),pi(4,3)))
 
-    q31 = pcubic(cc(:,3), f(pi(3,1),pi(1,2),pi(1,3)), f(pi(3,1),pi(1,2),pi(2,3))&
-                        , f(pi(3,1),pi(1,2),pi(3,3)), f(pi(3,1),pi(1,2),pi(4,3)))
-    q32 = pcubic(cc(:,3), f(pi(3,1),pi(2,2),pi(1,3)), f(pi(3,1),pi(2,2),pi(2,3))&
-                        , f(pi(3,1),pi(2,2),pi(3,3)), f(pi(3,1),pi(2,2),pi(4,3)))
-    q33 = pcubic(cc(:,3), f(pi(3,1),pi(3,2),pi(1,3)), f(pi(3,1),pi(3,2),pi(2,3))&
-                        , f(pi(3,1),pi(3,2),pi(3,3)), f(pi(3,1),pi(3,2),pi(4,3)))
-    q34 = pcubic(cc(:,3), f(pi(3,1),pi(4,2),pi(1,3)), f(pi(3,1),pi(4,2),pi(2,3))&
-                        , f(pi(3,1),pi(4,2),pi(3,3)), f(pi(3,1),pi(4,2),pi(4,3)))
+    q31 = pcubic(cc(:,3), f(pi(3,1),pi(1,2),pi(1,3)),                          &
+                          f(pi(3,1),pi(1,2),pi(2,3)),                          &
+                          f(pi(3,1),pi(1,2),pi(3,3)),                          &
+                          f(pi(3,1),pi(1,2),pi(4,3)))
+    q32 = pcubic(cc(:,3), f(pi(3,1),pi(2,2),pi(1,3)),                          &
+                          f(pi(3,1),pi(2,2),pi(2,3)),                          &
+                          f(pi(3,1),pi(2,2),pi(3,3)),                          &
+                          f(pi(3,1),pi(2,2),pi(4,3)))
+    q33 = pcubic(cc(:,3), f(pi(3,1),pi(3,2),pi(1,3)),                          &
+                          f(pi(3,1),pi(3,2),pi(2,3)),                          &
+                          f(pi(3,1),pi(3,2),pi(3,3)),                          &
+                          f(pi(3,1),pi(3,2),pi(4,3)))
+    q34 = pcubic(cc(:,3), f(pi(3,1),pi(4,2),pi(1,3)),                          &
+                          f(pi(3,1),pi(4,2),pi(2,3)),                          &
+                          f(pi(3,1),pi(4,2),pi(3,3)),                          &
+                          f(pi(3,1),pi(4,2),pi(4,3)))
 
-    q41 = pcubic(cc(:,3), f(pi(4,1),pi(1,2),pi(1,3)), f(pi(4,1),pi(1,2),pi(2,3))&
-                        , f(pi(4,1),pi(1,2),pi(3,3)), f(pi(4,1),pi(1,2),pi(4,3)))
-    q42 = pcubic(cc(:,3), f(pi(4,1),pi(2,2),pi(1,3)), f(pi(4,1),pi(2,2),pi(2,3))&
-                        , f(pi(4,1),pi(2,2),pi(3,3)), f(pi(4,1),pi(2,2),pi(4,3)))
-    q43 = pcubic(cc(:,3), f(pi(4,1),pi(3,2),pi(1,3)), f(pi(4,1),pi(3,2),pi(2,3))&
-                        , f(pi(4,1),pi(3,2),pi(3,3)), f(pi(4,1),pi(3,2),pi(4,3)))
-    q44 = pcubic(cc(:,3), f(pi(4,1),pi(4,2),pi(1,3)), f(pi(4,1),pi(4,2),pi(2,3))&
-                        , f(pi(4,1),pi(4,2),pi(3,3)), f(pi(4,1),pi(4,2),pi(4,3)))
+    q41 = pcubic(cc(:,3), f(pi(4,1),pi(1,2),pi(1,3)),                          &
+                          f(pi(4,1),pi(1,2),pi(2,3)),                          &
+                          f(pi(4,1),pi(1,2),pi(3,3)),                          &
+                          f(pi(4,1),pi(1,2),pi(4,3)))
+    q42 = pcubic(cc(:,3), f(pi(4,1),pi(2,2),pi(1,3)),                          &
+                          f(pi(4,1),pi(2,2),pi(2,3)),                          &
+                          f(pi(4,1),pi(2,2),pi(3,3)),                          &
+                          f(pi(4,1),pi(2,2),pi(4,3)))
+    q43 = pcubic(cc(:,3), f(pi(4,1),pi(3,2),pi(1,3)),                          &
+                          f(pi(4,1),pi(3,2),pi(2,3)),                          &
+                          f(pi(4,1),pi(3,2),pi(3,3)),                          &
+                          f(pi(4,1),pi(3,2),pi(4,3)))
+    q44 = pcubic(cc(:,3), f(pi(4,1),pi(4,2),pi(1,3)),                          &
+                          f(pi(4,1),pi(4,2),pi(2,3)),                          &
+                          f(pi(4,1),pi(4,2),pi(3,3)),                          &
+                          f(pi(4,1),pi(4,2),pi(4,3)))
 
 ! interpolate along the Y direction
 !
@@ -557,12 +657,14 @@ module interpolations
 !
   function plinear(fx, fl, fr) result(q)
 
+! local variables are not implicit by default
+!
     implicit none
 
 ! subroutine arguments
 !
     real(kind=8), intent(in) :: fx
-    real(kind=4), intent(in) :: fl, fr
+    real(kind=8), intent(in) :: fl, fr
     real(kind=8)             :: q
 !
 !-------------------------------------------------------------------------------
@@ -589,12 +691,14 @@ module interpolations
 !
   function pcubic_notvd(c, fk, fl, fr, fq) result(q)
 
+! local variables are not implicit by default
+!
     implicit none
 
 ! input and output arguments
 !
     real(kind=8), dimension(4), intent(in)  :: c
-    real(kind=4)              , intent(in)  :: fk, fl, fr, fq
+    real(kind=8)              , intent(in)  :: fk, fl, fr, fq
     real(kind=8)                            :: q
 !
 !-------------------------------------------------------------------------------
@@ -621,12 +725,14 @@ module interpolations
 !
   function pcubic_tvd(c, fk, fl, fr, fq) result(q)
 
+! local variables are not implicit by default
+!
     implicit none
 
 ! input and output arguments
 !
     real(kind=8), dimension(4), intent(in)  :: c
-    real(kind=4)              , intent(in)  :: fk, fl, fr, fq
+    real(kind=8)              , intent(in)  :: fk, fl, fr, fq
     real(kind=8)                            :: q
 
 ! local parameters
@@ -679,6 +785,8 @@ module interpolations
 !
   subroutine coefficients_cubic_notvd(x, c)
 
+! local variables are not implicit by default
+!
     implicit none
 
 ! input and output arguments
@@ -724,6 +832,8 @@ module interpolations
 !
   subroutine coefficients_cubic_tvd(x, c)
 
+! local variables are not implicit by default
+!
     implicit none
 
 ! input and output arguments

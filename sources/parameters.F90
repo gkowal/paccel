@@ -1,8 +1,7 @@
 !!******************************************************************************
 !!
-!!  This file is part of the PACCEL source code, a program to perform
-!!  Newtonian or relativistic magnetohydrodynamical simulations on uniform or
-!!  adaptive mesh.
+!!  This file is part of the PACCEL source code, a program to integrate
+!!  test particle trajectories.
 !!
 !!  Copyright (C) 2008-2021 Grzegorz Kowal <grzegorz@amuncode.org>
 !!
@@ -125,10 +124,6 @@ module parameters
 !
 !-------------------------------------------------------------------------------
 !
-! print info
-!
-    if (verbose) write(*,"('INFO',6x,': reading parameters')")
-
 ! parse the command line to check if a different parameter file has been
 ! provided
 !
