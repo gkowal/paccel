@@ -573,13 +573,13 @@ module particles
 ! open the output file, print headers and the initial values
 !
     open (10, file = 'output.dat', form = 'formatted', status = 'replace')
-    write(10,"('#',1a20,19a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz',      &
+    write(10,"('#',1a20,19a22)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz',      &
                                  '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
                                  'gamma', 'En [MeV]', 'Ek [MeV]',              &
                                  '<B> [Gs]', 'Omega [1/s]',                    &
                                  'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]',       &
                                  'Tolerance'
-    write(10,"(20(1es22.14))") t, x(1), x(2), x(3), v(1), v(2), v(3),          &
+    write(10,"(20(1es22.14))") t, x(1), x(2), x(3), p(1), p(2), p(3),          &
                                va, vp, vr, gm, en, ek,                         &
                                bunit * ba, om / tunit, tg * tunit, rg * lunit, &
                                tg, rg, tol
@@ -740,7 +740,7 @@ module particles
 
 ! store the particle parameters
 !
-          write(10,"(20(1es22.14))") t, x(1), x(2), x(3), v(1), v(2), v(3),    &
+          write(10,"(20(1es22.14))") t, x(1), x(2), x(3), p(1), p(2), p(3),    &
                                      va, vp, vr, gm, en, ek,                   &
                                      bunit * ba, om / tunit, tg * tunit,       &
                                      rg * lunit, tg, rg, tol
@@ -784,7 +784,7 @@ module particles
 
 ! store the particle parameters
 !
-    write(10,"(20(1es22.14))") t, x(1), x(2), x(3), v(1), v(2), v(3),          &
+    write(10,"(20(1es22.14))") t, x(1), x(2), x(3), p(1), p(2), p(3),          &
                                va, vp, vr, gm, en, ek,                         &
                                bunit * ba, om / tunit, tg * tunit,             &
                                rg * lunit, tg, rg, tol
@@ -949,13 +949,13 @@ module particles
 ! open the output file, print headers and the initial values
 !
     open (10, file = 'output.dat', form = 'formatted', status = 'replace')
-    write(10,"('#',1a20,19a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz',      &
+    write(10,"('#',1a20,19a22)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz',      &
                                  '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
                                  'gamma', 'En [MeV]', 'Ek [MeV]',              &
                                  '<B> [Gs]', 'Omega [1/s]',                    &
                                  'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]',       &
                                  'Error'
-    write(10,"(20(1es22.14))") t, x(1), x(2), x(3), v(1), v(2), v(3),          &
+    write(10,"(20(1es22.14))") t, x(1), x(2), x(3), p(1), p(2), p(3),          &
                                va, vp, vr, gm, en, ek,                         &
                                bunit * ba, om / tunit, tg * tunit, rg * lunit, &
                                tg, rg, err
@@ -1078,7 +1078,7 @@ module particles
 
 ! store the particle parameters
 !
-          write(10,"(20(1es22.14))") t, x(1), x(2), x(3), v(1), v(2), v(3),    &
+          write(10,"(20(1es22.14))") t, x(1), x(2), x(3), p(1), p(2), p(3),    &
                                      va, vp, vr, gm, en, ek,                   &
                                      bunit * ba, om / tunit, tg * tunit,       &
                                      rg * lunit, tg, rg, err
@@ -1151,7 +1151,7 @@ module particles
 
 ! store the particle parameters
 !
-    write(10,"(20(1es22.14))") t, x(1), x(2), x(3), v(1), v(2), v(3),          &
+    write(10,"(20(1es22.14))") t, x(1), x(2), x(3), p(1), p(2), p(3),          &
                                va, vp, vr, gm, en, ek,                         &
                                bunit * ba, om / tunit, tg * tunit, rg * lunit, &
                                tg, rg, err
@@ -1267,12 +1267,12 @@ module particles
 ! open the output file, print headers and the initial values
 !
     open(10, file = 'output.dat', form = 'formatted', status = 'replace')
-    write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz',      &
+    write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz',      &
                                  '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
                                  'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
                                  'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
                                  'Rg [L]', 'Tolerance', 'Iterations'
-    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),      &
+    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), p(1), p(2), p(3),      &
                                    va, vp, vr, gm, en, ek, bunit * ba,         &
                                    om / tunit, tg * tunit, rg * lunit, tg, rg, &
                                    tol, i
@@ -1387,7 +1387,7 @@ module particles
 
 ! write results to the output file
 !
-        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),  &
+        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), p(1), p(2), p(3),  &
                                        va, vp, vr, gm, en, ek, bunit * ba,     &
                                        om / tunit, tg * tunit, rg * lunit, tg, &
                                        rg, tol, i
@@ -1529,12 +1529,12 @@ module particles
 ! open the output file, print headers and the initial values
 !
     open(10, file = 'output.dat', form = 'formatted', status = 'replace')
-    write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz',      &
+    write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz',      &
                                  '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
                                  'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
                                  'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
                                  'Rg [L]', 'Tolerance', 'Iterations'
-    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),      &
+    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), p(1), p(2), p(3),      &
                                    va, vp, vr, gm, en, ek, bunit * ba,         &
                                    om / tunit, tg * tunit, rg * lunit, tg, rg, &
                                    tol, i
@@ -1647,7 +1647,7 @@ module particles
 
 ! write results to the output file
 !
-        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),  &
+        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), p(1), p(2), p(3),  &
                                        va, vp, vr, gm, en, ek, bunit * ba,     &
                                        om / tunit, tg * tunit, rg * lunit, tg, &
                                        rg, tol, i
@@ -1896,12 +1896,12 @@ module particles
 ! open the output file, print headers and the initial values
 !
     open(10, file = 'output.dat', form = 'formatted', status = 'replace')
-    write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz',      &
+    write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz',      &
                                  '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
                                  'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
                                  'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
                                  'Rg [L]', 'Tolerance', 'Iterations'
-    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),      &
+    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), p(1), p(2), p(3),      &
                                    va, vp, vr, gm, en, ek, bunit * ba,         &
                                    om / tunit, tg * tunit, rg * lunit, tg, rg, &
                                    tol, i
@@ -2016,7 +2016,7 @@ module particles
 
 ! write results to the output file
 !
-        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),  &
+        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), p(1), p(2), p(3),  &
                                        va, vp, vr, gm, en, ek, bunit * ba,     &
                                        om / tunit, tg * tunit, rg * lunit, tg, &
                                        rg, tol, i
@@ -2154,12 +2154,12 @@ module particles
 ! open the output file, print headers and the initial values
 !
     open(10, file = 'output.dat', form = 'formatted', status = 'replace')
-    write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz',      &
+    write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz',      &
                                  '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
                                  'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
                                  'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
                                  'Rg [L]', 'Tolerance', 'Iterations'
-    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),      &
+    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), p(1), p(2), p(3),      &
                                    va, vp, vr, gm, en, ek, bunit * ba,         &
                                    om / tunit, tg * tunit, rg * lunit, tg, rg, &
                                    tol, i
@@ -2273,7 +2273,7 @@ module particles
 
 ! write results to the output file
 !
-        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),  &
+        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), p(1), p(2), p(3),  &
                                        va, vp, vr, gm, en, ek, bunit * ba,     &
                                        om / tunit, tg * tunit, rg * lunit, tg, &
                                        rg, tol, i
@@ -2534,12 +2534,12 @@ module particles
 ! open the output file, print headers and the initial values
 !
     open(10, file = 'output.dat', form = 'formatted', status = 'replace')
-    write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz',      &
+    write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz',      &
                                  '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
                                  'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
                                  'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
                                  'Rg [L]', 'Tolerance', 'Iterations'
-    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),      &
+    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), p(1), p(2), p(3),      &
                                    va, vp, vr, gm, en, ek, bunit * ba,         &
                                    om / tunit, tg * tunit, rg * lunit, tg, rg, &
                                    tol, i
@@ -2656,7 +2656,7 @@ module particles
 
 ! write results to the output file
 !
-        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),  &
+        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), p(1), p(2), p(3),  &
                                        va, vp, vr, gm, en, ek, bunit * ba,     &
                                        om / tunit, tg * tunit, rg * lunit, tg, &
                                        rg, tol, i
@@ -2794,12 +2794,12 @@ module particles
 ! open the output file, print headers and the initial values
 !
     open(10, file = 'output.dat', form = 'formatted', status = 'replace')
-    write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz',      &
+    write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz',      &
                                  '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
                                  'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
                                  'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
                                  'Rg [L]', 'Tolerance', 'Iterations'
-    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),      &
+    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), p(1), p(2), p(3),      &
                                    va, vp, vr, gm, en, ek, bunit * ba,         &
                                    om / tunit, tg * tunit, rg * lunit, tg, rg, &
                                    tol, i
@@ -2915,7 +2915,7 @@ module particles
 
 ! write results to the output file
 !
-        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), v(1), v(2), v(3),  &
+        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), p(1), p(2), p(3),  &
                                        va, vp, vr, gm, en, ek, bunit * ba,     &
                                        om / tunit, tg * tunit, rg * lunit, tg, &
                                        rg, tol, i
