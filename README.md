@@ -31,4 +31,3 @@ Requirements
 
 * [GNU Fortran](http://gcc.gnu.org/fortran/) version 4.5 or newer.
 * [FITS library](https://heasarc.gsfc.nasa.gov/fitsio/) version 3.3 or newer, optional for tests.
-* [HDF5 libraries](http://www.hdfgroup.org/HDF5/) version 1.8 or newer, optional.

@@ -110,9 +110,6 @@ endif
 ifeq ($(TEST),ISLAND)
 FFLAGS += -DTEST -DITEST
 endif
-ifeq ($(HDF5),Y)
-FFLAGS   += -DHDF5
-endif
 
 #-------------------------------------------------------------------------------
 #
@@ -130,21 +127,6 @@ FFLAGS   += -I$(FITSDIR)/include
 LIBS     += -L$(FITSDIR)/lib
 endif
 LIBS     += -lcfitsio
-
-# if your HDF5 libraries not are installed in the standard location /usr,
-# you can set this path using the HDF5DIR variable here
-#
-#HDF5DIR=/${HOME}/hdf5
-
-ifeq ($(HDF5),Y)
-ifeq ($(HDF5DIR),)
-FFLAGS   += -I/usr/include
-else
-FFLAGS   += -I$(HDF5DIR)/include
-LIBS     += -L$(HDF5DIR)/lib
-endif
-LIBS     += -lhdf5_fortran -lhdf5
-endif
 
 # compression for DataXML files
 #
