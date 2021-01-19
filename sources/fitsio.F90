@@ -31,20 +31,35 @@ module fitsio
 
   implicit none
 
+! interfaces
+!
+  interface fitsio_put_data
+    module procedure fitsio_put_data_double_1d
+    module procedure fitsio_put_data_double_2d
+    module procedure fitsio_put_data_double_3d
+    module procedure fitsio_put_data_integer_3d
+  end interface fitsio_put_data
+  interface fitsio_get_data
+    module procedure fitsio_get_data_double_1d
+    module procedure fitsio_get_data_double_2d
+    module procedure fitsio_get_data_double_3d
+    module procedure fitsio_get_data_integer_3d
+  end interface fitsio_get_data
+
 ! module parameters
 !
-  character(len=128)   , save :: idir  = './'
-  real(kind=8)         , save :: dxmin = 0.0d+00
-  real(kind=8)         , save :: dxmax = 1.0d+00
-  real(kind=8)         , save :: dymin = 0.0d+00
-  real(kind=8)         , save :: dymax = 1.0d+00
-  real(kind=8)         , save :: dzmin = 0.0d+00
-  real(kind=8)         , save :: dzmax = 1.0d+00
+  character(len=128)              , save :: idir  = './'
+  integer                         , save :: ndims = 0, ncells = 0
+  integer, dimension(3)           , save :: dims  = 1
+  real(kind=8), dimension(2,3)    , save :: bnds  = 0.0d+00
+  character(len=4)  , dimension(9), save :: vars  = ''
+  character(len=128), dimension(9), save :: vpath = ''
+  integer           , dimension(9), save :: kinds = 0
 
-! module variables
-!
-  integer, dimension(3), save :: dm
-  integer              , save :: nl
+  private
+
+  public :: fitsio_init, fitsio_get_ndims, fitsio_get_dims, fitsio_get_bounds
+  public :: fitsio_read_var, fitsio_put_data, fitsio_get_data
 
 !-------------------------------------------------------------------------------
 !
@@ -52,784 +67,506 @@ module fitsio
 !
 !===============================================================================
 !
-! hdf4_init: subroutine reads attributes from a HDF file
+! subroutine FITSIO_INIT:
+! ----------------------
+!
+!   Subroutine initializes the module FITSIO.
 !
 !===============================================================================
 !
-  subroutine fits_init(nm)
+  subroutine fitsio_init()
 
-! imported subroutines
-!
     use parameters, only : get_parameter
 
     implicit none
 
-! input parameters
-!
-    character(len=4), intent(in) :: nm
-
 ! local variables
 !
-    character(len=255) :: fl
-    logical            :: info
-
-! FITS variables
-!
-    integer            :: status, iunit, bsize, bpix, naxes
+    logical :: info
+    integer :: status, io, p, bsize
 !
 !-------------------------------------------------------------------------------
 !
-! get module parameters
-!
-    call get_parameter('idir'       , idir )
-    call get_parameter('xmin_domain', dxmin)
-    call get_parameter('xmax_domain', dxmax)
-    call get_parameter('ymin_domain', dymin)
-    call get_parameter('ymax_domain', dymax)
-    call get_parameter('zmin_domain', dzmin)
-    call get_parameter('zmax_domain', dzmax)
+    status = 0
 
-! set default values
-!
-    dm (:) = 1
+    call get_parameter('idir', idir)
+    p = len_trim(idir)
+    if (idir(p:p) /= '/') then
+      idir = trim(idir) // '/'
+    end if
+    call get_parameter('xmin_domain', bnds(1,1))
+    call get_parameter('xmax_domain', bnds(2,1))
+    call get_parameter('ymin_domain', bnds(1,2))
+    call get_parameter('ymax_domain', bnds(2,2))
+    call get_parameter('zmin_domain', bnds(1,3))
+    call get_parameter('zmax_domain', bnds(2,3))
 
-! generate filename
+    if (any(bnds(1,:) >= bnds(2,:))) then
+      write(*,"('ERROR',5x,': domain limits are not set correctly!')")
+      write(*,"('ERROR',5x,': use xmin_domain, xmax_domain, etc.')")
+      stop
+    end if
+
+
+! parse filename information
 !
-    write(fl,"(a,a4,'.fits')") trim(idir), trim(nm)
+    vars(1:6) = [ 'velx', 'vely', 'velz', 'magx', 'magy', 'magz' ]
+    call ftgiou(io, status)
+    do p = 1, 6
+
+! generate the file path
+!
+      vpath(p) = trim(idir) // trim(adjustl(vars(p))) // '.fits'
 
 ! check if the file exists
 !
-    inquire(file = fl, exist = info)
+      inquire(file = vpath(p), exist = info)
+      if (.not. info) then
+        write(*,"('ERROR',5x,': file ',a,' does not exist!')") trim(vpath(p))
+        stop
+      end if
 
-    if (.not. info) then
-      write (*,'("ERROR   : file ",a," does not exist!")') trim(fl)
-      stop
-    endif
-
-! check if the file is written in FITS format
+! get some info about data stored in FITS format
 !
-    status  = 0
+      call ftopen(io, vpath(p), 0, bsize, status)
+      call ftgipr(io, 3, kinds(p), ndims, dims, status)
+      call ftclos(io, status)
 
-    call ftgiou(iunit, status)
-    call ftopen(iunit, fl, 0, bsize, status)
-    call ftgipr(iunit, 3, bpix, naxes, dm, status)
-    call ftclos(iunit, status)
-    call ftfiou(iunit, status)
+    end do
+    call ftfiou(io, status)
 
 ! calculate number of elements in array
 !
-    nl = product(dm)
+    ncells = product(dims)
 
-  end subroutine fits_init
+  end subroutine fitsio_init
 !
 !===============================================================================
 !
-! fits_get_dims: subroutine reads dimensions of stored arrays from a FITS file
+! subroutine FITSIO_GET_NDIMS:
+! ---------------------------
+!
+!   Subroutine returns the number of the domain dimensions.
 !
 !===============================================================================
 !
-  subroutine fits_get_dims(dims)
+  subroutine fitsio_get_ndims(dm)
 
     implicit none
 
-! arguments
-!
-    integer, dimension(:), intent(inout) :: dims
+    integer, intent(out) :: dm
 !
 !-------------------------------------------------------------------------------
 !
-    dims(:) = dm(:)
+    dm = ndims
 
-  end subroutine fits_get_dims
+  end subroutine fitsio_get_ndims
 !
 !===============================================================================
 !
-! fits_get_bounds: subroutine returns the limits of the box
+! subroutine FITSIO_GET_DIMS:
+! --------------------------
+!
+!   Subroutine returns the domain dimensions.
 !
 !===============================================================================
 !
-  subroutine fits_get_bounds(xmin, xmax, ymin, ymax, zmin, zmax)
+  subroutine fitsio_get_dims(dm)
 
     implicit none
 
-! arguments
+    integer, dimension(:), intent(out) :: dm
 !
+!-------------------------------------------------------------------------------
+!
+    dm(:) = dims(:)
+
+  end subroutine fitsio_get_dims
+!
+!===============================================================================
+!
+! subroutine FITSIO_GET_BOUNDS:
+! ----------------------------
+!
+!   Subroutine returns the domain bounds.
+!
+!===============================================================================
+!
+  subroutine fitsio_get_bounds(xmin, xmax, ymin, ymax, zmin, zmax)
+
+    implicit none
+
     real(kind=8), intent(out) :: xmin, xmax, ymin, ymax, zmin, zmax
-!
+
 !-------------------------------------------------------------------------------
 !
-    xmin = dxmin
-    xmax = dxmax
-    ymin = dymin
-    ymax = dymax
-    zmin = dzmin
-    zmax = dzmax
+    xmin = bnds(1,1)
+    xmax = bnds(2,1)
+    ymin = bnds(1,2)
+    ymax = bnds(2,2)
+    zmin = bnds(1,3)
+    zmax = bnds(2,3)
 
-  end subroutine fits_get_bounds
+  end subroutine fitsio_get_bounds
 !
 !===============================================================================
 !
-! fits_get_gridsize: subroutine returns the size of the cell
+! subroutine FITSIO_READ_VAR:
+! --------------------------
+!
+!   Subroutine reads dataset for a given variable.
 !
 !===============================================================================
 !
-  subroutine fits_get_gridsize(dx, dy, dz)
+  subroutine fitsio_read_var(var, qty)
+
+    use iso_fortran_env, only : error_unit
 
     implicit none
 
-! arguments
-!
-    real(kind=8), intent(out) :: dx, dy, dz
-!
-!-------------------------------------------------------------------------------
-!
-    dx = 1.0d+00 / dm(1)
-    dy = 1.0d+00 / dm(2)
-    dz = 1.0d+00 / dm(3)
-
-  end subroutine fits_get_gridsize
-!
-!===============================================================================
-!
-! fits_get_timestep: subroutine returns the timestep
-!
-!===============================================================================
-!
-  subroutine fits_get_timestep(dt)
-
-    implicit none
-
-! arguments
-!
-    real(kind=8), intent(out) :: dt
-!
-!-------------------------------------------------------------------------------
-!
-    dt = 1.0d+00
-
-  end subroutine fits_get_timestep
-!
-!===============================================================================
-!
-! fits_read_var: subroutine reads variables from HDF files
-!
-!===============================================================================
-!
-  subroutine fits_read_var(var, qty)
-
-    implicit none
-
-! arguments
-!
-    character(len=*)      , intent(in)    :: var
+    character(len=*)              , intent(in)    :: var
     real(kind=8), dimension(:,:,:), intent(inout) :: qty
 
-! local variables
-!
-    real(kind=8), dimension(:,:,:), allocatable :: a
-!
+    logical :: info
+    integer :: status, io, p, bsize
+
+    real(kind=4), dimension(:,:,:), allocatable :: tmp
+
+    character(len=*), parameter :: loc = 'FITSIO::fitsio_read_var()'
+
 !-------------------------------------------------------------------------------
 !
-! allocate temporary arrays
-!
-    allocate(a(dm(1),dm(2),dm(3)))
+    status = 0
 
-    select case(trim(var))
-    case("dlog")
-      call fits_read_data("dens", qty)
-      qty = dlog10(qty)
-    case("momx")
-      call fits_read_data("dens", a)
-      call fits_read_data("velx", qty)
-      qty = a * qty
-    case("momy")
-      call fits_read_data("dens", a)
-      call fits_read_data("vely", qty)
-      qty = a * qty
-    case("momz")
-      call fits_read_data("dens", a)
-      call fits_read_data("velz", qty)
-      qty = a * qty
-    case("dvlx")
-      call fits_read_data("dens", a)
-      call fits_read_data("velx", qty)
-      qty = a**(1./3.) * qty
-    case("dvly")
-      call fits_read_data("dens", a)
-      call fits_read_data("vely", qty)
-      qty = a**(1./3.) * qty
-    case("dvlz")
-      call fits_read_data("dens", a)
-      call fits_read_data("velz", qty)
-      qty = a**(1./3.) * qty
+    p = 1
+    do while(vars(p) /= var .and. p <= size(vars))
+      p = p + 1
+    end do
+    write(*,"('INFO',6x,': reading from ',a)") trim(vpath(p))
+
+    call ftgiou(io, status)
+    call ftopen(io, trim(vpath(p)), 0, bsize, status)
+    select case(kinds(p))
+    case(-32)
+      allocate(tmp(dims(1),dims(2),dims(3)))
+      call ftgpve(io, 0, 1, ncells, 0.0e+00, tmp, info, status)
+      qty = real(tmp, 8)
+      deallocate(tmp)
+    case(-64)
+      call ftgpvd(io, 0, 1, ncells, 0.0d+00, qty, info, status)
     case default
-      call fits_read_data(var, qty)
+      write(error_unit,"('[',a,']: ',a)") trim(loc),                           &
+                       "Unsupported data format in file '" // trim(vpath(p)) //&
+                       "!"
+      stop
     end select
+    call ftclos(io, status)
+    call ftfiou(io, status)
 
-! deallocate temporary arrays
-!
-    deallocate(a)
-
-  end subroutine fits_read_var
-!
-!===============================================================================
-!
-! fits_read_data: subroutine reads selected array from an HDF file
-!
-!===============================================================================
-!
-  subroutine fits_read_data(var, qty)
-
-! arguments
-!
-    character(len=*)      , intent(in)    :: var
-    real(kind=8), dimension(:,:,:), intent(inout) :: qty
-
-! local variables
-!
-    character(len=255) :: fl
-
-! FITS variables
-!
-    logical            :: info
-    integer            :: status, iunit, bsize
-!
 !-------------------------------------------------------------------------------
 !
-! generate filename
-!
-    write(fl,"(a,a4,'.fits')") trim(idir), trim(var)
-    write( *,"(a,a4,'.fits')") 'INFO      : reading from ', trim(var)
-
-! check if the file exists
-!
-    inquire(file = fl, exist = info)
-
-    if (.not. info) then
-      write (*,'("ERROR   : file ",a," does not exist!")') trim(fl)
-      stop
-    endif
-
-! check if the file is written in FITS format
-!
-    status  = 0
-
-    call ftgiou(iunit, status)
-    call ftopen(iunit, fl, 0, bsize, status)
-    call ftgpve(iunit, 0, 1, nl, 0.0, qty, info, status)
-    call ftclos(iunit, status)
-    call ftfiou(iunit, status)
-
-  end subroutine fits_read_data
+  end subroutine fitsio_read_var
 !
 !===============================================================================
 !
-! FITS_GET_DATA: subroutine reads data from FITS file
+! subroutine FITSIO_PUT_DATA_DOUBLE_1D:
+! ------------------------------------
+!
+!   Subroutine stores 1D data in a file.
 !
 !===============================================================================
 !
-  subroutine fits_get_data(rfile, qty, status)
+  subroutine fitsio_put_data_double_1d(fname, array)
 
     implicit none
 
-    character(len=*)            , intent(in)    :: rfile
-    real, dimension(:,:,:)      , intent(inout) :: qty
-    integer                     , intent(out)   :: status
+    character(len=*)          , intent(in) :: fname
+    real(kind=8), dimension(:), intent(in) :: array
 
-    logical :: anyf, ext
-    integer :: nelems, iunit, bsize, bpix, naxis, naxes(3)
+    integer :: status, io, naxis, p
+
+    integer, dimension(:), allocatable :: naxes
 !
 !-------------------------------------------------------------------------------
 !
-    inquire(file = rfile, exist = ext)
-
-    if (.not. ext) then
-      write (*,'("ERROR   : file ",a," does not exist!")') trim(rfile)
-      stop
-    endif
-
     status = 0
-    naxes(:) = 1
+    naxis  = rank(array)
+    allocate(naxes(naxis))
+    do p = 1, naxis
+      naxes(p) = size(array, p)
+    end do
 
-    call ftgiou(iunit, status)
-    call ftopen(iunit, rfile, 0, bsize, status)
-    call ftgipr(iunit, 3, bpix, naxis, naxes, status)
-    nelems = product(naxes(:))
-    call ftgpve(iunit, 0, 1, nelems, 0.0, qty, anyf, status)
-    call ftclos(iunit, status)
-    call ftfiou(iunit, status)
+    call ftgiou(io, status)
+    call ftinit(io, trim(fname), 1, status)
+    call ftphps(io, -64, naxis, naxes, status)
+    call ftpprd(io, 1, 1, size(array), array, status)
+    call ftclos(io, status)
+    call ftfiou(io, status)
 
+    deallocate(naxes)
 
-  end subroutine fits_get_data
-
+!-------------------------------------------------------------------------------
+!
+  end subroutine fitsio_put_data_double_1d
+!
 !===============================================================================
 !
-! FITS_GET_DATA_3D: subroutine reads data from FITS file
+! subroutine FITSIO_PUT_DATA_DOUBLE_2D:
+! ------------------------------------
+!
+!   Subroutine stores 2D data in a file.
 !
 !===============================================================================
 !
-  subroutine fits_get_data_3d(rfile, qty)
+  subroutine fitsio_put_data_double_2d(fname, array)
 
     implicit none
 
-    character(len=*)              , intent(in)    :: rfile
-    real(kind=8), dimension(:,:,:), intent(inout) :: qty
+    character(len=*)            , intent(in) :: fname
+    real(kind=8), dimension(:,:), intent(in) :: array
 
-    logical :: anyf, ext
-    integer :: nelems, iunit, bsize, bpix, naxis, naxes(3), status
+    integer :: status, io, naxis, p
+
+    integer, dimension(:), allocatable :: naxes
 !
 !-------------------------------------------------------------------------------
 !
-    inquire(file = rfile, exist = ext)
-
-    if (.not. ext) then
-      write (*,'("ERROR   : file ",a," does not exist!")') trim(rfile)
-      stop
-    endif
-
     status = 0
-    naxes(:) = 1
+    naxis  = rank(array)
+    allocate(naxes(naxis))
+    do p = 1, naxis
+      naxes(p) = size(array, p)
+    end do
 
-    qty(:,:,:) = 0.0
+    call ftgiou(io, status)
+    call ftinit(io, trim(fname), 1, status)
+    call ftphps(io, -64, naxis, naxes, status)
+    call ftpprd(io, 1, 1, size(array), array, status)
+    call ftclos(io, status)
+    call ftfiou(io, status)
 
-    call ftgiou(iunit, status)
-    call ftopen(iunit, rfile, 0, bsize, status)
-    call ftgipr(iunit, 3, bpix, naxis, naxes, status)
-    nelems = naxes(1) * naxes(2) * naxes(3)
-    call ftgpvd(iunit, 0, 1, nelems, 0.0, qty, anyf, status)
-    call ftclos(iunit, status)
-    call ftfiou(iunit, status)
-!
+    deallocate(naxes)
+
 !-------------------------------------------------------------------------------
 !
-  end subroutine fits_get_data_3d
-
-!===============================================================================
-!
-! FITS_GET_DATA_2D: subroutine reads data from FITS file
+  end subroutine fitsio_put_data_double_2d
 !
 !===============================================================================
 !
-  subroutine fits_get_data_2d(rfile, qty)
+! subroutine FITSIO_PUT_DATA_DOUBLE_3D:
+! ------------------------------------
+!
+!   Subroutine stores 3D data in a file.
+!
+!===============================================================================
+!
+  subroutine fitsio_put_data_double_3d(fname, array)
 
     implicit none
 
-    character(len=*)            , intent(in)    :: rfile
-    real(kind=8), dimension(:,:), intent(inout) :: qty
+    character(len=*)              , intent(in) :: fname
+    real(kind=8), dimension(:,:,:), intent(in) :: array
 
-    logical :: anyf, ext
-    integer :: nelems, iunit, bsize, bpix, naxis, naxes(2), status
+    integer :: status, io, naxis, p
+
+    integer, dimension(:), allocatable :: naxes
 !
 !-------------------------------------------------------------------------------
 !
-    inquire(file = rfile, exist = ext)
-
-    if (.not. ext) then
-      write (*,'("ERROR   : file ",a," does not exist!")') trim(rfile)
-      stop
-    endif
-
     status = 0
-    naxes(:) = 1
+    naxis  = rank(array)
+    allocate(naxes(naxis))
+    do p = 1, naxis
+      naxes(p) = size(array, p)
+    end do
 
-    qty(:,:) = 0.0
+    call ftgiou(io, status)
+    call ftinit(io, trim(fname), 1, status)
+    call ftphps(io, -64, naxis, naxes, status)
+    call ftpprd(io, 1, 1, size(array), array, status)
+    call ftclos(io, status)
+    call ftfiou(io, status)
 
-    call ftgiou(iunit, status)
-    call ftopen(iunit, rfile, 0, bsize, status)
-    call ftgipr(iunit, 2, bpix, naxis, naxes, status)
-    nelems = naxes(1) * naxes(2)
-    call ftgpvd(iunit, 0, 1, nelems, 0.0, qty, anyf, status)
-    call ftclos(iunit, status)
-    call ftfiou(iunit, status)
-!
+    deallocate(naxes)
+
 !-------------------------------------------------------------------------------
 !
-  end subroutine fits_get_data_2d
+  end subroutine fitsio_put_data_double_3d
 !
 !===============================================================================
 !
-! FITS_GET_DATA_1D: subroutine reads data from FITS file
+! subroutine FITSIO_PUT_DATA_INTEGER_3D:
+! -------------------------------------
+!
+!   Subroutine stores 3D data in a file.
 !
 !===============================================================================
 !
-  subroutine fits_get_data_1d(rfile, qty)
+  subroutine fitsio_put_data_integer_3d(fname, array)
 
     implicit none
 
-    character(len=*)          , intent(in)    :: rfile
-    real(kind=8), dimension(:), intent(inout) :: qty
+    character(len=*)                 , intent(in) :: fname
+    integer(kind=4), dimension(:,:,:), intent(in) :: array
 
-    logical :: anyf, ext
-    integer :: nelems, iunit, bsize, bpix, naxis, naxes(1), status
+    integer :: status, io, naxis, p
+
+    integer, dimension(:), allocatable :: naxes
 !
 !-------------------------------------------------------------------------------
 !
-    inquire(file = rfile, exist = ext)
-
-    if (.not. ext) then
-      write (*,'("ERROR   : file ",a," does not exist!")') trim(rfile)
-      stop
-    endif
-
     status = 0
-    naxes(:) = 1
+    naxis  = rank(array)
+    allocate(naxes(naxis))
+    do p = 1, naxis
+      naxes(p) = size(array, p)
+    end do
 
-    qty(:) = 0.0
+    call ftgiou(io, status)
+    call ftinit(io, trim(fname), 1, status)
+    call ftphps(io, 32, naxis, naxes, status)
+    call ftpprj(io, 1, 1, size(array), array, status)
+    call ftclos(io, status)
+    call ftfiou(io, status)
 
-    call ftgiou(iunit, status)
-    call ftopen(iunit, rfile, 0, bsize, status)
-    call ftgipr(iunit, 1, bpix, naxis, naxes, status)
-    nelems = naxes(1)
-    call ftgpvd(iunit, 0, 1, nelems, 0.0, qty, anyf, status)
-    call ftclos(iunit, status)
-    call ftfiou(iunit, status)
-!
+    deallocate(naxes)
+
 !-------------------------------------------------------------------------------
 !
-  end subroutine fits_get_data_1d
+  end subroutine fitsio_put_data_integer_3d
 !
 !===============================================================================
 !
-! FITS_GET_FOURIER_DATA: subroutine reads data from two files containing
-!                        the real and imaginery parts and merges them into
-!                        one complex array
+! subroutine FITSIO_GET_DATA_DOUBLE_1D:
+! ------------------------------------
+!
+!   Subroutine restores 1D data in a file.
 !
 !===============================================================================
 !
-  subroutine fits_get_fourier_data(refile, imfile, fft, status)
+  subroutine fitsio_get_data_double_1d(fname, array)
 
     implicit none
 
-    character(len=*)            , intent(in)    :: refile, imfile
-    complex, dimension(:,:,:)   , intent(inout) :: fft
-    integer                     , intent(out)   :: status
+    character(len=*)          , intent(in)    :: fname
+    real(kind=8), dimension(:), intent(inout) :: array
 
-    logical :: anyf, ext
-    integer :: nelems, iunit, bsize, bpix, naxis, naxes(3)
-
-    real, dimension(:,:,:), allocatable :: tmp
-    integer                     , parameter :: FFTW_ESTIMATE = 64
-!
-!-------------------------------------------------------------------------------
-!
-    inquire(file = refile, exist = ext)
-
-    if (.not. ext) then
-      write (*,'("ERROR   : file ",a," does not exist!")') trim(refile)
-      stop
-    endif
-
-    inquire(file = imfile, exist = ext)
-
-    if (.not. ext) then
-      write (*,'("ERROR   : file ",a," does not exist!")') trim(imfile)
-      stop
-    endif
-
-    status = 0
-    naxes(:) = 1
-
-    fft(:,:,:) = cmplx(0.0, 0.0)
-
-    call ftgiou(iunit, status)
-    call ftopen(iunit, refile, 0, bsize, status)
-    call ftgipr(iunit, 3, bpix, naxis, naxes, status)
-    nelems = product(naxes(:))
-    allocate(tmp(naxes(1),naxes(2),naxes(3)))
-    call ftgpve(iunit, 0, 1, nelems, 0.0, tmp, anyf, status)
-    call ftclos(iunit, status)
-    call ftfiou(iunit, status)
-
-!     print *, minval(tmp), maxval(tmp)
-
-    fft(:,:,:) = fft(:,:,:) + cmplx(tmp(:,:,:), 0.0)
-
-!     print *, minval(real(fft)), maxval(real(fft))
-!     print *, minval(imag(fft)), maxval(imag(fft))
-
-    call ftgiou(iunit, status)
-    call ftopen(iunit, imfile, 0, bsize, status)
-    call ftgipr(iunit, 3, bpix, naxis, naxes, status)
-    nelems = product(naxes(:))
-    call ftgpve(iunit, 0, 1, nelems, 0.0, tmp, anyf, status)
-    call ftclos(iunit, status)
-    call ftfiou(iunit, status)
-
-!     print *, minval(tmp), maxval(tmp)
-
-    fft(:,:,:) = fft(:,:,:) + cmplx(0.0, tmp(:,:,:))
-
-!     print *, minval(real(fft)), maxval(real(fft))
-!     print *, minval(imag(fft)), maxval(imag(fft))
-
-    if (allocated(tmp)) deallocate(tmp)
-
-  end subroutine fits_get_fourier_data
-
-!===============================================================================
-!
-! FITS_PUT_DATA: subroutine writes data to a file (single precision)
-!
-!===============================================================================
-!
-  subroutine fits_put_dataf(rfile, qty, status)
-
-    implicit none
-
-    character(len=*)            , intent(in)    :: rfile
-    real, dimension(:,:,:)      , intent(in)    :: qty
-    integer                     , intent(out)   :: status
-
-    integer :: nelems, iunit, naxes(3)
+    logical :: anyf
+    integer :: status, io, bsize
 !
 !-------------------------------------------------------------------------------
 !
     status = 0
 
-    naxes(1) = size(qty, 1)
-    naxes(2) = size(qty, 2)
-    naxes(3) = size(qty, 3)
+    call ftgiou(io, status)
+    call ftopen(io, trim(fname), 0, bsize, status)
+    call ftgpvd(io, 0, 1, size(array), 0.0d+00, array, anyf, status)
+    call ftclos(io, status)
+    call ftfiou(io, status)
 
-    call ftgiou(iunit, status)
-    call ftinit(iunit, rfile, 1, status)
-    nelems = product(naxes(:))
-    call ftphpr(iunit, .true., -32, 3, naxes, 0, 1, .true., status)
-    call ftppre(iunit, 1, 1, nelems, qty, status)
-    call ftclos(iunit, status)
-    call ftfiou(iunit, status)
-
-  end subroutine fits_put_dataf
-!
-!===============================================================================
-!
-! FITS_PUT_DATA_3D: subroutine writes 3D data to a file
-!
-!===============================================================================
-!
-  subroutine fits_put_data_3d(rfile, qty)
-
-    implicit none
-
-    character(len=*)              , intent(in)    :: rfile
-    real(kind=8), dimension(:,:,:), intent(in)    :: qty
-
-    integer :: nelems, iunit, naxes(3), status
-!
 !-------------------------------------------------------------------------------
 !
-    status = 0
-    naxes(1) = size(qty, 1)
-    naxes(2) = size(qty, 2)
-    naxes(3) = size(qty, 3)
-
-    call ftgiou(iunit, status)
-    call ftinit(iunit, rfile, 1, status)
-    nelems = naxes(1) * naxes(2) * naxes(3)
-    call ftphpr(iunit, .true., -64, 3, naxes, 0, 1, .true., status)
-    call ftpprd(iunit, 1, 1, nelems, qty, status)
-    call ftclos(iunit, status)
-    call ftfiou(iunit, status)
-
-  end subroutine fits_put_data_3d
+  end subroutine fitsio_get_data_double_1d
 !
 !===============================================================================
 !
-! FITS_PUT_DATA_2D: subroutine writes 2D data to a file
+! subroutine FITSIO_GET_DATA_DOUBLE_2D:
+! -------------------------------------
+!
+!   Subroutine restores 2D data in a file.
 !
 !===============================================================================
 !
-  subroutine fits_put_data_2d(rfile, qty)
+  subroutine fitsio_get_data_double_2d(fname, array)
 
     implicit none
 
-    character(len=*)            , intent(in)    :: rfile
-    real(kind=8), dimension(:,:), intent(in)    :: qty
+    character(len=*)            , intent(in)    :: fname
+    real(kind=8), dimension(:,:), intent(inout) :: array
 
-    integer :: nelems, iunit, naxes(2), status
-!
-!-------------------------------------------------------------------------------
-!
-    status = 0
-    naxes(1) = size(qty, 1)
-    naxes(2) = size(qty, 2)
-
-    call ftgiou(iunit, status)
-    call ftinit(iunit, rfile, 1, status)
-    nelems = naxes(1) * naxes(2)
-    call ftphpr(iunit, .true., -64, 2, naxes, 0, 1, .true., status)
-    call ftpprd(iunit, 1, 1, nelems, qty, status)
-    call ftclos(iunit, status)
-    call ftfiou(iunit, status)
-
-  end subroutine fits_put_data_2d
-!
-!===============================================================================
-!
-! FITS_PUT_DATA_1D: subroutine writes 1D data to a file
-!
-!===============================================================================
-!
-  subroutine fits_put_data_1d(rfile, qty)
-
-    implicit none
-
-    character(len=*)            , intent(in)    :: rfile
-    real(kind=8), dimension(:)  , intent(in)    :: qty
-
-    integer :: nelems, iunit, naxes(1), status
-!
-!-------------------------------------------------------------------------------
-!
-    status = 0
-    naxes(1) = size(qty, 1)
-
-    call ftgiou(iunit, status)
-    call ftinit(iunit, rfile, 1, status)
-    nelems = naxes(1)
-    call ftphpr(iunit, .true., -64, 1, naxes, 0, 1, .true., status)
-    call ftpprd(iunit, 1, 1, nelems, qty, status)
-    call ftclos(iunit, status)
-    call ftfiou(iunit, status)
-
-  end subroutine fits_put_data_1d
-!
-!===============================================================================
-!
-! FITS_PUT_DATA: subroutine writes data to a file (double precision)
-!
-!===============================================================================
-!
-  subroutine fits_put_data(rfile, qty, status)
-
-    implicit none
-
-    character(len=*)              , intent(in)    :: rfile
-    real(kind=8), dimension(:,:,:), intent(in)    :: qty
-    integer                       , intent(out)   :: status
-
-    integer :: nelems, iunit, naxes(3)
+    logical :: anyf
+    integer :: status, io, bsize
 !
 !-------------------------------------------------------------------------------
 !
     status = 0
 
-    naxes(1) = size(qty, 1)
-    naxes(2) = size(qty, 2)
-    naxes(3) = size(qty, 3)
+    call ftgiou(io, status)
+    call ftopen(io, trim(fname), 0, bsize, status)
+    call ftgpvd(io, 0, 1, size(array), 0.0d+00, array, anyf, status)
+    call ftclos(io, status)
+    call ftfiou(io, status)
 
-    call ftgiou(iunit, status)
-    call ftinit(iunit, rfile, 1, status)
-    nelems = product(naxes(:))
-    call ftphpr(iunit, .true., -64, 3, naxes, 0, 1, .true., status)
-    call ftpprd(iunit, 1, 1, nelems, qty, status)
-    call ftclos(iunit, status)
-    call ftfiou(iunit, status)
-
-  end subroutine fits_put_data
+!-------------------------------------------------------------------------------
+!
+  end subroutine fitsio_get_data_double_2d
 !
 !===============================================================================
 !
-! FITS_APPEND_KEY_DOUBLE: subroutine appends a double precision value keyword
-!                         to a file
+! subroutine FITSIO_GET_DATA_DOUBLE_3D:
+! -------------------------------------
+!
+!   Subroutine restores 3D data in a file.
 !
 !===============================================================================
 !
-  subroutine fits_append_key_double(file, key, comment, value)
+  subroutine fitsio_get_data_double_3d(fname, array)
 
     implicit none
 
-! subroutine arguments
-!
-    character(len=*), intent(in)    :: file
-    character(len=*), intent(in)    :: key, comment
-    real(kind=8)    , intent(in)    :: value
+    character(len=*)              , intent(in)    :: fname
+    real(kind=8), dimension(:,:,:), intent(inout) :: array
 
-! local variables
-!
-    integer :: iunit, bsize, status, rwmode = 1
+    logical :: anyf
+    integer :: status, io, bsize
 !
 !-------------------------------------------------------------------------------
 !
     status = 0
 
-    call ftgiou(iunit, status)
-    call ftopen(iunit, file, rwmode, bsize, status)
-    call ftpkyd(iunit, key, value, 10, comment, status)
-    call ftclos(iunit, status)
-    call ftfiou(iunit, status)
-!
+    call ftgiou(io, status)
+    call ftopen(io, trim(fname), 0, bsize, status)
+    call ftgpvd(io, 0, 1, size(array), 0.0d+00, array, anyf, status)
+    call ftclos(io, status)
+    call ftfiou(io, status)
+
 !-------------------------------------------------------------------------------
 !
-  end subroutine fits_append_key_double
+  end subroutine fitsio_get_data_double_3d
 !
 !===============================================================================
 !
-! FITS_READ_KEY_INTEGER: subroutine reads an integer keyword from a file
+! subroutine FITSIO_GET_DATA_INTEGER_3D:
+! --------------------------------------
+!
+!   Subroutine restores 3D data in a file.
 !
 !===============================================================================
 !
-  subroutine fits_read_key_integer(file, key, value)
+  subroutine fitsio_get_data_integer_3d(fname, array)
 
     implicit none
 
-! subroutine arguments
-!
-    character(len=*), intent(in)    :: file
-    character(len=*), intent(in)    :: key
-    integer         , intent(out)   :: value
+    character(len=*)         , intent(in)    :: fname
+    integer, dimension(:,:,:), intent(inout) :: array
 
-! local variables
-!
-    integer :: iunit, bsize, status, rwmode = 0
-    character(len=255) :: comment
+    logical :: anyf
+    integer :: status, io, bsize
 !
 !-------------------------------------------------------------------------------
 !
     status = 0
 
-    call ftgiou(iunit, status)
-    call ftopen(iunit, file, rwmode, bsize, status)
-    call ftgkyj(iunit, key, value, comment, status)
-    call ftclos(iunit, status)
-    call ftfiou(iunit, status)
-!
+    call ftgiou(io, status)
+    call ftopen(io, trim(fname), 0, bsize, status)
+    call ftgpvj(io, 0, 1, size(array), 0, array, anyf, status)
+    call ftclos(io, status)
+    call ftfiou(io, status)
+
 !-------------------------------------------------------------------------------
 !
-  end subroutine fits_read_key_integer
-!
+  end subroutine fitsio_get_data_integer_3d
+
 !===============================================================================
-!
-! FITS_READ_KEY_DOUBLE: subroutine reads a double precision keyword from a file
-!
-!===============================================================================
-!
-  subroutine fits_read_key_double(file, key, value)
-
-    implicit none
-
-! subroutine arguments
-!
-    character(len=*), intent(in)    :: file
-    character(len=*), intent(in)    :: key
-    real(kind=8)    , intent(out)   :: value
-
-! local variables
-!
-    integer :: iunit, bsize, status, rwmode = 0
-    character(len=255) :: comment
-!
-!-------------------------------------------------------------------------------
-!
-    status = 0
-
-    call ftgiou(iunit, status)
-    call ftopen(iunit, file, rwmode, bsize, status)
-    call ftgkyd(iunit, key, value, comment, status)
-    call ftclos(iunit, status)
-    call ftfiou(iunit, status)
-!
-!-------------------------------------------------------------------------------
-!
-  end subroutine fits_read_key_double
 !
 end module fitsio

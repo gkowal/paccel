@@ -130,7 +130,7 @@ module fields
 ! include subroutines and variables from other modules
 !
     use dataxml   , only : dataxml_init, dataxml_get_dims, dataxml_get_bounds
-    use fitsio    , only : fits_init, fits_get_dims, fits_get_bounds
+    use fitsio    , only : fitsio_init, fitsio_get_dims, fitsio_get_bounds
     use parameters, only : get_parameter
 
 ! local variables are not implicit by default
@@ -174,9 +174,9 @@ module fields
       call dataxml_get_dims(dm)
       call dataxml_get_bounds(xmin, xmax, ymin, ymax, zmin, zmax)
     case('fits')
-      call fits_init('magx')
-      call fits_get_dims(dm)
-      call fits_get_bounds(xmin, xmax, ymin, ymax, zmin, zmax)
+      call fitsio_init()
+      call fitsio_get_dims(dm)
+      call fitsio_get_bounds(xmin, xmax, ymin, ymax, zmin, zmax)
     case default
       write(*,"('ERROR',5x,': ',a,1x,a)") "unsupported data format:",          &
                                                                  trim(fformat)
@@ -258,7 +258,7 @@ module fields
 ! include subroutines and variables from other modules
 !
     use dataxml, only : dataxml_read_var
-    use fitsio , only : fits_read_var
+    use fitsio , only : fitsio_read_var
 
 ! local variables are not implicit by default
 !
@@ -296,16 +296,16 @@ module fields
       call dataxml_read_var('curz', jz(1:dm(1),1:dm(2),1:dm(3)))
 #endif /* CURRENT */
     case('fits')
-      call fits_read_var('velx', ux(1:dm(1),1:dm(2),1:dm(3)))
-      call fits_read_var('vely', uy(1:dm(1),1:dm(2),1:dm(3)))
-      call fits_read_var('velz', uz(1:dm(1),1:dm(2),1:dm(3)))
-      call fits_read_var('magx', bx(1:dm(1),1:dm(2),1:dm(3)))
-      call fits_read_var('magy', by(1:dm(1),1:dm(2),1:dm(3)))
-      call fits_read_var('magz', bz(1:dm(1),1:dm(2),1:dm(3)))
+      call fitsio_read_var('velx', ux(1:dm(1),1:dm(2),1:dm(3)))
+      call fitsio_read_var('vely', uy(1:dm(1),1:dm(2),1:dm(3)))
+      call fitsio_read_var('velz', uz(1:dm(1),1:dm(2),1:dm(3)))
+      call fitsio_read_var('magx', bx(1:dm(1),1:dm(2),1:dm(3)))
+      call fitsio_read_var('magy', by(1:dm(1),1:dm(2),1:dm(3)))
+      call fitsio_read_var('magz', bz(1:dm(1),1:dm(2),1:dm(3)))
 #ifdef CURRENT
-      call fits_read_var('curx', jx(1:dm(1),1:dm(2),1:dm(3)))
-      call fits_read_var('cury', jy(1:dm(1),1:dm(2),1:dm(3)))
-      call fits_read_var('curz', jz(1:dm(1),1:dm(2),1:dm(3)))
+      call fitsio_read_var('curx', jx(1:dm(1),1:dm(2),1:dm(3)))
+      call fitsio_read_var('cury', jy(1:dm(1),1:dm(2),1:dm(3)))
+      call fitsio_read_var('curz', jz(1:dm(1),1:dm(2),1:dm(3)))
 #endif /* CURRENT */
     end select
 
