@@ -82,11 +82,6 @@ module fields
   real(kind=8), dimension(:,:,:), save, allocatable :: jx, jy, jz
 #endif /* CURRENT */
 
-! arrays for acceleration rates
-!
-  integer     , dimension(:,:,:), save, allocatable :: cn
-  real(kind=8), dimension(:,:,:), save, allocatable :: ar, mr
-
 ! by default everything is private
 !
   private
@@ -103,7 +98,6 @@ module fields
 #ifdef CURRENT
   public :: jx, jy, jz
 #endif /* CURRENT */
-  public :: cn, ar, mr
 !
 !-------------------------------------------------------------------------------
 !
@@ -220,19 +214,6 @@ module fields
     allocate(jz(lm(1):um(1),lm(2):um(2),lm(3):um(3)), stat = status)
     if (status /= 0) return
 #endif /* CURRENT */
-
-! allocate space for acceleration rate distribution
-!
-    allocate(cn(lm(1):um(1),lm(2):um(2),lm(3):um(3)), stat = status)
-    if (status /= 0) return
-    allocate(ar(lm(1):um(1),lm(2):um(2),lm(3):um(3)), stat = status)
-    if (status /= 0) return
-    allocate(mr(lm(1):um(1),lm(2):um(2),lm(3):um(3)), stat = status)
-    if (status /= 0) return
-
-    cn = 0
-    ar = 0.0d+00
-    mr = 0.0d+00
 
 !-------------------------------------------------------------------------------
 !
@@ -422,9 +403,6 @@ module fields
     if (allocated(jy)) deallocate(jy)
     if (allocated(jz)) deallocate(jz)
 #endif /* CURRENT */
-    if (allocated(cn)) deallocate(cn)
-    if (allocated(ar)) deallocate(ar)
-    if (allocated(mr)) deallocate(mr)
 
 !-------------------------------------------------------------------------------
 !
