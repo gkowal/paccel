@@ -284,9 +284,9 @@ module particles
 
 ! get parameters
 !
-    call get_parameter('xc'    , x0(1))
-    call get_parameter('yc'    , x0(2))
-    call get_parameter('zc'    , x0(3))
+    call get_parameter('xp'    , x0(1))
+    call get_parameter('yp'    , x0(2))
+    call get_parameter('zp'    , x0(3))
     call get_parameter('vpar'  , vpar)
     call get_parameter('vper'  , vper)
 #ifdef TEST
