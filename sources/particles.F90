@@ -62,8 +62,7 @@ module particles
 ! integration parameters
 !
   real(kind=8), save :: safety = 5.0d-01  ! safety coefficient
-  real(kind=8), save :: maxtol = 1.0d-04  ! the maximi integration tolerance
-  real(kind=8), save :: maxeps = 1.0d-15  ! the maximum iteration error
+  real(kind=8), save :: maxtol = 1.0d-04  ! the maximum integration tolerance
   real(kind=8), save :: dtini  = 1.0d-08  ! the initial time step
   real(kind=8), save :: dtmax  = 1.0d+00  ! maximum allowed step size
   integer     , save :: maxit  = 1000     ! the limit of iterations
@@ -147,7 +146,6 @@ module particles
     call get_parameter('tmax'  , tmax)
     call get_parameter('safety', safety)
     call get_parameter('maxtol', maxtol)
-    call get_parameter('maxeps', maxeps)
     call get_parameter('dtini' , dtini)
     call get_parameter('dtmax' , dtmax)
     call get_parameter('maxit' , maxit)
