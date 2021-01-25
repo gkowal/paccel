@@ -497,8 +497,11 @@ module particles
 !
 !===============================================================================
 !
-! integrate_trajectory_rk4: subroutine integrates particle trajectory using
-!                           the 4th order RK method
+! subroutine INTEGRATE_RK4:
+! ------------------------
+!
+!   Subroutine integrates particle trajectory using the classic 4th order
+!   explicit Runge-Kutta method.
 !
 !===============================================================================
 !
@@ -512,17 +515,17 @@ module particles
 
 ! local variables
 !
-    logical                    :: keepon = .true.
-    integer                    :: n, m
-    real(kind=8)               ::    t1, t2, t3, t4, t5
-    real(kind=8), dimension(3) :: x, x1, x2, x3, x4, x5
-    real(kind=8), dimension(3) :: p, p1, p2, p3, p4, p5
-    real(kind=8), dimension(3) ::    k1, k2, k3, k4, k5
-    real(kind=8), dimension(3) ::    l1, l2, l3, l4, l5
-    real(kind=8), dimension(3) :: s, a, v, u, b
-    real(kind=8)               :: gm, t, dt, dtn
-    real(kind=8)               :: ba, va, vp, vr, om, tg, rg, en, ek
-    real(kind=8)               :: tol = 0.0d+00
+    logical                        :: keepon = .true.
+    integer                        :: n, m
+    real(kind=8)                   :: t, dt, dtn, tt, err
+    real(kind=8)                   :: gm, ba, va, vp, vr, om, tg, rg, en, ek
+    real(kind=8), dimension(3)     :: v, u, b
+    real(kind=8), dimension(3,2)   :: ss, si, sr, er
+    real(kind=8), dimension(3,2,5) :: ff
+
+! local parameters
+!
+    real(kind=8), parameter        :: expo = -2.0d-01
 !
 !-------------------------------------------------------------------------------
 !
@@ -530,33 +533,25 @@ module particles
 !
     n  = 0
     m  = 0
-    t  = 0.0d0
+    t  = 0.0d+00
     dt = dtini
 
 ! set the initial position and momentum
 !
-    x(:) = x0(:)
-    p(:) = p0(:)
+    si(:,1) = x0(:)
+    si(:,2) = p0(:)
 
-! calculate the Lorentz factor and particle speed
+! calculate the particle parameters at the initial state
 !
-    gm = lorentz_factor(p(:))
-    v(:) = p(:) / gm
+    gm = lorentz_factor(si(:,2))
+    v(:) = si(:,2) / gm
 
-! calculate the acceleration at the initial position
-!
-    call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
+    call acceleration(t, si(:,1), si(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
 
-! separate the particle velocity into parallel and perpendicular components
-!
     call separate_velocity(v(:), b(:), ba, va, vp, vr)
 
-! calculate the particle gyroperiod and gyroradius
-!
     call gyro_parameters(gm, ba, vr, om, tg, rg)
 
-! calculate the particle energies
-!
     en = gm * mrest
     ek = en - mrest
 
@@ -577,10 +572,10 @@ module particles
                                  '<B> [Gs]', 'Omega [1/s]',                    &
                                  'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]',       &
                                  'Tolerance'
-    write(10,"(20(1es22.14))") t, x(1), x(2), x(3), p(1), p(2), p(3),          &
+    write(10,"(20(1es22.14))") t, si(:,:),                                     &
                                va, vp, vr, gm, en, ek,                         &
                                bunit * ba, om / tunit, tg * tunit, rg * lunit, &
-                               tg, rg, tol
+                               tg, rg, err
 
 !== INTEGRATION LOOP ==
 !
@@ -590,144 +585,66 @@ module particles
 
 !! 1st step of the RK integration
 !!
-! integrate the position and momentum
-!
-      t1    = t
-      x1(:) = x(:)
-      p1(:) = p(:)
+      tt      = t
+      ss(:,:) = si(:,:)
 
-! calculate the acceleration for the location x1 and velocity u1
-!
-      call acceleration(t1, x1(:), p1(:), s(:), a(:), u(:), b(:))
-
-! calculate the first term
-!
-      l1(:) = dt * s(:)
-      k1(:) = dt * a(:)
+      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
 
 !! 2nd step of the RK integration
 !!
-! integrate the position and momentum
-!
-      t2    = t    + 0.5d0 * dt
-      x2(:) = x(:) + 0.5d0 * l1(:)
-      p2(:) = p(:) + 0.5d0 * k1(:)
+      tt      = t       + 5.0d-01 * dt
+      ss(:,:) = si(:,:) + 5.0d-01 * dt * ff(:,:,1)
 
-! calculate the acceleration for the location x2 and velocity u2
-!
-      call acceleration(t2, x2(:), p2(:), s(:), a(:), u(:), b(:))
-
-! calculate the second term
-!
-      l2(:) = dt * s(:)
-      k2(:) = dt * a(:)
+      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,2), ff(:,2,2), u(:), b(:))
 
 !! 3rd step of the RK integration
 !!
-! integrate the position and momentum
-!
-      t3    = t    + 0.5d0 * dt
-      x3(:) = x(:) + 0.5d0 * l2(:)
-      p3(:) = p(:) + 0.5d0 * k2(:)
+      tt      = t       + 5.0d-01 * dt
+      ss(:,:) = si(:,:) + 5.0d-01 * dt * ff(:,:,2)
 
-! calculate the acceleration for the location x3 and velocity u3
-!
-      call acceleration(t3, x3(:), p3(:), s(:), a(:), u(:), b(:))
-
-! calculate the third term
-!
-      l3(:) = dt * s(:)
-      k3(:) = dt * a(:)
+      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,3), ff(:,2,3), u(:), b(:))
 
 !! 4th step of the RK integration
 !!
-! integrate the position and momentum
-!
-      t4    = t    + dt
-      x4(:) = x(:) + l3(:)
-      p4(:) = p(:) + k3(:)
+      tt      = t       + dt
+      ss(:,:) = si(:,:) + dt * ff(:,:,3)
 
-! calculate the acceleration for the location x4 and velocity u4
-!
-      call acceleration(t4, x4(:), p4(:), s(:), a(:), u(:), b(:))
-
-! calculate the third term
-!
-      l4(:) = dt * s(:)
-      k4(:) = dt * a(:)
+      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,4), ff(:,2,4), u(:), b(:))
 
 !! the final integration of the particle position and momentum
 !!
-      t5    = t    + dt
-      x5(:) = x(:) + ( l1(:) + 2.0d0 * ( l2(:) + l3(:) ) + l4(:) ) / 6.0d0
-      p5(:) = p(:) + ( k1(:) + 2.0d0 * ( k2(:) + k3(:) ) + k4(:) ) / 6.0d0
-
-! calculate the acceleration at the updated location
-!
-      call acceleration(t5, x5(:), p5(:), s(:), a(:), u(:), b(:))
+      tt      = t       + dt
+      ss(:,:) = si(:,:) + dt * (ff(:,:,1)                                      &
+                   + 2.0d+00 * (ff(:,:,2) + ff(:,:,3)) + ff(:,:,4)) / 6.0d+00
 
 ! estimate the error for timestep control
 !
-      l4(:) = l4(:) - dt * s(:)
-      k4(:) = k4(:) - dt * a(:)
+      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
+      sr(:,:) = atol + rtol * max(abs(si(:,:)), abs(ss(:,:)))
+      er(:,:) = ff(:,:,4) - ff(:,:,1)
+      err = abs(dt) * sqrt(sum((er(:,:) / sr(:,:))**2)) / 6.0d+00
 
-      tol = sqrt(dot_product(l4(:), l4(:)) + dot_product(k4(:), k4(:))) / 6.0d0
-
-! estimate the new timestep
+! update the solution, if the error is small, otherwise reduce
+! the time step and repeat
 !
-      dtn   = dt * (safety * maxtol / tol)**0.2d0
+      if (err <= 1.0d+00) then
 
-! check if the error is below desired tolerance
+        t       = tt
+        si(:,:) = ss(:,:)
+
+! store the particle state, if desired
 !
-      if (tol > maxtol) then
+        if (m >= ndumps) then
 
-! repeat the integration with a new timestep
-!
-        dt = dtn
+          gm = lorentz_factor(si(:,2))
+          v(:) = si(:,2) / gm
 
-      else
+          call acceleration(t, si(:,1), si(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
 
-! update the time
-!
-        t   = t + dt
-
-! check if time exceeded the maximum time
-!
-        if (t >= tmax) keepon = .false.
-
-! update the new timestep
-!
-        dt = min(2.0d0 * dt, dtn, dtmax)
-
-! update the position and momentum
-!
-        x(:) = x5(:)
-        p(:) = p5(:)
-
-! if the boundaries are not periodic and particle is out of the box, stop
-! the integration
-!
-        keepon = keepon .and. is_inside(x)
-
-! store the current particle state
-!
-        if (m == ndumps) then
-
-! calculate the particle Lorentz factor and speed
-!
-          gm   = lorentz_factor(p(:))
-          v(:) = p(:) / gm
-
-! separate the particle velocity into the parallel and perpendicular components
-!
           call separate_velocity(v(:), b(:), ba, va, vp, vr)
 
-! calculate the particle gyroperiod and gyroradius
-!
           call gyro_parameters(gm, ba, vr, om, tg, rg)
 
-! calculate the particle energies
-!
           en = gm * mrest
           ek = en - mrest
 
@@ -738,10 +655,10 @@ module particles
 
 ! store the particle parameters
 !
-          write(10,"(20(1es22.14))") t, x(1), x(2), x(3), p(1), p(2), p(3),    &
+          write(10,"(20(1es22.14))") t, si(:,:),                               &
                                      va, vp, vr, gm, en, ek,                   &
                                      bunit * ba, om / tunit, tg * tunit,       &
-                                     rg * lunit, tg, rg, tol
+                                     rg * lunit, tg, rg, err
 
 ! update the counters
 !
@@ -754,38 +671,56 @@ module particles
 !
         m = m + 1
 
+! check if the particle time did not exceed the maximum time and
+! if the particle is still inside the domain
+!
+        keepon = (t < tmax) .and. is_inside(si(:,1))
+
+! determine the new timestep
+!
+        dtn = dt * min(facmax, max(facmin, safe * err**expo))
+
+      else
+
+        dtn = dt *             max(facmin, safe * err**expo)
+
       end if
+
+! substitute time step
+!
+      dt = min(dtn, dtmax)
 
     end do
 
-! calculate the particle Lorentz factor and speed
+! calculate the particle parameters at the final state
 !
-    gm   = lorentz_factor(p(:))
-    v(:) = p(:) / gm
+    if (m > 1) then
 
-! separate the particle velocity into the parallel and perpendicular components
-!
-    call separate_velocity(v(:), b(:), ba, va, vp, vr)
+      gm = lorentz_factor(si(:,2))
+      v(:) = si(:,2) / gm
 
-! calculate the particle gyroperiod and gyroradius
-!
-    call gyro_parameters(gm, ba, vr, om, tg, rg)
+      call acceleration(t, si(:,1), si(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
 
-! calculate the particle energies
-!
-    en = gm * mrest
-    ek = en - mrest
+      call separate_velocity(v(:), b(:), ba, va, vp, vr)
+
+      call gyro_parameters(gm, ba, vr, om, tg, rg)
+
+      en = gm * mrest
+      ek = en - mrest
 
 ! print the progress
 !
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, va, ek
+      write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, va, ek
 
 ! store the particle parameters
 !
-    write(10,"(20(1es22.14))") t, x(1), x(2), x(3), p(1), p(2), p(3),          &
-                               va, vp, vr, gm, en, ek,                         &
-                               bunit * ba, om / tunit, tg * tunit,             &
-                               rg * lunit, tg, rg, tol
+      write(10,"(20(1es22.14))") t, si(:,:),                                   &
+                                 va, vp, vr, gm, en, ek,                       &
+                                 bunit * ba, om / tunit, tg * tunit,           &
+                                 rg * lunit, tg, rg, err
+
+    end if
+
     close (10)
 
 !-------------------------------------------------------------------------------
