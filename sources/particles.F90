@@ -543,15 +543,11 @@ module particles
 
 ! calculate the particle parameters at the initial state
 !
-    gm = lorentz_factor(si(:,2))
+    gm   = lorentz_factor(si(:,2))
     v(:) = si(:,2) / gm
-
     call acceleration(t, si(:,1), si(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
-
     call separate_velocity(v(:), b(:), ba, va, vp, vr)
-
     call gyro_parameters(gm, ba, vr, om, tg, rg)
-
     en = gm * mrest
     ek = en - mrest
 
@@ -636,15 +632,11 @@ module particles
 !
         if (m >= ndumps) then
 
-          gm = lorentz_factor(si(:,2))
+          gm   = lorentz_factor(si(:,2))
           v(:) = si(:,2) / gm
-
           call acceleration(t, si(:,1), si(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
-
           call separate_velocity(v(:), b(:), ba, va, vp, vr)
-
           call gyro_parameters(gm, ba, vr, om, tg, rg)
-
           en = gm * mrest
           ek = en - mrest
 
@@ -696,15 +688,11 @@ module particles
 !
     if (m > 1) then
 
-      gm = lorentz_factor(si(:,2))
+      gm   = lorentz_factor(si(:,2))
       v(:) = si(:,2) / gm
-
       call acceleration(t, si(:,1), si(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
-
       call separate_velocity(v(:), b(:), ba, va, vp, vr)
-
       call gyro_parameters(gm, ba, vr, om, tg, rg)
-
       en = gm * mrest
       ek = en - mrest
 
@@ -755,13 +743,12 @@ module particles
 !
     logical                         :: keepon = .true., rejected = .false.
     integer                         :: n, m
-    real(kind=8)                    :: gm, en, ek, ba, va, vp, vr, om, tg, rg
-    real(kind=8), dimension(3)      :: x, v, p, s, a, u, b
-
     real(kind=8)                    :: t, dt, dtn, tt
+    real(kind=8)                    :: gm, en, ek, ba, va, vp, vr, om, tg, rg
     real(kind=8)                    :: err, err3, err5, errold, deno, expo
-    real(kind=8), dimension(3,2)    :: si, ss, sf, sr, er
-    real(kind=8), dimension(3,2,10) :: k
+    real(kind=8), dimension(3)      :: v, u, b
+    real(kind=8), dimension(3,2)    :: si, ss, sr, er
+    real(kind=8), dimension(3,2,10) :: ff
 
 ! parameters
 !
@@ -825,6 +812,17 @@ module particles
                              , b11 =  2.01365400804030348374776537501d-01      &
                              , b12 =  4.47106157277725905176885569043d-02
 
+    real(kind=8), parameter :: c2  = 0.526001519587677318785587544488d-01,     &
+                               c3  = 0.789002279381515978178381316732d-01,     &
+                               c4  = 0.118350341907227396726757197510d+00,     &
+                               c5  = 0.281649658092772603273242802490d+00,     &
+                               c6  = 0.333333333333333333333333333333d+00,     &
+                               c7  = 0.250000000000000000000000000000d+00,     &
+                               c8  = 0.307692307692307692307692307692d+00,     &
+                               c9  = 0.651282051282051282051282051282d+00,     &
+                               c10 = 0.600000000000000000000000000000d+00,     &
+                               c11 = 0.857142857142857142857142857142d+00
+
     real(kind=8), parameter :: bh1 = 0.244094488188976377952755905512d+00      &
                              , bh2 = 0.733846688281611857341361741547d+00      &
                              , bh3 = 0.220588235294117647058823529412d-01
@@ -858,14 +856,12 @@ module particles
 !
     si(:,1) = x0(:)
     si(:,2) = p0(:)
-    x(:)    = si(:,1)
-    p(:)    = si(:,2)
 
 ! determine the initial state of the particle
 !
-    gm = lorentz_factor(p(:))
-    v(:) = p(:) / gm
-    call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
+    gm   = lorentz_factor(si(:,2))
+    v(:) = si(:,2) / gm
+    call acceleration(t, si(:,1), si(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
     call separate_velocity(v(:), b(:), ba, va, vp, vr)
     call gyro_parameters(gm, ba, vr, om, tg, rg)
     en = gm * mrest
@@ -888,7 +884,7 @@ module particles
                                  '<B> [Gs]', 'Omega [1/s]',                    &
                                  'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]',       &
                                  'Error'
-    write(10,"(20(1es22.14))") t, x(1), x(2), x(3), p(1), p(2), p(3),          &
+    write(10,"(20(1es22.14))") t, si(:,:),                                     &
                                va, vp, vr, gm, en, ek,                         &
                                bunit * ba, om / tunit, tg * tunit, rg * lunit, &
                                tg, rg, err
@@ -901,72 +897,84 @@ module particles
 
 ! the 12 steps
 !
+      tt      = t
       ss(:,:) = si(:,:)
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,1), k(:,2,1), u(:), b(:))
+      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
 
-      ss(:,:) = si(:,:) + dt * a0201 * k(:,:,1)
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,2), k(:,2,2), u(:), b(:))
+      tt      = t       + dt * c2
+      ss(:,:) = si(:,:) + dt * a0201 * ff(:,:,1)
+      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,2), ff(:,2,2), u(:), b(:))
 
-      ss(:,:) = si(:,:) + dt * (a0301 * k(:,:,1) + a0302 * k(:,:,2))
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,3), k(:,2,3), u(:), b(:))
+      tt      = t       + dt * c3
+      ss(:,:) = si(:,:) + dt * (a0301 * ff(:,:,1) + a0302 * ff(:,:,2))
+      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,3), ff(:,2,3), u(:), b(:))
 
-      ss(:,:) = si(:,:) + dt * (a0401 * k(:,:,1) + a0403 * k(:,:,3))
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,4), k(:,2,4), u(:), b(:))
+      tt      = t       + dt * c4
+      ss(:,:) = si(:,:) + dt * (a0401 * ff(:,:,1) + a0403 * ff(:,:,3))
+      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,4), ff(:,2,4), u(:), b(:))
 
-      ss(:,:) = si(:,:) + dt * (a0501 * k(:,:,1) + a0503 * k(:,:,3)            &
-                              + a0504 * k(:,:,4))
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,5), k(:,2,5), u(:), b(:))
+      tt      = t       + dt * c5
+      ss(:,:) = si(:,:) + dt * (a0501 * ff(:,:,1) + a0503 * ff(:,:,3)          &
+                              + a0504 * ff(:,:,4))
+      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,5), ff(:,2,5), u(:), b(:))
 
-      ss(:,:)  = si(:,:) + dt * (a0601 * k(:,:,1) + a0604 * k(:,:,4)           &
-                               + a0605 * k(:,:,5))
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,6), k(:,2,6), u(:), b(:))
+      tt      = t       + dt * c6
+      ss(:,:)  = si(:,:) + dt * (a0601 * ff(:,:,1) + a0604 * ff(:,:,4)         &
+                               + a0605 * ff(:,:,5))
+      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,6), ff(:,2,6), u(:), b(:))
 
-      ss(:,:)  = si(:,:) + dt * (a0701 * k(:,:,1) + a0704 * k(:,:,4)           &
-                               + a0705 * k(:,:,5) + a0706 * k(:,:,6))
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,7), k(:,2,7), u(:), b(:))
+      tt      = t       + dt * c7
+      ss(:,:)  = si(:,:) + dt * (a0701 * ff(:,:,1) + a0704 * ff(:,:,4)         &
+                               + a0705 * ff(:,:,5) + a0706 * ff(:,:,6))
+      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,7), ff(:,2,7), u(:), b(:))
 
-      ss(:,:)  = si(:,:) + dt * (a0801 * k(:,:,1) + a0804 * k(:,:,4)           &
-                               + a0805 * k(:,:,5) + a0806 * k(:,:,6)           &
-                               + a0807 * k(:,:,7))
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,8), k(:,2,8), u(:), b(:))
+      tt      = t       + dt * c8
+      ss(:,:)  = si(:,:) + dt * (a0801 * ff(:,:,1) + a0804 * ff(:,:,4)         &
+                               + a0805 * ff(:,:,5) + a0806 * ff(:,:,6)         &
+                               + a0807 * ff(:,:,7))
+      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,8), ff(:,2,8), u(:), b(:))
 
-      ss(:,:)  = si(:,:) + dt * (a0901 * k(:,:,1) + a0904 * k(:,:,4)           &
-                               + a0905 * k(:,:,5) + a0906 * k(:,:,6)           &
-                               + a0907 * k(:,:,7) + a0908 * k(:,:,8))
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,9), k(:,2,9), u(:), b(:))
+      tt      = t       + dt * c9
+      ss(:,:)  = si(:,:) + dt * (a0901 * ff(:,:,1) + a0904 * ff(:,:,4)         &
+                               + a0905 * ff(:,:,5) + a0906 * ff(:,:,6)         &
+                               + a0907 * ff(:,:,7) + a0908 * ff(:,:,8))
+      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,9), ff(:,2,9), u(:), b(:))
 
-      ss(:,:)  = si(:,:) + dt * (a1001 * k(:,:,1) + a1004 * k(:,:,4)           &
-                               + a1005 * k(:,:,5) + a1006 * k(:,:,6)           &
-                               + a1007 * k(:,:,7) + a1008 * k(:,:,8)           &
-                               + a1009 * k(:,:,9))
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,10), k(:,2,10), u(:), b(:))
+      tt      = t       + dt * c10
+      ss(:,:)  = si(:,:) + dt * (a1001 * ff(:,:,1) + a1004 * ff(:,:,4)         &
+                               + a1005 * ff(:,:,5) + a1006 * ff(:,:,6)         &
+                               + a1007 * ff(:,:,7) + a1008 * ff(:,:,8)         &
+                               + a1009 * ff(:,:,9))
+      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,10), ff(:,2,10), u(:), b(:))
 
-      ss(:,:)  = si(:,:) + dt * (a1101 * k(:,:,1) + a1104 * k(:,:, 4)          &
-                               + a1105 * k(:,:,5) + a1106 * k(:,:, 6)          &
-                               + a1107 * k(:,:,7) + a1108 * k(:,:, 8)          &
-                               + a1109 * k(:,:,9) + a1110 * k(:,:,10))
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,2), k(:,2,2), u(:), b(:))
+      tt      = t       + dt * c11
+      ss(:,:)  = si(:,:) + dt * (a1101 * ff(:,:,1) + a1104 * ff(:,:, 4)        &
+                               + a1105 * ff(:,:,5) + a1106 * ff(:,:, 6)        &
+                               + a1107 * ff(:,:,7) + a1108 * ff(:,:, 8)        &
+                               + a1109 * ff(:,:,9) + a1110 * ff(:,:,10))
+      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,2), ff(:,2,2), u(:), b(:))
 
-      ss(:,:)  = si(:,:) + dt * (a1201 * k(:,:,1) + a1204 * k(:,:, 4)          &
-                               + a1205 * k(:,:,5) + a1206 * k(:,:, 6)          &
-                               + a1207 * k(:,:,7) + a1208 * k(:,:, 8)          &
-                               + a1209 * k(:,:,9) + a1210 * k(:,:,10)          &
-                               + a1211 * k(:,:,2))
-      call acceleration(tt, ss(:,1), ss(:,2), k(:,1,3), k(:,2,3), u(:), b(:))
+      tt      = t       + dt
+      ss(:,:)  = si(:,:) + dt * (a1201 * ff(:,:,1) + a1204 * ff(:,:, 4)        &
+                               + a1205 * ff(:,:,5) + a1206 * ff(:,:, 6)        &
+                               + a1207 * ff(:,:,7) + a1208 * ff(:,:, 8)        &
+                               + a1209 * ff(:,:,9) + a1210 * ff(:,:,10)        &
+                               + a1211 * ff(:,:,2))
+      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,3), ff(:,2,3), u(:), b(:))
 
-      k(:,:,4) = b01 * k(:,:, 1) + b06 * k(:,:, 6) + b07 * k(:,:, 7)           &
-               + b08 * k(:,:, 8) + b09 * k(:,:, 9) + b10 * k(:,:,10)           &
-               + b11 * k(:,:, 2) + b12 * k(:,:, 3)
-      sf(:,:)  = si(:,:) + dt * k(:,:,4)
+      ff(:,:,4) = b01 * ff(:,:, 1) + b06 * ff(:,:, 6) + b07 * ff(:,:, 7)       &
+                + b08 * ff(:,:, 8) + b09 * ff(:,:, 9) + b10 * ff(:,:,10)       &
+                + b11 * ff(:,:, 2) + b12 * ff(:,:, 3)
+      ss(:,:)  = si(:,:) + dt * ff(:,:,4)
 
 ! error estimation
 !
-      sr(:,:) = atol + rtol * max(abs(si(:,:)), abs(sf(:,:)))
-      er(:,:) = k(:,:,4) - bh1 * k(:,:,1) - bh2 * k(:,:,9) - bh3 * k(:,:,3)
+      sr(:,:) = atol + rtol * max(abs(si(:,:)), abs(ss(:,:)))
+      er(:,:) = ff(:,:,4) - bh1 * ff(:,:,1) - bh2 * ff(:,:,9) - bh3 * ff(:,:,3)
       err3 = sum((er(:,:) / sr(:,:))**2) ! 3rd order error
-      er(:,:) = er01 * k(:,:,1) + er06 * k(:,:,6) + er07 * k(:,:, 7)           &
-              + er08 * k(:,:,8) + er09 * k(:,:,9) + er10 * k(:,:,10)           &
-              + er11 * k(:,:,2) + er12 * k(:,:,3)
+      er(:,:) = er01 * ff(:,:,1) + er06 * ff(:,:,6) + er07 * ff(:,:, 7)        &
+              + er08 * ff(:,:,8) + er09 * ff(:,:,9) + er10 * ff(:,:,10)        &
+              + er11 * ff(:,:,2) + er12 * ff(:,:,3)
       err5 = sum((er(:,:) / sr(:,:))**2) ! 5th order error
       deno = err5 + 1.0d-02 * err3
       if (deno <= 0.0d+00) then
@@ -975,30 +983,21 @@ module particles
         err = abs(dt) * err5 / sqrt(6.0d+00 * deno)
       end if
 
-! verify error
+! update the solution, if the error is small, otherwise reduce
+! the time step and repeat
 !
       if (err <= 1.0d+00) then
 
-! increase time
-!
-        t = t + dt
+        t       = tt
+        si(:,:) = ss(:,:)
 
-! check if time exceeded the maximum time
+! store the particle state, if desired
 !
-        if (t >= tmax) keepon = .false.
+        if (m >= ndumps) then
 
-! store the current particle state
-!
-        if (m == ndumps) then
-
-! determine the current state of the particle
-!
-          x(:) = sf(:,1)
-          p(:) = sf(:,2)
-
-          gm = lorentz_factor(p(:))
-          v(:) = p(:) / gm
-          call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
+          gm   = lorentz_factor(si(:,2))
+          v(:) = si(:,2) / gm
+          call acceleration(t, si(:,1), si(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
           call separate_velocity(v(:), b(:), ba, va, vp, vr)
           call gyro_parameters(gm, ba, vr, om, tg, rg)
           en = gm * mrest
@@ -1011,7 +1010,7 @@ module particles
 
 ! store the particle parameters
 !
-          write(10,"(20(1es22.14))") t, x(1), x(2), x(3), p(1), p(2), p(3),    &
+          write(10,"(20(1es22.14))") t, si(:,:),                               &
                                      va, vp, vr, gm, en, ek,                   &
                                      bunit * ba, om / tunit, tg * tunit,       &
                                      rg * lunit, tg, rg, err
@@ -1021,15 +1020,16 @@ module particles
           n = n + 1
           m = 0
 
-        end if ! m == ndumps
+        end if
 
 ! increase the data write counter
 !
         m = m + 1
 
-! update new state
+! check if the particle time did not exceed the maximum time and
+! if the particle is still inside the domain
 !
-        si(:,:) = sf(:,:)
+        keepon = (t < tmax) .and. is_inside(si(:,1))
 
 ! new time step
 !
@@ -1061,34 +1061,34 @@ module particles
 !
       dt = min(dtn, dtmax)
 
-! if the boundaries are not periodic and particle is out of the box, stop
-! the integration
-!
-      keepon = keepon .and. is_inside(si(:,1))
-
     end do
 
-! determine the final state of the particle
+! calculate the particle parameters at the final state
 !
-    gm = lorentz_factor(p(:))
-    v(:) = p(:) / gm
-    call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
-    call separate_velocity(v(:), b(:), ba, va, vp, vr)
-    call gyro_parameters(gm, ba, vr, om, tg, rg)
-    en = gm * mrest
-    ek = en - mrest
+    if (m > 1) then
+
+      gm   = lorentz_factor(si(:,2))
+      v(:) = si(:,2) / gm
+      call acceleration(t, si(:,1), si(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
+      call separate_velocity(v(:), b(:), ba, va, vp, vr)
+      call gyro_parameters(gm, ba, vr, om, tg, rg)
+      en = gm * mrest
+      ek = en - mrest
 
 ! print the progress
 !
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, va, ek
+      write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, va, ek
 
 ! store the particle parameters
 !
-    write(10,"(20(1es22.14))") t, x(1), x(2), x(3), p(1), p(2), p(3),          &
-                               va, vp, vr, gm, en, ek,                         &
-                               bunit * ba, om / tunit, tg * tunit, rg * lunit, &
-                               tg, rg, err
-    close(10)
+      write(10,"(20(1es22.14))") t, si(:,:),                                   &
+                                 va, vp, vr, gm, en, ek,                       &
+                                 bunit * ba, om / tunit, tg * tunit,           &
+                                 rg * lunit, tg, rg, err
+
+    end if
+
+    close (10)
 
 !-------------------------------------------------------------------------------
 !
