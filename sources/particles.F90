@@ -1639,9 +1639,9 @@ module particles
 
 ! estimate the new increment Z (eq. 5.3)
 !
-!   Z1 = dt * [ a11 * F(y + Z1) + a12 * F(y + Z2) ]
-!   Z2 = dt * [ a21 * F(y + Z1) + a22 * F(y + Z2) ]
-!   Z3 = dt * [ a21 * F(y + Z1) + a22 * F(y + Z2) ]
+!   Z1 = dt * [ a11 * F(y + Z1) + a12 * F(y + Z2) + a13 * F(y + Z3) ]
+!   Z2 = dt * [ a21 * F(y + Z1) + a22 * F(y + Z2) + a23 * F(y + Z3) ]
+!   Z3 = dt * [ a31 * F(y + Z1) + a32 * F(y + Z2) + a33 * F(y + Z3) ]
 !
       call estimate_si6(t, dt, si(:,:), zi(:,:,:), err, i)
 
