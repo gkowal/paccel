@@ -37,7 +37,8 @@ program paccel
                              integrate_trajectory_dop853,                      &
                              integrate_trajectory_si4,                         &
                              integrate_trajectory_si6,                         &
-                             integrate_trajectory_si8
+                             integrate_trajectory_si8,                         &
+                             integrate_trajectory_si10
 
   implicit none
 
@@ -100,6 +101,9 @@ program paccel
   case('si8')
     write( *, "('INFO      : ',a)" ) "integrating the particle trajectory (SI8 method)"
     call integrate_trajectory_si8()
+  case('si10')
+    write( *, "('INFO      : ',a)" ) "integrating the particle trajectory (SI10 method)"
+    call integrate_trajectory_si10()
   end select
 
 ! display performance information

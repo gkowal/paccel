@@ -1100,9 +1100,12 @@ module particles
 !
 !   References:
 !
-!   [1] "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
+!   [1] "Implicit Runge-Kutta Processes", J.C. Butcher,
+!       Mathematics of Computation, Vol. 18, No. 85, 1964,
+!       https://doi.org/10.2307/2003405
+!   [2] "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
 !       Chapman & Hall, London, New York, 1994
-!   [2] "High order starting iterates for implicit Runge-Kutta methods:
+!   [3] "High order starting iterates for implicit Runge-Kutta methods:
 !       an improvement for variable-step symplectic integrators", M. P. Calvo,
 !       IMA Journal of Numerical Analysis, 2002, vol. 22, pp. 153-166
 !
@@ -1255,16 +1258,11 @@ module particles
         k = k - 1
       end if
 
-! estimate the new increment Z (eq. 5.3)
-!
-!   Z1 = dt * [ a11 * F(y + Z1) + a12 * F(y + Z2) ]
-!   Z2 = dt * [ a21 * F(y + Z1) + a22 * F(y + Z2) ]
+! estimate the intermediate increments (Eq. 5.3 in [2])
 !
       call estimate_si4(t, dt, si(:,:), zi(:,:,:), err, i)
 
-! update the solution
-!
-!   y(n+1) = y(n) + [ b1 * Z1 + b2 * Z2 ]
+! update the solution (Eq. below 5.3 in [2])
 !
       sc(:,:) = (d1 * zi(:,:,1) + d2 * zi(:,:,2)) - se(:,:)
       ss(:,:) =  si(:,:) + sc(:,:)
@@ -1474,9 +1472,12 @@ module particles
 !
 !   References:
 !
-!   [1] "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
+!   [1] "Implicit Runge-Kutta Processes", J.C. Butcher,
+!       Mathematics of Computation, Vol. 18, No. 85, 1964,
+!       https://doi.org/10.2307/2003405
+!   [2] "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
 !       Chapman & Hall, London, New York, 1994
-!   [2] "High order starting iterates for implicit Runge-Kutta methods:
+!   [3] "High order starting iterates for implicit Runge-Kutta methods:
 !       an improvement for variable-step symplectic integrators", M. P. Calvo,
 !       IMA Journal of Numerical Analysis, 2002, vol. 22, pp. 153-166
 !
@@ -1630,17 +1631,11 @@ module particles
         k = k - 1
       end if
 
-! estimate the new increment Z (eq. 5.3)
-!
-!   Z1 = dt * [ a11 * F(y + Z1) + a12 * F(y + Z2) + a13 * F(y + Z3) ]
-!   Z2 = dt * [ a21 * F(y + Z1) + a22 * F(y + Z2) + a23 * F(y + Z3) ]
-!   Z3 = dt * [ a31 * F(y + Z1) + a32 * F(y + Z2) + a33 * F(y + Z3) ]
+! estimate the intermediate increments (Eq. 5.3 in [2])
 !
       call estimate_si6(t, dt, si(:,:), zi(:,:,:), err, i)
 
-! update the solution
-!
-!   y(n+1) = y(n) + [ b1 * Z1 + b2 * Z2 + b3 * Z3 ]
+! update the solution (Eq. below 5.3 in [2])
 !
       sc(:,:) = (d1 * zi(:,:,1) + d2 * zi(:,:,2) + d3 * zi(:,:,3)) - se(:,:)
       ss(:,:) =  si(:,:) + sc(:,:)
@@ -1855,9 +1850,12 @@ module particles
 !
 !   References:
 !
-!   [1] "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
+!   [1] "Implicit Runge-Kutta Processes", J.C. Butcher,
+!       Mathematics of Computation, Vol. 18, No. 85, 1964,
+!       https://doi.org/10.2307/2003405
+!   [2] "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
 !       Chapman & Hall, London, New York, 1994
-!   [2] "High order starting iterates for implicit Runge-Kutta methods:
+!   [3] "High order starting iterates for implicit Runge-Kutta methods:
 !       an improvement for variable-step symplectic integrators", M. P. Calvo,
 !       IMA Journal of Numerical Analysis, 2002, vol. 22, pp. 153-166
 !
@@ -2014,18 +2012,11 @@ module particles
         k = k - 1
       end if
 
-! estimate the new increment Z (eq. 5.3)
-!
-!   Z1 = dt * [ a11 * F(y + Z1) + a12 * F(y + Z2) + a13 * F(y + Z3) + a14 * F(y + Z4) ]
-!   Z2 = dt * [ a21 * F(y + Z1) + a22 * F(y + Z2) + a23 * F(y + Z3) + a24 * F(y + Z4) ]
-!   Z3 = dt * [ a31 * F(y + Z1) + a32 * F(y + Z2) + a33 * F(y + Z3) + a34 * F(y + Z4) ]
-!   Z4 = dt * [ a41 * F(y + Z1) + a42 * F(y + Z2) + a43 * F(y + Z3) + a44 * F(y + Z4) ]
+! estimate the intermediate increments (Eq. 5.3 in [2])
 !
       call estimate_si8(t, dt, si(:,:), zi(:,:,:), err, i)
 
-! update the solution
-!
-!   y(n+1) = y(n) + [ b1 * Z1 + b2 * Z2 + b3 * Z3 + b4 * Z4 ]
+! update the solution (Eq. below 5.3 in [2])
 !
       sc(:,:) = (d1 * zi(:,:,1) + d2 * zi(:,:,2) + d3 * zi(:,:,3)              &
                                                  + d4 * zi(:,:,4)) - se(:,:)
@@ -2243,6 +2234,417 @@ module particles
 !-------------------------------------------------------------------------------
 !
   end subroutine estimate_si8
+!
+!===============================================================================
+!
+! subroutine INTEGRATE_SI10:
+! -------------------------
+!
+!   Subroutine integrates the particle trajectory using the 10th order implicit
+!   symplectic Gauss-Legendre Runge-Kutta method.
+!
+!   References:
+!
+!   [1] "Implicit Runge-Kutta Processes", J.C. Butcher,
+!       Mathematics of Computation, Vol. 18, No. 85, 1964,
+!       https://doi.org/10.2307/2003405
+!   [2] "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
+!       Chapman & Hall, London, New York, 1994
+!   [3] "High order starting iterates for implicit Runge-Kutta methods:
+!       an improvement for variable-step symplectic integrators", M. P. Calvo,
+!       IMA Journal of Numerical Analysis, 2002, vol. 22, pp. 153-166
+!
+!===============================================================================
+!
+  subroutine integrate_trajectory_si10()
+
+! import required modules
+!
+    use coordinates, only : is_inside
+
+    implicit none
+
+! local variables
+!
+    character(len=32)                :: str
+    integer                          :: n, m, i = 0, mi, ti, k
+    real(kind=8)                     :: gm, t, dt, tc, te, ts
+    real(kind=8)                     :: ba, va, vp, vr, om, tg, rg, en, ek
+    real(kind=8)                     :: err
+    real(kind=8), dimension(3)       :: v, u, b
+    real(kind=8), dimension(3,2)     :: si, sc, se, ss, ff
+    real(kind=8), dimension(3,2,5)   :: zi
+    real(kind=8), dimension(3,2,5,5) :: zp
+
+! local flags
+!
+    logical :: keepon = .true.
+
+! local parameters
+!
+    real(kind=8), parameter :: c1 =  4.6910077030668003601d-02,                &
+                               c2 =  2.3076534494715845448d-01,                &
+                               c3 =  5.0000000000000000000d-01,                &
+                               c4 =  7.6923465505284154552d-01,                &
+                               c5 =  9.5308992296933199640d-01
+    real(kind=8), parameter :: d1 =  1.6277667108901259133d+00,                &
+                               d2 = -1.1611000442234592466d+00,                &
+                               d3 =  1.0666666666666666667d+00,                &
+                               d4 = -1.1611000442234592466d+00,                &
+                               d5 =  1.6277667108901259133d+00
+!
+!-------------------------------------------------------------------------------
+!
+! initialize the iteration number, snapshot number, time, and time steps
+!
+    n  = 1
+    m  = 1
+    k  = 5
+    mi = 0
+    ti = 0
+    t  = 0.0d+00
+    te = 0.0d+00
+    dt = dtini
+    err = 0.0d+00
+
+! reset the initial guess
+!
+    zp(:,:,:,:) = 0.0d+00
+    zi(:,:,:)   = 0.0d+00
+
+! reset the vector of the position and momentum errors
+!
+    se(:,:) = 0.0d+00
+
+! set the initial position, velocity, and momentum
+!
+    si(:,1) = x0(:)
+    si(:,2) = p0(:)
+
+! determine the initial state of the particle
+!
+    gm   = lorentz_factor(si(:,2))
+    v(:) = si(:,2) / gm
+    call acceleration(t, si(:,:), ff(:,:), u(:), b(:))
+    call separate_velocity(v(:), b(:), ba, va, vp, vr)
+    call gyro_parameters(gm, ba, vr, om, tg, rg)
+    en = gm * mrest
+    ek = en - mrest
+
+! print the progress
+!
+    write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
+                                             'GPERIOD', 'SPEED (c)',           &
+                                             'ENERGY (MeV)'
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')            &
+                                                    n, t, dt, tg, va, ek, term
+
+! open the output file, print headers and the initial values
+!
+    open(10, file = 'output.dat', form = 'formatted', status = 'replace')
+    write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz',      &
+                                 '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
+                                 'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
+                                 'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
+                                 'Rg [L]', 'Tolerance', 'Iterations'
+    write(10,"(20(1es22.14),i22)") t, si(:,:),                                 &
+                                   va, vp, vr, gm, en, ek, bunit * ba,         &
+                                   om / tunit, tg * tunit, rg * lunit, tg, rg, &
+                                   err, i
+
+!== INTEGRATION LOOP ==
+!
+! iterate until the maximum time is reached
+!
+    do while (keepon)
+
+! find the initial guess for the vector Z using Newton's interpolation formula
+!
+      if (k == 0) then
+        zp(:,:,:,5) = zp(:,:,:,4)
+        zp(:,:,:,4) = zp(:,:,:,3)
+        zp(:,:,:,3) = zp(:,:,:,2)
+        zp(:,:,:,2) = zp(:,:,:,1)
+        zp(:,:,:,1) = zi(:,:,:  )
+        zi(:,:,:)   = 5.0d+00 * zp(:,:,:,1) - 1.0d+01 * zp(:,:,:,2)            &
+                    + 1.0d+01 * zp(:,:,:,3) - 5.0d+00 * zp(:,:,:,4)            &
+                              + zp(:,:,:,5)
+      else if (k == 1) then
+        zp(:,:,:,4) = zp(:,:,:,3)
+        zp(:,:,:,3) = zp(:,:,:,2)
+        zp(:,:,:,2) = zp(:,:,:,1)
+        zp(:,:,:,1) = zi(:,:,:  )
+        zi(:,:,:)   = 4.0d+00 * zp(:,:,:,1) - 6.0d+00 * zp(:,:,:,2)            &
+                    + 4.0d+00 * zp(:,:,:,3) -           zp(:,:,:,4)
+        k = k - 1
+      else if (k == 2) then
+        zp(:,:,:,3) = zp(:,:,:,2)
+        zp(:,:,:,2) = zp(:,:,:,1)
+        zp(:,:,:,1) = zi(:,:,:  )
+        zi(:,:,:)   = 3.0d+00 * zp(:,:,:,1) - 3.0d+00 * zp(:,:,:,2)            &
+                              + zp(:,:,:,3)
+        k = k - 1
+      else if (k == 3) then
+        zp(:,:,:,2) = zp(:,:,:,1)
+        zp(:,:,:,1) = zi(:,:,:  )
+        zi(:,:,:)   = 2.0d+00 * zp(:,:,:,1) - zp(:,:,:,2)
+        k = k - 1
+      else if (k == 4) then
+        zp(:,:,:,1) = zi(:,:,:  )
+        zi(:,:,:)   = zp(:,:,:,1)
+        k = k - 1
+      else if (k == 5) then
+
+! calculate the acceleration at the initial state
+!
+        call acceleration(t, si(:,:), ff(:,:), u(:), b(:))
+
+! find the initial guess for the increment Z
+!
+        zi(:,:,1) = c1 * dt * ff(:,:)
+        zi(:,:,2) = c2 * dt * ff(:,:)
+        zi(:,:,3) = c3 * dt * ff(:,:)
+        zi(:,:,4) = c4 * dt * ff(:,:)
+        zi(:,:,5) = c5 * dt * ff(:,:)
+
+        k = k - 1
+      end if
+
+! estimate the intermediate increments (Eq. 5.3 in [2])
+!
+      call estimate_si10(t, dt, si(:,:), zi(:,:,:), err, i)
+
+! update the solution (Eq. below 5.3 in [2])
+!
+      sc(:,:) = (d1 * zi(:,:,1) + d2 * zi(:,:,2) + d3 * zi(:,:,3)              &
+                                + d4 * zi(:,:,4) + d5 * zi(:,:,5)) - se(:,:)
+      ss(:,:) =  si(:,:) + sc(:,:)
+      se(:,:) = (ss(:,:) - si(:,:)) - sc(:,:)
+      si(:,:) =  ss(:,:)
+
+! update the time
+!
+      tc =  dt - te
+      ts =  t  + tc
+      te = (ts - t) - tc
+      t  =  ts
+
+! store the particle parameters at a given snapshot time
+!
+      if (m == ndumps) then
+
+        gm   = lorentz_factor(si(:,2))
+        v(:) = si(:,2) / gm
+        call acceleration(t, si(:,:), ff(:,:), u(:), b(:))
+        call separate_velocity(v(:), b(:), ba, va, vp, vr)
+        call gyro_parameters(gm, ba, vr, om, tg, rg)
+        en = gm * mrest
+        ek = en - mrest
+
+! print the progress
+!
+        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')        &
+                                                    n, t, dt, tg, va, ek, term
+
+! write results to the output file
+!
+        write(10,"(20(1es22.14),i22)") t, si(:,:),                             &
+                                       va, vp, vr, gm, en, ek, bunit * ba,     &
+                                       om / tunit, tg * tunit, rg * lunit, tg, &
+                                       rg, err, i
+
+        n = n + 1
+        m = 0
+
+      end if
+
+! increase data write counter
+!
+      m = m + 1
+
+! check if the particle time did not exceed the maximum time and
+! if the particle is still inside the domain
+!
+      keepon = (t < tmax) .and. is_inside(si(:,1))
+
+! find the maximum number of iteration in the estimator and update the counter
+! of the total number of iterations
+!
+      mi = max(mi, i)
+      ti = ti + i
+
+! end of iteration
+!
+    end do
+
+    if (m > 1) then
+
+! calculate the particle parameters at the final state
+!
+      gm   = lorentz_factor(si(:,2))
+      v(:) = si(:,2) / gm
+      call acceleration(t, si(:,:), ff(:,:), u(:), b(:))
+      call separate_velocity(v(:), b(:), ba, va, vp, vr)
+      call gyro_parameters(gm, ba, vr, om, tg, rg)
+      en = gm * mrest
+      ek = en - mrest
+
+! store the particle parameters
+!
+      write(10,"(20(1es22.14))") t, si(:,:),                                   &
+                                 va, vp, vr, gm, en, ek,                       &
+                                 bunit * ba, om / tunit, tg * tunit,           &
+                                 rg * lunit, tg, rg, err
+    end if
+
+    close(10)
+
+! print the progress
+!
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, va, ek
+
+! write info about the estimator
+!
+    write(str,"(i12)") mi
+    write(*,"('INFO      : maximum iterations per step = ',a)"      )          &
+          trim(adjustl(str))
+    write(*,"('INFO      : average iterations per step = ',1pe12.6)")          &
+          real(ti, kind=8) / ((n - 1) * ndumps)
+
+!-------------------------------------------------------------------------------
+!
+  end subroutine integrate_trajectory_si10
+!
+!===============================================================================
+!
+! subroutine ESTIMATE_SI10:
+! ------------------------
+!
+!   Subroutine estimates the intermediate steps for the SI10 method using
+!   a simple functional iteration.
+!
+!   Arguments:
+!
+!     s(:,:)   - the initial particle state (position and moment);
+!     z(:,:,:) - the intermediate particle states;
+!     dt       - the position incremental step;
+!
+!   References:
+!
+!   [1] "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
+!       Chapman & Hall, London, New York, 1994
+!
+!===============================================================================
+!
+  subroutine estimate_si10(t, dt, si, zi, err, n)
+
+    implicit none
+
+! subroutine arguments
+!
+    real(kind=8)                  , intent(in)    :: t, dt
+    real(kind=8), dimension(3,2)  , intent(in)    :: si
+    real(kind=8), dimension(3,2,5), intent(inout) :: zi
+    real(kind=8)                  , intent(out)   :: err
+    integer                       , intent(inout) :: n
+
+! local variables
+!
+    integer                        :: m
+    real(kind=8), dimension(3)     :: u, b
+    real(kind=8), dimension(5)     :: ti
+    real(kind=8), dimension(3,2,5) :: zr, zn
+    real(kind=8), dimension(3,2,5) :: fi
+
+! local parameter
+!
+    real(kind=8), parameter :: c1  =  4.6910077030668003601d-02,               &
+                               c2  =  2.3076534494715845448d-01,               &
+                               c3  =  5.0000000000000000000d-01,               &
+                               c4  =  7.6923465505284154552d-01,               &
+                               c5  =  9.5308992296933199640d-01
+    real(kind=8), parameter :: a11 =  5.9231721264047271879d-02,               &
+                               a12 = -1.9570364359076037493d-02,               &
+                               a13 =  1.1254400818642955553d-02,               &
+                               a14 = -5.5937936608121848768d-03,               &
+                               a15 =  1.5881129678659985394d-03,               &
+                               a21 =  1.2815100567004528350d-01,               &
+                               a22 =  1.1965716762484161701d-01,               &
+                               a23 = -2.4592114619642200389d-02,               &
+                               a24 =  1.0318280670683357409d-02,               &
+                               a25 = -2.7689943987696030443d-03,               &
+                               a31 =  1.1377628800422460253d-01,               &
+                               a32 =  2.6000465168064151859d-01,               &
+                               a33 =  1.4222222222222222222d-01,               &
+                               a34 = -2.0690316430958284572d-02,               &
+                               a35 =  4.6871545238699412284d-03,               &
+                               a41 =  1.2123243692686414680d-01,               &
+                               a42 =  2.2899605457899987661d-01,               &
+                               a43 =  3.0903655906408664483d-01,               &
+                               a44 =  1.1965716762484161701d-01,               &
+                               a45 = -9.6875631419507397390d-03,               &
+                               a51 =  1.1687532956022854522d-01,               &
+                               a52 =  2.4490812891049541890d-01,               &
+                               a53 =  2.7319004362580148889d-01,               &
+                               a54 =  2.5888469960875927151d-01,               &
+                               a55 =  5.9231721264047271879d-02
+!
+!-------------------------------------------------------------------------------
+!
+! initiate the iteration control parameters
+!
+    n   = 0
+    err = huge(err)
+
+! prepare the time moments for intermedia states
+!
+    ti(1)   = t + c1 * dt
+    ti(2)   = t + c2 * dt
+    ti(3)   = t + c3 * dt
+    ti(4)   = t + c4 * dt
+    ti(5)   = t + c5 * dt
+
+! perform fixed-point iteration
+!
+    do while (err > 1.0d+00 .and. n < maxit)
+
+! iterate over intermediate states
+!
+      do m = 1, 5
+        call acceleration(ti(m), si(:,:) + zi(:,:,m), fi(:,:,m), u(:), b(:))
+      end do
+
+! get the new increment estimate for the intermediate states
+!
+      zn(:,:,1) = dt * (a11 * fi(:,:,1) + a12 * fi(:,:,2) + a13 * fi(:,:,3)    &
+                                        + a14 * fi(:,:,4) + a15 * fi(:,:,5))
+      zn(:,:,2) = dt * (a21 * fi(:,:,1) + a22 * fi(:,:,2) + a23 * fi(:,:,3)    &
+                                        + a24 * fi(:,:,4) + a25 * fi(:,:,5))
+      zn(:,:,3) = dt * (a31 * fi(:,:,1) + a32 * fi(:,:,2) + a33 * fi(:,:,3)    &
+                                        + a34 * fi(:,:,4) + a35 * fi(:,:,5))
+      zn(:,:,4) = dt * (a41 * fi(:,:,1) + a42 * fi(:,:,2) + a43 * fi(:,:,3)    &
+                                        + a44 * fi(:,:,4) + a45 * fi(:,:,5))
+      zn(:,:,5) = dt * (a51 * fi(:,:,1) + a52 * fi(:,:,2) + a53 * fi(:,:,3)    &
+                                        + a54 * fi(:,:,4) + a55 * fi(:,:,5))
+
+! calculate the maximum of residuum of the increment
+!
+      zr(:,:,:) = atol + rtol * max(abs(zi(:,:,:)), abs(zn(:,:,:)))
+      err       = maxval(abs(zn(:,:,:) - zi(:,:,:)) / zr(:,:,:))
+
+! substitute the new solution of the increment
+!
+      zi(:,:,:) = zn(:,:,:)
+
+! increase the iteration counter
+!
+      n = n + 1
+
+    end do
+
+!-------------------------------------------------------------------------------
+!
+  end subroutine estimate_si10
 !
 !===============================================================================
 !
