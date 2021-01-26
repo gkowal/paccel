@@ -1445,16 +1445,10 @@ module particles
       zn(:,:,1) = dt * (a11 * fi(:,:,1) + a12 * fi(:,:,2))
       zn(:,:,2) = dt * (a21 * fi(:,:,1) + a22 * fi(:,:,2))
 
-! prepare normalized state to calculate tolerance
-!
-      zr(:,:,:) = atol + rtol * abs(zi(:,:,:))
-
 ! calculate the maximum of residuum of the increment
 !
-      err = 0.0d+00
-      do m = 1, 2
-        err = max(err, maxval(abs(zn(:,:,m) - zi(:,:,m)) / zr(:,:,m)))
-      end do
+      zr(:,:,:) = atol + rtol * max(abs(zi(:,:,:)), abs(zn(:,:,:)))
+      err       = maxval(abs(zn(:,:,:) - zi(:,:,:)) / zr(:,:,:))
 
 ! substitute the new solution of the increment
 !
@@ -1832,16 +1826,10 @@ module particles
       zn(:,:,2) = dt * (a21 * fi(:,:,1) + a22 * fi(:,:,2) + a23 * fi(:,:,3))
       zn(:,:,3) = dt * (a31 * fi(:,:,1) + a32 * fi(:,:,2) + a33 * fi(:,:,3))
 
-! prepare normalized state to calculate tolerance
-!
-      zr(:,:,:) = atol + rtol * abs(zi(:,:,:))
-
 ! calculate the maximum of residuum of the increment
 !
-      err = 0.0d+00
-      do m = 1, 3
-        err = max(err, maxval(abs(zn(:,:,m) - zi(:,:,m)) / zr(:,:,m)))
-      end do
+      zr(:,:,:) = atol + rtol * max(abs(zi(:,:,:)), abs(zn(:,:,:)))
+      err       = maxval(abs(zn(:,:,:) - zi(:,:,:)) / zr(:,:,:))
 
 ! substitute the new solution of the increment
 !
@@ -2237,16 +2225,10 @@ module particles
       zn(:,:,4) = dt * (a41 * fi(:,:,1) + a42 * fi(:,:,2) + a43 * fi(:,:,3)    &
                                                           + a44 * fi(:,:,4))
 
-! prepare normalized state to calculate tolerance
-!
-      zr(:,:,:) = atol + rtol * abs(zi(:,:,:))
-
 ! calculate the maximum of residuum of the increment
 !
-      err = 0.0d+00
-      do m = 1, 4
-        err = max(err, maxval(abs(zn(:,:,m) - zi(:,:,m)) / zr(:,:,m)))
-      end do
+      zr(:,:,:) = atol + rtol * max(abs(zi(:,:,:)), abs(zn(:,:,:)))
+      err       = maxval(abs(zn(:,:,:) - zi(:,:,:)) / zr(:,:,:))
 
 ! substitute the new solution of the increment
 !
