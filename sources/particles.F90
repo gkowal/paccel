@@ -543,7 +543,7 @@ module particles
 !
     gm   = lorentz_factor(si(:,2))
     v(:) = si(:,2) / gm
-    call acceleration(t, si(:,1), si(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
+    call acceleration(t, si(:,:), ff(:,:,1), u(:), b(:))
     call separate_velocity(v(:), b(:), ba, va, vp, vr)
     call gyro_parameters(gm, ba, vr, om, tg, rg)
     en = gm * mrest
@@ -582,28 +582,28 @@ module particles
       tt      = t
       ss(:,:) = si(:,:)
 
-      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
+      call acceleration(tt, ss(:,:), ff(:,:,1), u(:), b(:))
 
 !! 2nd step of the RK integration
 !!
       tt      = t       + 5.0d-01 * dt
       ss(:,:) = si(:,:) + 5.0d-01 * dt * ff(:,:,1)
 
-      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,2), ff(:,2,2), u(:), b(:))
+      call acceleration(tt, ss(:,:), ff(:,:,2), u(:), b(:))
 
 !! 3rd step of the RK integration
 !!
       tt      = t       + 5.0d-01 * dt
       ss(:,:) = si(:,:) + 5.0d-01 * dt * ff(:,:,2)
 
-      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,3), ff(:,2,3), u(:), b(:))
+      call acceleration(tt, ss(:,:), ff(:,:,3), u(:), b(:))
 
 !! 4th step of the RK integration
 !!
       tt      = t       + dt
       ss(:,:) = si(:,:) + dt * ff(:,:,3)
 
-      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,4), ff(:,2,4), u(:), b(:))
+      call acceleration(tt, ss(:,:), ff(:,:,4), u(:), b(:))
 
 !! the final integration of the particle position and momentum
 !!
@@ -613,7 +613,7 @@ module particles
 
 ! estimate the error for timestep control
 !
-      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
+      call acceleration(tt, ss(:,:), ff(:,:,1), u(:), b(:))
       sr(:,:) = atol + rtol * max(abs(si(:,:)), abs(ss(:,:)))
       er(:,:) = ff(:,:,4) - ff(:,:,1)
       err = abs(dt) * sqrt(sum((er(:,:) / sr(:,:))**2)) / 6.0d+00
@@ -632,7 +632,7 @@ module particles
 
           gm   = lorentz_factor(si(:,2))
           v(:) = si(:,2) / gm
-          call acceleration(t, si(:,1), si(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
+          call acceleration(t, si(:,:), ff(:,:,1), u(:), b(:))
           call separate_velocity(v(:), b(:), ba, va, vp, vr)
           call gyro_parameters(gm, ba, vr, om, tg, rg)
           en = gm * mrest
@@ -688,7 +688,7 @@ module particles
 !
       gm   = lorentz_factor(si(:,2))
       v(:) = si(:,2) / gm
-      call acceleration(t, si(:,1), si(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
+      call acceleration(t, si(:,:), ff(:,:,1), u(:), b(:))
       call separate_velocity(v(:), b(:), ba, va, vp, vr)
       call gyro_parameters(gm, ba, vr, om, tg, rg)
       en = gm * mrest
@@ -858,7 +858,7 @@ module particles
 !
     gm   = lorentz_factor(si(:,2))
     v(:) = si(:,2) / gm
-    call acceleration(t, si(:,1), si(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
+    call acceleration(t, si(:,:), ff(:,:,1), u(:), b(:))
     call separate_velocity(v(:), b(:), ba, va, vp, vr)
     call gyro_parameters(gm, ba, vr, om, tg, rg)
     en = gm * mrest
@@ -896,60 +896,60 @@ module particles
 !
       tt      = t
       ss(:,:) = si(:,:)
-      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
+      call acceleration(tt, ss(:,:), ff(:,:,1), u(:), b(:))
 
       tt      = t       + dt * c2
       ss(:,:) = si(:,:) + dt * a0201 * ff(:,:,1)
-      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,2), ff(:,2,2), u(:), b(:))
+      call acceleration(tt, ss(:,:), ff(:,:,2), u(:), b(:))
 
       tt      = t       + dt * c3
       ss(:,:) = si(:,:) + dt * (a0301 * ff(:,:,1) + a0302 * ff(:,:,2))
-      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,3), ff(:,2,3), u(:), b(:))
+      call acceleration(tt, ss(:,:), ff(:,:,3), u(:), b(:))
 
       tt      = t       + dt * c4
       ss(:,:) = si(:,:) + dt * (a0401 * ff(:,:,1) + a0403 * ff(:,:,3))
-      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,4), ff(:,2,4), u(:), b(:))
+      call acceleration(tt, ss(:,:), ff(:,:,4), u(:), b(:))
 
       tt      = t       + dt * c5
       ss(:,:) = si(:,:) + dt * (a0501 * ff(:,:,1) + a0503 * ff(:,:,3)          &
                               + a0504 * ff(:,:,4))
-      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,5), ff(:,2,5), u(:), b(:))
+      call acceleration(tt, ss(:,:), ff(:,:,5), u(:), b(:))
 
       tt      = t       + dt * c6
       ss(:,:)  = si(:,:) + dt * (a0601 * ff(:,:,1) + a0604 * ff(:,:,4)         &
                                + a0605 * ff(:,:,5))
-      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,6), ff(:,2,6), u(:), b(:))
+      call acceleration(tt, ss(:,:), ff(:,:,6), u(:), b(:))
 
       tt      = t       + dt * c7
       ss(:,:)  = si(:,:) + dt * (a0701 * ff(:,:,1) + a0704 * ff(:,:,4)         &
                                + a0705 * ff(:,:,5) + a0706 * ff(:,:,6))
-      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,7), ff(:,2,7), u(:), b(:))
+      call acceleration(tt, ss(:,:), ff(:,:,7), u(:), b(:))
 
       tt      = t       + dt * c8
       ss(:,:)  = si(:,:) + dt * (a0801 * ff(:,:,1) + a0804 * ff(:,:,4)         &
                                + a0805 * ff(:,:,5) + a0806 * ff(:,:,6)         &
                                + a0807 * ff(:,:,7))
-      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,8), ff(:,2,8), u(:), b(:))
+      call acceleration(tt, ss(:,:), ff(:,:,8), u(:), b(:))
 
       tt      = t       + dt * c9
       ss(:,:)  = si(:,:) + dt * (a0901 * ff(:,:,1) + a0904 * ff(:,:,4)         &
                                + a0905 * ff(:,:,5) + a0906 * ff(:,:,6)         &
                                + a0907 * ff(:,:,7) + a0908 * ff(:,:,8))
-      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,9), ff(:,2,9), u(:), b(:))
+      call acceleration(tt, ss(:,:), ff(:,:,9), u(:), b(:))
 
       tt      = t       + dt * c10
       ss(:,:)  = si(:,:) + dt * (a1001 * ff(:,:,1) + a1004 * ff(:,:,4)         &
                                + a1005 * ff(:,:,5) + a1006 * ff(:,:,6)         &
                                + a1007 * ff(:,:,7) + a1008 * ff(:,:,8)         &
                                + a1009 * ff(:,:,9))
-      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,10), ff(:,2,10), u(:), b(:))
+      call acceleration(tt, ss(:,:), ff(:,:,10), u(:), b(:))
 
       tt      = t       + dt * c11
       ss(:,:)  = si(:,:) + dt * (a1101 * ff(:,:,1) + a1104 * ff(:,:, 4)        &
                                + a1105 * ff(:,:,5) + a1106 * ff(:,:, 6)        &
                                + a1107 * ff(:,:,7) + a1108 * ff(:,:, 8)        &
                                + a1109 * ff(:,:,9) + a1110 * ff(:,:,10))
-      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,2), ff(:,2,2), u(:), b(:))
+      call acceleration(tt, ss(:,:), ff(:,:,2), u(:), b(:))
 
       tt      = t       + dt
       ss(:,:)  = si(:,:) + dt * (a1201 * ff(:,:,1) + a1204 * ff(:,:, 4)        &
@@ -957,7 +957,7 @@ module particles
                                + a1207 * ff(:,:,7) + a1208 * ff(:,:, 8)        &
                                + a1209 * ff(:,:,9) + a1210 * ff(:,:,10)        &
                                + a1211 * ff(:,:,2))
-      call acceleration(tt, ss(:,1), ss(:,2), ff(:,1,3), ff(:,2,3), u(:), b(:))
+      call acceleration(tt, ss(:,:), ff(:,:,3), u(:), b(:))
 
       ff(:,:,4) = b01 * ff(:,:, 1) + b06 * ff(:,:, 6) + b07 * ff(:,:, 7)       &
                 + b08 * ff(:,:, 8) + b09 * ff(:,:, 9) + b10 * ff(:,:,10)       &
@@ -994,7 +994,7 @@ module particles
 
           gm   = lorentz_factor(si(:,2))
           v(:) = si(:,2) / gm
-          call acceleration(t, si(:,1), si(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
+          call acceleration(t, si(:,:), ff(:,:,1), u(:), b(:))
           call separate_velocity(v(:), b(:), ba, va, vp, vr)
           call gyro_parameters(gm, ba, vr, om, tg, rg)
           en = gm * mrest
@@ -1066,7 +1066,7 @@ module particles
 !
       gm   = lorentz_factor(si(:,2))
       v(:) = si(:,2) / gm
-      call acceleration(t, si(:,1), si(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
+      call acceleration(t, si(:,:), ff(:,:,1), u(:), b(:))
       call separate_velocity(v(:), b(:), ba, va, vp, vr)
       call gyro_parameters(gm, ba, vr, om, tg, rg)
       en = gm * mrest
@@ -1173,7 +1173,7 @@ module particles
 !
     gm   = lorentz_factor(si(:,2))
     v(:) = si(:,2) / gm
-    call acceleration(t, si(:,1), si(:,2), ff(:,1), ff(:,2), u(:), b(:))
+    call acceleration(t, si(:,:), ff(:,:), u(:), b(:))
     call separate_velocity(v(:), b(:), ba, va, vp, vr)
     call gyro_parameters(gm, ba, vr, om, tg, rg)
     en = gm * mrest
@@ -1245,7 +1245,7 @@ module particles
 
 ! calculate the acceleration at the initial state
 !
-        call acceleration(t, si(:,1), si(:,2), ff(:,1), ff(:,2), u(:), b(:))
+        call acceleration(t, si(:,:), ff(:,:), u(:), b(:))
 
 ! find the initial guess for the increment Z
 !
@@ -1284,7 +1284,7 @@ module particles
 
         gm   = lorentz_factor(si(:,2))
         v(:) = si(:,2) / gm
-        call acceleration(t, si(:,1), si(:,2), ff(:,1), ff(:,2), u(:), b(:))
+        call acceleration(t, si(:,:), ff(:,:), u(:), b(:))
         call separate_velocity(v(:), b(:), ba, va, vp, vr)
         call gyro_parameters(gm, ba, vr, om, tg, rg)
         en = gm * mrest
@@ -1332,7 +1332,7 @@ module particles
 !
       gm   = lorentz_factor(si(:,2))
       v(:) = si(:,2) / gm
-      call acceleration(t, si(:,1), si(:,2), ff(:,1), ff(:,2), u(:), b(:))
+      call acceleration(t, si(:,:), ff(:,:), u(:), b(:))
       call separate_velocity(v(:), b(:), ba, va, vp, vr)
       call gyro_parameters(gm, ba, vr, om, tg, rg)
       en = gm * mrest
@@ -1437,8 +1437,7 @@ module particles
 ! iterate over intermediate states
 !
       do m = 1, 2
-        call acceleration(ti(m), si(:,1) + zi(:,1,m), si(:,2) + zi(:,2,m),     &
-                                 fi(:,1,m), fi(:,2,m), u(:), b(:))
+        call acceleration(ti(m), si(:,:) + zi(:,:,m), fi(:,:,m), u(:), b(:))
       end do
 
 ! get the new increment estimate for the intermediate states
@@ -1554,7 +1553,7 @@ module particles
 !
     gm   = lorentz_factor(si(:,2))
     v(:) = si(:,2) / gm
-    call acceleration(t, si(:,1), si(:,2), ff(:,1), ff(:,2), u(:), b(:))
+    call acceleration(t, si(:,:), ff(:,:), u(:), b(:))
     call separate_velocity(v(:), b(:), ba, va, vp, vr)
     call gyro_parameters(gm, ba, vr, om, tg, rg)
     en = gm * mrest
@@ -1626,7 +1625,7 @@ module particles
 
 ! calculate the acceleration at the initial state
 !
-        call acceleration(t, si(:,1), si(:,2), ff(:,1), ff(:,2), u(:), b(:))
+        call acceleration(t, si(:,:), ff(:,:), u(:), b(:))
 
 ! find the initial guess for the increment Z
 !
@@ -1667,7 +1666,7 @@ module particles
 
         gm   = lorentz_factor(si(:,2))
         v(:) = si(:,2) / gm
-        call acceleration(t, si(:,1), si(:,2), ff(:,1), ff(:,2), u(:), b(:))
+        call acceleration(t, si(:,:), ff(:,:), u(:), b(:))
         call separate_velocity(v(:), b(:), ba, va, vp, vr)
         call gyro_parameters(gm, ba, vr, om, tg, rg)
         en = gm * mrest
@@ -1715,7 +1714,7 @@ module particles
 !
       gm   = lorentz_factor(si(:,2))
       v(:) = si(:,2) / gm
-      call acceleration(t, si(:,1), si(:,2), ff(:,1), ff(:,2), u(:), b(:))
+      call acceleration(t, si(:,:), ff(:,:), u(:), b(:))
       call separate_velocity(v(:), b(:), ba, va, vp, vr)
       call gyro_parameters(gm, ba, vr, om, tg, rg)
       en = gm * mrest
@@ -1824,8 +1823,7 @@ module particles
 ! iterate over intermediate states
 !
       do m = 1, 3
-        call acceleration(ti(m), si(:,1) + zi(:,1,m), si(:,2) + zi(:,2,m),     &
-                                 fi(:,1,m), fi(:,2,m), u(:), b(:))
+        call acceleration(ti(m), si(:,:) + zi(:,:,m), fi(:,:,m), u(:), b(:))
       end do
 
 ! get the new increment estimate for the intermediate states
@@ -1944,7 +1942,7 @@ module particles
 !
     gm   = lorentz_factor(si(:,2))
     v(:) = si(:,2) / gm
-    call acceleration(t, si(:,1), si(:,2), ff(:,1), ff(:,2), u(:), b(:))
+    call acceleration(t, si(:,:), ff(:,:), u(:), b(:))
     call separate_velocity(v(:), b(:), ba, va, vp, vr)
     call gyro_parameters(gm, ba, vr, om, tg, rg)
     en = gm * mrest
@@ -2016,7 +2014,7 @@ module particles
 
 ! calculate the acceleration at the initial state
 !
-        call acceleration(t, si(:,1), si(:,2), ff(:,1), ff(:,2), u(:), b(:))
+        call acceleration(t, si(:,:), ff(:,:), u(:), b(:))
 
 ! find the initial guess for the increment Z
 !
@@ -2060,7 +2058,7 @@ module particles
 
         gm   = lorentz_factor(si(:,2))
         v(:) = si(:,2) / gm
-        call acceleration(t, si(:,1), si(:,2), ff(:,1), ff(:,2), u(:), b(:))
+        call acceleration(t, si(:,:), ff(:,:), u(:), b(:))
         call separate_velocity(v(:), b(:), ba, va, vp, vr)
         call gyro_parameters(gm, ba, vr, om, tg, rg)
         en = gm * mrest
@@ -2108,7 +2106,7 @@ module particles
 !
       gm   = lorentz_factor(si(:,2))
       v(:) = si(:,2) / gm
-      call acceleration(t, si(:,1), si(:,2), ff(:,1), ff(:,2), u(:), b(:))
+      call acceleration(t, si(:,:), ff(:,:), u(:), b(:))
       call separate_velocity(v(:), b(:), ba, va, vp, vr)
       call gyro_parameters(gm, ba, vr, om, tg, rg)
       en = gm * mrest
@@ -2225,8 +2223,7 @@ module particles
 ! iterate over intermediate states
 !
       do m = 1, 4
-        call acceleration(ti(m), si(:,1) + zi(:,1,m), si(:,2) + zi(:,2,m),     &
-                                 fi(:,1,m), fi(:,2,m), u(:), b(:))
+        call acceleration(ti(m), si(:,:) + zi(:,:,m), fi(:,:,m), u(:), b(:))
       end do
 
 ! get the new increment estimate for the intermediate states
@@ -2281,15 +2278,16 @@ module particles
 !
 !===============================================================================
 !
-  subroutine acceleration(t, x, p, s, a, u, b)
+  subroutine acceleration(t, s, f, u, b)
 
     implicit none
 
 ! subroutine arguments
 !
-    real(kind=8)              , intent(in)  :: t
-    real(kind=8), dimension(3), intent(in)  :: x, p
-    real(kind=8), dimension(3), intent(out) :: s, a, u, b
+    real(kind=8)                , intent(in)  :: t
+    real(kind=8), dimension(3,2), intent(in)  :: s
+    real(kind=8), dimension(3,2), intent(out) :: f
+    real(kind=8), dimension(3)  , intent(out) :: u, b
 
 ! local variables
 !
@@ -2303,18 +2301,18 @@ module particles
 #ifdef TEST
 #ifdef WTEST
     u(1) =   0.0d+00
-    u(2) = - vamp * sin(pi2 * freq * x(1))
+    u(2) = - vamp * sin(pi2 * freq * s(1,1))
     u(3) =   0.0d+00
 
     b(1) =   bpar
-    b(2) =   bamp * cos(pi2 * freq * x(1))
-    b(3) =   bamp * sin(pi2 * freq * x(1))
+    b(2) =   bamp * cos(pi2 * freq * s(1,1))
+    b(3) =   bamp * sin(pi2 * freq * s(1,1))
 #endif /* WTEST */
 #ifdef ITEST
 ! calculate the local velocity
 !
-    u(1) =      - vamp * x(1)
-    u(2) = vrat * vamp * x(2)
+    u(1) =      - vamp * s(1,1)
+    u(2) = vrat * vamp * s(2,1)
     u(3) = 0.0d0
 
 ! calculate the local magnetic field
@@ -2323,8 +2321,8 @@ module particles
     ra   = 1.0d0 + dl
     rb   = 1.0d0 - dl
 
-    xt   = x(1) / ra
-    yt   = x(2) / rb
+    xt   = s(1,1) / ra
+    yt   = s(2,1) / rb
 
     rt   = dsqrt(xt * xt + yt * yt)
 
@@ -2341,16 +2339,16 @@ module particles
 #else /* TEST */
 ! get plasma field components
 !
-    call fields(x(:), u(:), b(:))
+    call fields(s(:,1), u(:), b(:))
 #endif /* TEST */
 
 ! get the particle speed from its momentum
 !
-    v(:) = p(:) / lorentz_factor(p(:))
+    v(:)  = s(:,2) / lorentz_factor(s(:,2))
 
 ! normalize the speed to get position in the code units
 !
-    s(:) = v(:) / vunit
+    f(:,1) = v(:) / vunit
 
 ! subtract the fluid velocity
 !
@@ -2358,9 +2356,9 @@ module particles
 
 ! compute the acceleration
 !
-    a(1) = qom * (w(2) * b(3) - w(3) * b(2))
-    a(2) = qom * (w(3) * b(1) - w(1) * b(3))
-    a(3) = qom * (w(1) * b(2) - w(2) * b(1))
+    f(1,2) = qom * (w(2) * b(3) - w(3) * b(2))
+    f(2,2) = qom * (w(3) * b(1) - w(1) * b(3))
+    f(3,2) = qom * (w(1) * b(2) - w(2) * b(1))
 
 !-------------------------------------------------------------------------------
 !
