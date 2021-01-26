@@ -270,7 +270,7 @@ module particles
     real(kind=8) :: xt, yt, rt, dl, ra, rb, ec, bb, ub
 #endif /* ITEST */
     real(kind=8) :: uu, ww
-    real(kind=8), dimension(3) :: b, u, w, v0
+    real(kind=8), dimension(3) :: u, b, w, v0
 !
 !-------------------------------------------------------------------------------
 !
@@ -469,6 +469,7 @@ module particles
     vabs  = sqrt(dot_product(v0(:), v0(:)))
     vpar  = abs(dot_product(v0(:), b(:)))
     vper  = sqrt(vabs**2 - vpar**2)
+    call gyro_parameters(lfac, babs, vper, gfrq, gper, grad)
 
 ! calculate particle energy
 !
@@ -477,17 +478,21 @@ module particles
 
 ! print the particle initial parameters
 !
-    write(*,"('INFO',6x,': Vpar  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')") vpar, vpar * c
-    write(*,"('INFO',6x,': Vper  =',1pe15.8,' [c] =',1pe15.8,' [m / s]')") vper, vper * c
-    write(*,"('INFO',6x,': |V|   =',1pe15.8,' [c] =',1pe15.8,' [m / s]')") vabs, vabs * c
-    write(*,"('INFO',6x,': gamma =',1pe15.8)"           ) lfac
-    write(*,"('INFO',6x,': Om    =',1pe15.8,' [1 / s]')") gfrq
-    write(*,"('INFO',6x,': Tg    =',1pe15.8,' [s]')"    ) gper
-    write(*,"('INFO',6x,': Rg    =',1pe15.8,' [m]')"    ) grad
+    write(*,"('INFO',6x,': Vpar  =',1pe15.8,' [c]   =',1pe15.8,' [m/s]')")     &
+                                                        vpar, vpar * c
+    write(*,"('INFO',6x,': Vper  =',1pe15.8,' [c]   =',1pe15.8,' [m/s]')")     &
+                                                        vper, vper * c
+    write(*,"('INFO',6x,': |V|   =',1pe15.8,' [c]   =',1pe15.8,' [m/s]')")     &
+                                                        vabs, vabs * c
+    write(*,"('INFO',6x,': gamma =',1pe15.8)") lfac
+    write(*,"('INFO',6x,': Om    =',1pe15.8,' [1/s] =',1pe15.8,' [1/T]')")     &
+                                                        gfrq / tunit, gfrq
+    write(*,"('INFO',6x,': Tg    =',1pe15.8,' [s]   =',1pe15.8,' [T]  ')")     &
+                                                        gper * tunit, gper
+    write(*,"('INFO',6x,': Rg    =',1pe15.8,' [m]   =',1pe15.8,' [L]  ')")     &
+                                                        grad * lunit, grad
     write(*,"('INFO',6x,': E0    =',1pe15.8,' [MeV]')"  ) ener
     write(*,"('INFO',6x,': Ek    =',1pe15.8,' [MeV]')"  ) ekin
-    write(*,"('INFO',6x,': Rg/L  =',1pe15.8)" ) grad / lunit
-    write(*,"('INFO',6x,': Tg/T  =',1pe15.8)" ) gper / tunit
 !
 !-------------------------------------------------------------------------------
 !
