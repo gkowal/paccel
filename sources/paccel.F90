@@ -38,7 +38,6 @@ program paccel
                              integrate_trajectory_si4,                         &
                              integrate_trajectory_si6,                         &
                              integrate_trajectory_si8,                         &
-                             integrate_trajectory_si6v,                        &
                              integrate_trajectory_si8v
 
   implicit none
@@ -99,9 +98,6 @@ program paccel
   case('si6')
     write( *, "('INFO      : ',a)" ) "integrating the particle trajectory (SI6 method)"
     call integrate_trajectory_si6()
-  case('si6v')
-    write( *, "('INFO      : ',a)" ) "integrating the particle trajectory (SI6v method)"
-    call integrate_trajectory_si6v()
   case('si8')
     write( *, "('INFO      : ',a)" ) "integrating the particle trajectory (SI8 method)"
     call integrate_trajectory_si8()

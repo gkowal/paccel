@@ -1473,14 +1473,19 @@ module particles
 !
 !===============================================================================
 !
-! integrate_trajectory_si6: subroutine integrates particle trajectory using
-!                           the 6th order simplectic method
+! subroutine INTEGRATE_SI6:
+! ------------------------
 !
-! references: "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
-!             Chapman & Hall, London, New York, 1994
-!             "High order starting iterates for implicit Runge-Kutta methods:
-!              an improvement for variable-step symplectic integrators", 2002,
-!              IMA J. of Num. Ana., 22, 153
+!   Subroutine integrates the particle trajectory using the 6th order implicit
+!   symplectic Gauss-Legendre Runge-Kutta method.
+!
+!   References:
+!
+!   [1] "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
+!       Chapman & Hall, London, New York, 1994
+!   [2] "High order starting iterates for implicit Runge-Kutta methods:
+!       an improvement for variable-step symplectic integrators", M. P. Calvo,
+!       IMA Journal of Numerical Analysis, 2002, vol. 22, pp. 153-166
 !
 !===============================================================================
 !
@@ -1494,29 +1499,28 @@ module particles
 
 ! local variables
 !
+    character(len=32)                :: str
+    integer                          :: n, m, i = 0, mi, ti, k
+    real(kind=8)                     :: gm, t, dt, tc, te, ts
+    real(kind=8)                     :: ba, va, vp, vr, om, tg, rg, en, ek
+    real(kind=8)                     :: err
+    real(kind=8), dimension(3)       :: v, u, b
+    real(kind=8), dimension(3,2)     :: si, sc, se, ss, ff
+    real(kind=8), dimension(3,2,3)   :: zi
+    real(kind=8), dimension(3,2,3,5) :: zp
+
+! local flags
+!
     logical                        :: keepon = .true.
-    character(len=32)              :: str
-    integer                        :: n, m, i = 0, mi, ti, k
-    real(kind=8), dimension(3,6)   :: z
-    real(kind=8), dimension(5,3,6) :: zp
-    real(kind=8), dimension(3)     :: x, v, p, s, a, u, b
-    real(kind=8), dimension(3)     :: xc, xe, xs
-    real(kind=8), dimension(3)     :: pc, pe, ps
-    real(kind=8)                   :: gm, t, dt, tc, te, ts
-    real(kind=8)                   :: ba, va, vp, vr, om, tg, rg, en, ek
-    real(kind=8)                   :: tol = 0.0d+00
 
 ! local parameters
 !
-    real(kind=8), parameter :: b1   =   5.0d0 / 3.0d0                       &
-                             , b2   = - 4.0d0 / 3.0d0                       &
-                             , b3   =   5.0d0 / 3.0d0
-    real(kind=8), parameter :: c1   =   0.5d0 - 0.1d0 * dsqrt(15.0d0)       &
-                             , c2   =   0.5d0                               &
-                             , c3   =   0.5d0 + 0.1d0 * dsqrt(15.0d0)
-    real(kind=8), parameter :: d1   =   5.0d0 / 3.0d0                       &
-                             , d2   = - 4.0d0 / 3.0d0                       &
-                             , d3   =   5.0d0 / 3.0d0
+    real(kind=8), parameter :: c1 =  1.1270166537925831148d-01,                &
+                               c2 =  5.0000000000000000000d-01,                &
+                               c3 =  8.8729833462074168852d-01
+    real(kind=8), parameter :: d1 =  1.6666666666666666667d+00,                &
+                               d2 = -1.3333333333333333333d+00,                &
+                               d3 =  1.6666666666666666667d+00
 !
 !-------------------------------------------------------------------------------
 !
@@ -1527,40 +1531,32 @@ module particles
     k  = 5
     mi = 0
     ti = 0
-    te = 0.0d+00
     t  = 0.0d+00
+    te = 0.0d+00
     dt = dtini
-    xe = 0.0d+00
-    pe = 0.0d+00
+    err = 0.0d+00
 
 ! reset the initial guess
 !
-    zp(:,:,:) = 0.0d+00
+    zp(:,:,:,:) = 0.0d+00
+    zi(:,:,:)   = 0.0d+00
 
-! substitute the initial position, velocity, and momentum
+! reset the vector of the position and momentum errors
 !
-    x(:) = x0(:)
-    p(:) = p0(:)
+    se(:,:) = 0.0d+00
 
-! calculate the Lorentz factor and particle speed
+! set the initial position, velocity, and momentum
 !
-    gm = lorentz_factor(p(:))
-    v(:) = p(:) / gm
+    si(:,1) = x0(:)
+    si(:,2) = p0(:)
 
-! calculate the acceleration at the initial position
+! determine the initial state of the particle
 !
-    call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
-
-! separate the particle velocity into parallel and perpendicular components
-!
+    gm   = lorentz_factor(si(:,2))
+    v(:) = si(:,2) / gm
+    call acceleration(t, si(:,1), si(:,2), ff(:,1), ff(:,2), u(:), b(:))
     call separate_velocity(v(:), b(:), ba, va, vp, vr)
-
-! calculate the particle gyroperiod and gyroradius
-!
     call gyro_parameters(gm, ba, vr, om, tg, rg)
-
-! calculate the particle energies
-!
     en = gm * mrest
     ek = en - mrest
 
@@ -1580,10 +1576,10 @@ module particles
                                  'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
                                  'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
                                  'Rg [L]', 'Tolerance', 'Iterations'
-    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), p(1), p(2), p(3),      &
+    write(10,"(20(1es22.14),i22)") t, si(:,:),                                 &
                                    va, vp, vr, gm, en, ek, bunit * ba,         &
                                    om / tunit, tg * tunit, rg * lunit, tg, rg, &
-                                   tol, i
+                                   err, i
 
 !== INTEGRATION LOOP ==
 !
@@ -1593,98 +1589,87 @@ module particles
 
 ! find the initial guess for the vector Z using Newton's interpolation formula
 !
-      zp(5,:,:) = zp(4,:,:)
-      zp(4,:,:) = zp(3,:,:)
-      zp(3,:,:) = zp(2,:,:)
-      zp(2,:,:) = zp(1,:,:)
-      zp(1,:,:) = z (  :,:)
       if (k == 0) then
-        z (  :,:) = 5.0d+00 * zp(1,:,:) - 1.0d+01 * zp(2,:,:)                  &
-                  + 1.0d+01 * zp(3,:,:) - 5.0d+00 * zp(4,:,:) + zp(5,:,:)
+        zp(:,:,:,5) = zp(:,:,:,4)
+        zp(:,:,:,4) = zp(:,:,:,3)
+        zp(:,:,:,3) = zp(:,:,:,2)
+        zp(:,:,:,2) = zp(:,:,:,1)
+        zp(:,:,:,1) = zi(:,:,:  )
+        zi(:,:,:)   = 5.0d+00 * zp(:,:,:,1) - 1.0d+01 * zp(:,:,:,2)            &
+                    + 1.0d+01 * zp(:,:,:,3) - 5.0d+00 * zp(:,:,:,4)            &
+                              + zp(:,:,:,5)
       else if (k == 1) then
-        z (  :,:) = 4.0d+00 * zp(1,:,:) - 6.0d+00 * zp(2,:,:)                  &
-                  + 4.0d+00 * zp(3,:,:) - zp(4,:,:)
+        zp(:,:,:,4) = zp(:,:,:,3)
+        zp(:,:,:,3) = zp(:,:,:,2)
+        zp(:,:,:,2) = zp(:,:,:,1)
+        zp(:,:,:,1) = zi(:,:,:  )
+        zi(:,:,:)   = 4.0d+00 * zp(:,:,:,1) - 6.0d+00 * zp(:,:,:,2)            &
+                    + 4.0d+00 * zp(:,:,:,3) -           zp(:,:,:,4)
         k = k - 1
       else if (k == 2) then
-        z (  :,:) = 3.0d+00 * zp(1,:,:) - 3.0d+00 * zp(2,:,:) + zp(3,:,:)
+        zp(:,:,:,3) = zp(:,:,:,2)
+        zp(:,:,:,2) = zp(:,:,:,1)
+        zp(:,:,:,1) = zi(:,:,:  )
+        zi(:,:,:)   = 3.0d+00 * zp(:,:,:,1) - 3.0d+00 * zp(:,:,:,2)            &
+                              + zp(:,:,:,3)
         k = k - 1
       else if (k == 3) then
-        z (  :,:) = 2.0d+00 * zp(1,:,:) - zp(2,:,:)
+        zp(:,:,:,2) = zp(:,:,:,1)
+        zp(:,:,:,1) = zi(:,:,:  )
+        zi(:,:,:)   = 2.0d+00 * zp(:,:,:,1) - zp(:,:,:,2)
         k = k - 1
       else if (k == 4) then
-        z (  :,:) = zp(1,:,:)
+        zp(:,:,:,1) = zi(:,:,:  )
+        zi(:,:,:)   = zp(:,:,:,1)
         k = k - 1
       else if (k == 5) then
-        z (  :,:) = 0.0d+00
+
+! calculate the acceleration at the initial state
+!
+        call acceleration(t, si(:,1), si(:,2), ff(:,1), ff(:,2), u(:), b(:))
+
+! find the initial guess for the increment Z
+!
+        zi(:,:,1) = c1 * dt * ff(:,:)
+        zi(:,:,2) = c2 * dt * ff(:,:)
+        zi(:,:,3) = c3 * dt * ff(:,:)
+
         k = k - 1
       end if
 
-! estimate the vector Z (eq. 5.3)
+! estimate the new increment Z (eq. 5.3)
 !
-!   Z1 = [ a11 * F(y + Z1) + a12 * F(y + Z2) + a13 * F(y + Z3) ]
-!   Z2 = [ a21 * F(y + Z1) + a22 * F(y + Z2) + a23 * F(y + Z3) ]
-!   Z3 = [ a31 * F(y + Z1) + a32 * F(y + Z2) + a33 * F(y + Z3) ]
+!   Z1 = dt * [ a11 * F(y + Z1) + a12 * F(y + Z2) ]
+!   Z2 = dt * [ a21 * F(y + Z1) + a22 * F(y + Z2) ]
+!   Z3 = dt * [ a21 * F(y + Z1) + a22 * F(y + Z2) ]
 !
-      call estimate_si6(x(:), p(:), z(:,:), t, dt, tol, i)
+      call estimate_si6(t, dt, si(:,:), zi(:,:,:), err, i)
 
 ! update the solution
 !
-!   y(n+1) = y(n) + [ d1 * Z1 + d2 * Z2 + d3 * Z3 ]
+!   y(n+1) = y(n) + [ b1 * Z1 + b2 * Z2 + b3 * Z3 ]
 !
-      xc(1:3) = (d1 * z(1,1:3) + d2 * z(2,1:3) + d3 * z(3,1:3)) - xe(1:3)
-      pc(1:3) = (d1 * z(1,4:6) + d2 * z(2,4:6) + d3 * z(3,4:6)) - pe(1:3)
-      xs(1:3) = x(1:3) + xc(1:3)
-      ps(1:3) = p(1:3) + pc(1:3)
-      xe(1:3) = (xs(1:3) - x(1:3)) - xc(1:3)
-      pe(1:3) = (ps(1:3) - p(1:3)) - pc(1:3)
-      x (1:3) = xs(1:3)
-      p (1:3) = ps(1:3)
+      sc(:,:) = (d1 * zi(:,:,1) + d2 * zi(:,:,2) + d3 * zi(:,:,3)) - se(:,:)
+      ss(:,:) =  si(:,:) + sc(:,:)
+      se(:,:) = (ss(:,:) - si(:,:)) - sc(:,:)
+      si(:,:) =  ss(:,:)
 
-! if the boundaries are not periodic and particle is out of the box, stop
-! the integration
+! update the time
 !
-      keepon = keepon .and. is_inside(x)
-
-! update the integration time
-!
-      tc = dt - te
-      ts = t  + tc
+      tc =  dt - te
+      ts =  t  + tc
       te = (ts - t) - tc
-      t  = ts
-
-! check if time exceeded the maximum time
-!
-      if (t >= tmax) keepon = .false.
-
-! find the maximum number of iteration in the estimator and update the counter
-! of the total number of iterations
-!
-      mi = max(mi, i)
-      ti = ti + i
+      t  =  ts
 
 ! store the particle parameters at a given snapshot time
 !
       if (m == ndumps) then
 
-! calculate the Lorentz factor and particle velocity
-!
-        gm   = lorentz_factor(p(:))
-        v(:) = p(:) / gm
-
-! calculate the acceleration at the locations x1 and x2
-!
-        call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
-
-! separate particle velocity into parallel and perpendicular components
-!
+        gm   = lorentz_factor(si(:,2))
+        v(:) = si(:,2) / gm
+        call acceleration(t, si(:,1), si(:,2), ff(:,1), ff(:,2), u(:), b(:))
         call separate_velocity(v(:), b(:), ba, va, vp, vr)
-
-! calculate the particle gyroperiod and gyroradius
-!
         call gyro_parameters(gm, ba, vr, om, tg, rg)
-
-! calculate particle energy
-!
         en = gm * mrest
         ek = en - mrest
 
@@ -1695,10 +1680,10 @@ module particles
 
 ! write results to the output file
 !
-        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), p(1), p(2), p(3),  &
+        write(10,"(20(1es22.14),i22)") t, si(:,:),                             &
                                        va, vp, vr, gm, en, ek, bunit * ba,     &
                                        om / tunit, tg * tunit, rg * lunit, tg, &
-                                       rg, tol, i
+                                       rg, err, i
 
         n = n + 1
         m = 0
@@ -1709,9 +1694,40 @@ module particles
 !
       m = m + 1
 
+! check if the particle time did not exceed the maximum time and
+! if the particle is still inside the domain
+!
+      keepon = (t < tmax) .and. is_inside(si(:,1))
+
+! find the maximum number of iteration in the estimator and update the counter
+! of the total number of iterations
+!
+      mi = max(mi, i)
+      ti = ti + i
+
 ! end of iteration
 !
     end do
+
+    if (m > 1) then
+
+! calculate the particle parameters at the final state
+!
+      gm   = lorentz_factor(si(:,2))
+      v(:) = si(:,2) / gm
+      call acceleration(t, si(:,1), si(:,2), ff(:,1), ff(:,2), u(:), b(:))
+      call separate_velocity(v(:), b(:), ba, va, vp, vr)
+      call gyro_parameters(gm, ba, vr, om, tg, rg)
+      en = gm * mrest
+      ek = en - mrest
+
+! store the particle parameters
+!
+      write(10,"(20(1es22.14))") t, si(:,:),                                   &
+                                 va, vp, vr, gm, en, ek,                       &
+                                 bunit * ba, om / tunit, tg * tunit,           &
+                                 rg * lunit, tg, rg, err
+    end if
 
     close(10)
 
@@ -1726,332 +1742,74 @@ module particles
           trim(adjustl(str))
     write(*,"('INFO      : average iterations per step = ',1pe12.6)")          &
           real(ti, kind=8) / ((n - 1) * ndumps)
-!
+
 !-------------------------------------------------------------------------------
 !
   end subroutine integrate_trajectory_si6
 !
 !===============================================================================
 !
-! integrate_trajectory_si6v: subroutine integrates particle trajectory using
-!                           the 6th order simplectic method
+! subroutine ESTIMATE_SI6:
+! -----------------------
 !
-! references: "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
-!             Chapman & Hall, London, New York, 1994
-!             "High order starting iterates for implicit Runge-Kutta methods:
-!              an improvement for variable-step symplectic integrators", 2002,
-!              IMA J. of Num. Ana., 22, 153
+!   Subroutine estimates the intermediate steps for the SI6 method using
+!   a simple functional iteration.
 !
-!===============================================================================
+!   Arguments:
 !
-  subroutine integrate_trajectory_si6v()
-
-! import required modules
+!     s(:,:)   - the initial particle state (position and moment);
+!     z(:,:,:) - the intermediate particle states;
+!     dt       - the position incremental step;
 !
-    use coordinates, only : is_inside
-
-    implicit none
-
-! local variables
+!   References:
 !
-    logical                        :: keepon = .true.
-    character(len=32)              :: str
-    integer                        :: n, m, i = 0, mi, ti, k
-    real(kind=8), dimension(3,6)   :: z
-    real(kind=8), dimension(5,3,6) :: zp
-    real(kind=8), dimension(5)     :: hp
-    real(kind=8), dimension(3)     :: x, v, p, s, a, u, b
-    real(kind=8), dimension(3)     :: xc, xe, xs
-    real(kind=8), dimension(3)     :: pc, pe, ps
-    real(kind=8)                   :: gm, t, dt, dtp, tc, te, ts
-    real(kind=8)                   :: ba, va, vp, vr, om, tg, rg, en, ek
-    real(kind=8)                   :: tol = 0.0d+00
-
-! local parameters
-!
-    real(kind=8), parameter :: b1   =   5.0d0 / 3.0d0                       &
-                             , b2   = - 4.0d0 / 3.0d0                       &
-                             , b3   =   5.0d0 / 3.0d0
-    real(kind=8), parameter :: c1   =   0.5d0 - 0.1d0 * dsqrt(15.0d0)       &
-                             , c2   =   0.5d0                               &
-                             , c3   =   0.5d0 + 0.1d0 * dsqrt(15.0d0)
-    real(kind=8), parameter :: d1   =   5.0d0 / 3.0d0                       &
-                             , d2   = - 4.0d0 / 3.0d0                       &
-                             , d3   =   5.0d0 / 3.0d0
-!
-!-------------------------------------------------------------------------------
-!
-! initialize the iteration number, snapshot number, time, and time steps
-!
-    n  = 1
-    m  = 1
-    k  = 5
-    mi = 0
-    ti = 0
-    te = 0.0d+00
-    t  = 0.0d+00
-    dt = dtini
-    xe = 0.0d+00
-    pe = 0.0d+00
-
-! reset the initial guess
-!
-    zp(:,:,:) = 0.0d+00
-
-! substitute the initial position, velocity, and momentum
-!
-    x(:) = x0(:)
-    p(:) = p0(:)
-
-! calculate the Lorentz factor and particle speed
-!
-    gm = lorentz_factor(p(:))
-    v(:) = p(:) / gm
-
-! calculate the acceleration at the initial position
-!
-    call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
-
-! separate the particle velocity into parallel and perpendicular components
-!
-    call separate_velocity(v(:), b(:), ba, va, vp, vr)
-
-! calculate the particle gyroperiod and gyroradius
-!
-    call gyro_parameters(gm, ba, vr, om, tg, rg)
-
-! calculate the particle energies
-!
-    en = gm * mrest
-    ek = en - mrest
-
-! print the progress
-!
-    write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
-                                             'GPERIOD', 'SPEED (c)',           &
-                                             'ENERGY (MeV)'
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')            &
-                                                    n, t, dt, tg, va, ek, term
-
-! open the output file, print headers and the initial values
-!
-    open(10, file = 'output.dat', form = 'formatted', status = 'replace')
-    write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz',      &
-                                 '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
-                                 'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
-                                 'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
-                                 'Rg [L]', 'Tolerance', 'Iterations'
-    write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), p(1), p(2), p(3),      &
-                                   va, vp, vr, gm, en, ek, bunit * ba,         &
-                                   om / tunit, tg * tunit, rg * lunit, tg, rg, &
-                                   tol, i
-
-!== INTEGRATION LOOP ==
-!
-! iterate until the maximum time is reached
-!
-    do while (keepon)
-
-! find the initial guess for the vector Z using Newton's interpolation formula
-!
-      dtp   = dt
-      hp(2) = hp(1)
-      hp(1) = dt / dtp
-      zp(3,:,:) = zp(2,:,:)
-      zp(2,:,:) = zp(1,:,:)
-      zp(1,:,:) = z (  :,:)
-      if (k == 2) then
-        z (  :,:) = zp(1,:,:) * (1.0d+00 + hp(1) + hp(1) * hp(1))              &
-                  - zp(2,:,:) * (hp(1) * (1.0d+00 + hp(1) + hp(2)))            &
-                  + zp(3,:,:) * (hp(1) * hp(2))
-      else if (k == 3) then
-        z (  :,:) = zp(1,:,:) + (zp(1,:,:) - zp(2,:,:)) * hp(1)
-        k = k - 1
-      else if (k == 4) then
-        z (  :,:) = zp(1,:,:)
-        k = k - 1
-      else if (k == 5) then
-        z (  :,:) = 0.0d+00
-        k = k - 1
-      end if
-
-! estimate the vector Z (eq. 5.3)
-!
-!   Z1 = [ a11 * F(y + Z1) + a12 * F(y + Z2) + a13 * F(y + Z3) ]
-!   Z2 = [ a21 * F(y + Z1) + a22 * F(y + Z2) + a23 * F(y + Z3) ]
-!   Z3 = [ a31 * F(y + Z1) + a32 * F(y + Z2) + a33 * F(y + Z3) ]
-!
-      call estimate_si6(x(:), p(:), z(:,:), t, dt, tol, i)
-      do while(tol >= maxtol)
-        dt = dt * min(5.0d+00, max(1.0d-01, 0.8d+00 * (maxtol / tol)**(0.2)))
-        call estimate_si6(x(:), p(:), z(:,:), t, dt, tol, i)
-      end do
-
-! update the solution
-!
-!   y(n+1) = y(n) + [ d1 * Z1 + d2 * Z2 + d3 * Z3 ]
-!
-      xc(1:3) = (d1 * z(1,1:3) + d2 * z(2,1:3) + d3 * z(3,1:3)) - xe(1:3)
-      pc(1:3) = (d1 * z(1,4:6) + d2 * z(2,4:6) + d3 * z(3,4:6)) - pe(1:3)
-      xs(1:3) = x(1:3) + xc(1:3)
-      ps(1:3) = p(1:3) + pc(1:3)
-      xe(1:3) = (xs(1:3) - x(1:3)) - xc(1:3)
-      pe(1:3) = (ps(1:3) - p(1:3)) - pc(1:3)
-      x (1:3) = xs(1:3)
-      p (1:3) = ps(1:3)
-
-! if the boundaries are not periodic and particle is out of the box, stop
-! the integration
-!
-      keepon = keepon .and. is_inside(x)
-
-! update the integration time
-!
-      tc = dt - te
-      ts = t  + tc
-      te = (ts - t) - tc
-      t  = ts
-
-! check if time exceeded the maximum time
-!
-      if (t >= tmax) keepon = .false.
-
-! find the maximum number of iteration in the estimator and update the counter
-! of the total number of iterations
-!
-      mi = max(mi, i)
-      ti = ti + i
-
-! store the particle parameters at a given snapshot time
-!
-      if (m == ndumps) then
-
-! calculate the Lorentz factor and particle velocity
-!
-        gm   = lorentz_factor(p(:))
-        v(:) = p(:) / gm
-
-! calculate the acceleration at the locations x1 and x2
-!
-        call acceleration(t, x(:), p(:), s(:), a(:), u(:), b(:))
-
-! separate particle velocity into parallel and perpendicular components
-!
-        call separate_velocity(v(:), b(:), ba, va, vp, vr)
-
-! calculate the particle gyroperiod and gyroradius
-!
-        call gyro_parameters(gm, ba, vr, om, tg, rg)
-
-! calculate particle energy
-!
-        en = gm * mrest
-        ek = en - mrest
-
-! print the progress
-!
-        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')        &
-                                                    n, t, dt, tg, va, ek, term
-
-! write results to the output file
-!
-        write(10,"(20(1es22.14),i22)") t, x(1), x(2), x(3), p(1), p(2), p(3),  &
-                                       va, vp, vr, gm, en, ek, bunit * ba,     &
-                                       om / tunit, tg * tunit, rg * lunit, tg, &
-                                       rg, tol, i
-
-        n = n + 1
-        m = 0
-
-      end if
-
-! increase data write counter
-!
-      m = m + 1
-
-! calculate new timestep
-!
-      dt = dt * min(2.7d+00 * maxit / (2.0d+00 * maxit + i), 1.0d+00)          &
-              * min(6.0d+00, max(1.0d-01, (maxtol / tol)**(2.0d-01)))
-      dt = min(dt, dtmax)
-
-! end of iteration
-!
-    end do
-
-    close(10)
-
-! print the progress
-!
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, va, ek
-
-! write info about the estimator
-!
-    write(str,"(i12)") mi
-    write(*,"('INFO      : maximum iterations per step = ',a)"      )          &
-          trim(adjustl(str))
-    write(*,"('INFO      : average iterations per step = ',1pe12.6)")          &
-          real(ti, kind=8) / ((n - 1) * ndumps)
-!
-!-------------------------------------------------------------------------------
-!
-  end subroutine integrate_trajectory_si6v
+!   [1] "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
+!       Chapman & Hall, London, New York, 1994
 !
 !===============================================================================
 !
-! estimate_si6: subroutine estimates the solution for the equation of motion
-!               using a simple functional iteration (SI6 version)
-!
-! references: "Numerical Hamiltonian Problems", J. M. Sanz-Serna & M. P. Calvo
-!             Chapman & Hall, London, New York, 1994
-!
-! description: This subroutines find the solution of the equation 5.3 for
-!              the increment Z using the functional iteration
-!
-!===============================================================================
-!
-  subroutine estimate_si6(x, p, z, t, dt, tol, n)
+  subroutine estimate_si6(t, dt, si, zi, err, n)
 
     implicit none
 
 ! subroutine arguments
 !
-    real(kind=8), dimension(3)  , intent(in)    :: x, p
-    real(kind=8), dimension(3,6), intent(inout) :: z
-    real(kind=8)                , intent(in)    :: t
-    real(kind=8)                , intent(inout) :: dt, tol
-    integer                     , intent(inout) :: n
+    real(kind=8)                  , intent(in)    :: t, dt
+    real(kind=8), dimension(3,2)  , intent(in)    :: si
+    real(kind=8), dimension(3,2,3), intent(inout) :: zi
+    real(kind=8)                  , intent(out)   :: err
+    integer                       , intent(inout) :: n
 
 ! local variables
 !
-    integer                      :: i
-    real(kind=8), dimension(3,6) :: zn
-    real(kind=8), dimension(3,3) :: si, ai
-    real(kind=8), dimension(3)   :: xi, pi, xm, pm, u, b
-    real(kind=8), dimension(3)   :: ti
+    integer                        :: m
+    real(kind=8), dimension(3)     :: u, b
+    real(kind=8), dimension(3)     :: ti
+    real(kind=8), dimension(3,2,3) :: zr, zn
+    real(kind=8), dimension(3,2,3) :: fi
 
 ! local parameter
 !
-    real(kind=8), parameter :: bh = 5.0d-01, ch  = sqrt(1.5d+01)
-    real(kind=8), parameter :: a11 = 5.0d+00 / 3.6d+01                         &
-                             , a12 = 2.0d+00 / 9.0d+00 - ch / 1.5d+01          &
-                             , a13 = 5.0d+00 / 3.6d+01 - ch / 3.0d+01          &
-                             , a21 = 5.0d+00 / 3.6d+01 + ch / 2.4d+01          &
-                             , a22 = 2.0d+00 / 9.0d+00                         &
-                             , a23 = 5.0d+00 / 3.6d+01 - ch / 2.4d+01          &
-                             , a31 = 5.0d+00 / 3.6d+01 + ch / 3.0d+01          &
-                             , a32 = 2.0d+00 / 9.0d+00 + ch / 1.5d+01          &
-                             , a33 = 5.0d+00 / 3.6d+01
-    real(kind=8), parameter :: c1  = bh - ch / 1.0d+01                         &
-                             , c2  = bh                                        &
-                             , c3  = bh + ch / 1.0d+01
+    real(kind=8), parameter :: c1  =  1.1270166537925831148d-01,               &
+                               c2  =  5.0000000000000000000d-01,               &
+                               c3  =  8.8729833462074168852d-01
+    real(kind=8), parameter :: a11 =  1.3888888888888888889d-01,               &
+                               a12 = -3.5976667524938903456d-02,               &
+                               a13 =  9.7894440153083260496d-03,               &
+                               a21 =  3.0026319498086459244d-01,               &
+                               a22 =  2.2222222222222222222d-01,               &
+                               a23 = -2.2485417203086814660d-02,               &
+                               a31 =  2.6798833376246945173d-01,               &
+                               a32 =  4.8042111196938334790d-01,               &
+                               a33 =  1.3888888888888888889d-01
+
 !
 !-------------------------------------------------------------------------------
 !
 ! initiate the iteration control parameters
 !
     n   = 0
-    tol = 2.0d+00 * maxtol
+    err = huge(err)
 
 ! prepare the time moments for intermedia states
 !
@@ -2059,57 +1817,44 @@ module particles
     ti(2)   = t + c2 * dt
     ti(3)   = t + c3 * dt
 
-! prepare normalized state to calculate tolerance
-!
-    xm(1:3) = max(1.0d+00, abs(x(1:3)))
-    pm(1:3) = max(1.0d+00, abs(p(1:3)))
-
 ! perform fixed-point iteration
 !
-    do while (tol > maxtol .and. n < maxit)
+    do while (err > 1.0d+00 .and. n < maxit)
 
 ! iterate over intermediate states
 !
-      do i = 1, 3
-
-! prepare the particle intermediate state (position and momentum)
-!
-        xi(1:3) = x(:) + z(i,1:3)
-        pi(1:3) = p(:) + z(i,4:6)
-
-! get acceleration for the current state
-!
-        call acceleration(ti(i), xi(1:3), pi(1:3), si(i,1:3), ai(i,1:3), u(:), b(:))
-
+      do m = 1, 3
+        call acceleration(ti(m), si(:,1) + zi(:,1,m), si(:,2) + zi(:,2,m),     &
+                                 fi(:,1,m), fi(:,2,m), u(:), b(:))
       end do
 
 ! get the new increment estimate for the intermediate states
 !
-      zn(1,1:3) = dt * (a11 * si(1,1:3) + a12 * si(2,1:3) + a13 * si(3,1:3))
-      zn(2,1:3) = dt * (a21 * si(1,1:3) + a22 * si(2,1:3) + a23 * si(3,1:3))
-      zn(3,1:3) = dt * (a31 * si(1,1:3) + a32 * si(2,1:3) + a33 * si(3,1:3))
-      zn(1,4:6) = dt * (a11 * ai(1,1:3) + a12 * ai(2,1:3) + a13 * ai(3,1:3))
-      zn(2,4:6) = dt * (a21 * ai(1,1:3) + a22 * ai(2,1:3) + a23 * ai(3,1:3))
-      zn(3,4:6) = dt * (a31 * ai(1,1:3) + a32 * ai(2,1:3) + a33 * ai(3,1:3))
+      zn(:,:,1) = dt * (a11 * fi(:,:,1) + a12 * fi(:,:,2) + a13 * fi(:,:,3))
+      zn(:,:,2) = dt * (a21 * fi(:,:,1) + a22 * fi(:,:,2) + a23 * fi(:,:,3))
+      zn(:,:,3) = dt * (a31 * fi(:,:,1) + a32 * fi(:,:,2) + a33 * fi(:,:,3))
+
+! prepare normalized state to calculate tolerance
+!
+      zr(:,:,:) = atol + rtol * abs(zi(:,:,:))
 
 ! calculate the maximum of residuum of the increment
 !
-      tol = 0.0d+00
-      do i = 1, 3
-        tol = max(tol, maxval(abs(zn(i,1:3) - z(i,1:3)) / xm(1:3)))
-        tol = max(tol, maxval(abs(zn(i,4:6) - z(i,4:6)) / pm(1:3)))
+      err = 0.0d+00
+      do m = 1, 3
+        err = max(err, maxval(abs(zn(:,:,m) - zi(:,:,m)) / zr(:,:,m)))
       end do
 
-! update the intermediate states with the new estimate
+! substitute the new solution of the increment
 !
-      z(:,:) = zn(:,:)
+      zi(:,:,:) = zn(:,:,:)
 
 ! increase the iteration counter
 !
       n = n + 1
 
     end do
-!
+
 !-------------------------------------------------------------------------------
 !
   end subroutine estimate_si6
