@@ -491,8 +491,8 @@ module particles
                                                         gper * tunit, gper
     write(*,"('INFO',6x,': Rg    =',1pe15.8,' [m]   =',1pe15.8,' [L]  ')")     &
                                                         grad * lunit, grad
-    write(*,"('INFO',6x,': E0    =',1pe15.8,' [MeV]')"  ) ener
-    write(*,"('INFO',6x,': Ek    =',1pe15.8,' [MeV]')"  ) ekin
+    write(*,"('INFO',6x,': E     =',1pe15.8,' [MeV]')"  ) ener
+    write(*,"('INFO',6x,': Ekin  =',1pe15.8,' [MeV]')"  ) ekin
 !
 !-------------------------------------------------------------------------------
 !
