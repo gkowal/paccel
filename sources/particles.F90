@@ -247,7 +247,6 @@ module particles
 
 ! import required modules
 !
-    use fields    , only : ux, uy, uz, bx, by, bz
     use fields    , only : get_domain_dimensions, get_domain_bounds
     use parameters, only : get_parameter
 
@@ -263,16 +262,15 @@ module particles
     real(kind=8) :: vpar  = 0.0d+00  ! the parallel and
     real(kind=8) :: vper  = 1.0d-02  ! perpendicular component of
                                      ! the initial speed in c
-    integer      :: p
 
 ! local variables
 !
     real(kind=8) :: babs, vabs, lfac, grad, gper, gfrq, ener, ekin
 #ifdef ITEST
-    real(kind=8) :: xt, yt, rt, dl, ra, rb, ec
+    real(kind=8) :: xt, yt, rt, dl, ra, rb, ec, bb, ub
 #endif /* ITEST */
-    real(kind=8) :: bb, ub, uu, ww
-    real(kind=8), dimension(3) :: r, b, u, w, v0
+    real(kind=8) :: uu, ww
+    real(kind=8), dimension(3) :: b, u, w, v0
 !
 !-------------------------------------------------------------------------------
 !
@@ -684,10 +682,10 @@ module particles
 
     end do
 
-! calculate the particle parameters at the final state
-!
     if (m > 1) then
 
+! calculate the particle parameters at the final state
+!
       gm   = lorentz_factor(si(:,2))
       v(:) = si(:,2) / gm
       call acceleration(t, si(:,1), si(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
@@ -696,20 +694,19 @@ module particles
       en = gm * mrest
       ek = en - mrest
 
-! print the progress
-!
-      write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, va, ek
-
 ! store the particle parameters
 !
       write(10,"(20(1es22.14))") t, si(:,:),                                   &
                                  va, vp, vr, gm, en, ek,                       &
                                  bunit * ba, om / tunit, tg * tunit,           &
                                  rg * lunit, tg, rg, err
-
     end if
 
-    close (10)
+    close(10)
+
+! print the progress
+!
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, va, ek
 
 !-------------------------------------------------------------------------------
 !
@@ -1063,10 +1060,10 @@ module particles
 
     end do
 
-! calculate the particle parameters at the final state
-!
     if (m > 1) then
 
+! calculate the particle parameters at the final state
+!
       gm   = lorentz_factor(si(:,2))
       v(:) = si(:,2) / gm
       call acceleration(t, si(:,1), si(:,2), ff(:,1,1), ff(:,2,1), u(:), b(:))
@@ -1075,20 +1072,19 @@ module particles
       en = gm * mrest
       ek = en - mrest
 
-! print the progress
-!
-      write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, va, ek
-
 ! store the particle parameters
 !
       write(10,"(20(1es22.14))") t, si(:,:),                                   &
                                  va, vp, vr, gm, en, ek,                       &
                                  bunit * ba, om / tunit, tg * tunit,           &
                                  rg * lunit, tg, rg, err
-
     end if
 
-    close (10)
+    close(10)
+
+! print the progress
+!
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, va, ek
 
 !-------------------------------------------------------------------------------
 !
@@ -1330,23 +1326,20 @@ module particles
 !
     end do
 
+    if (m > 1) then
+
 ! calculate the particle parameters at the final state
 !
-    gm   = lorentz_factor(si(:,2))
-    v(:) = si(:,2) / gm
-    call acceleration(t, si(:,1), si(:,2), ff(:,1), ff(:,2), u(:), b(:))
-    call separate_velocity(v(:), b(:), ba, va, vp, vr)
-    call gyro_parameters(gm, ba, vr, om, tg, rg)
-    en = gm * mrest
-    ek = en - mrest
-
-! print the progress
-!
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, va, ek
+      gm   = lorentz_factor(si(:,2))
+      v(:) = si(:,2) / gm
+      call acceleration(t, si(:,1), si(:,2), ff(:,1), ff(:,2), u(:), b(:))
+      call separate_velocity(v(:), b(:), ba, va, vp, vr)
+      call gyro_parameters(gm, ba, vr, om, tg, rg)
+      en = gm * mrest
+      ek = en - mrest
 
 ! store the particle parameters
 !
-    if (m > 1) then
       write(10,"(20(1es22.14))") t, si(:,:),                                   &
                                  va, vp, vr, gm, en, ek,                       &
                                  bunit * ba, om / tunit, tg * tunit,           &
@@ -1354,6 +1347,10 @@ module particles
     end if
 
     close(10)
+
+! print the progress
+!
+    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, va, ek
 
 ! write info about the estimator
 !
@@ -1530,8 +1527,11 @@ module particles
     k  = 5
     mi = 0
     ti = 0
+    te = 0.0d+00
     t  = 0.0d+00
     dt = dtini
+    xe = 0.0d+00
+    pe = 0.0d+00
 
 ! reset the initial guess
 !
@@ -1788,8 +1788,11 @@ module particles
     k  = 5
     mi = 0
     ti = 0
+    te = 0.0d+00
     t  = 0.0d+00
     dt = dtini
+    xe = 0.0d+00
+    pe = 0.0d+00
 
 ! reset the initial guess
 !
@@ -2026,7 +2029,6 @@ module particles
     real(kind=8), dimension(3,3) :: si, ai
     real(kind=8), dimension(3)   :: xi, pi, xm, pm, u, b
     real(kind=8), dimension(3)   :: ti
-    real(kind=8)                 :: lf
 
 ! local parameter
 !
@@ -2168,8 +2170,11 @@ module particles
     k  = 5
     mi = 0
     ti = 0
+    te = 0.0d+00
     t  = 0.0d+00
     dt = dtini
+    xe = 0.0d+00
+    pe = 0.0d+00
 
 ! reset the initial guess
 !
@@ -2428,8 +2433,11 @@ module particles
     k  = 5
     mi = 0
     ti = 0
+    te = 0.0d+00
     t  = 0.0d+00
     dt = dtini
+    xe = 0.0d+00
+    pe = 0.0d+00
 
 ! reset the initial guess
 !
@@ -2668,7 +2676,6 @@ module particles
     real(kind=8), dimension(4,3) :: si, ai
     real(kind=8), dimension(3)   :: xi, pi, xm, pm, u, b
     real(kind=8), dimension(4)   :: ti
-    real(kind=8)                 :: lf
 
 ! local parameters, Butcher's coefficients a_ij
 !
