@@ -322,6 +322,78 @@ module dataxml
 !
 !===============================================================================
 !
+! subroutine PARSE_ATTRIBUTE:
+! --------------------------
+!
+!   Subroutine parses the buffer for specific attribute and returns
+!   the indices to its value.
+!
+!===============================================================================
+!
+  subroutine parse_attribute(buffer, aname, ibeg, iend)
+
+    use iso_fortran_env, only : error_unit
+
+    implicit none
+
+    character(len=*), intent(in)  :: buffer, aname
+    integer         , intent(out) :: ibeg, iend
+
+    logical :: found
+    integer :: il, iu, ib, ie
+
+    character(len=*), parameter :: loc = 'DATAXML::parse_attribute()'
+
+!-------------------------------------------------------------------------------
+!
+    ibeg = 0
+    iend = 0
+    ib   = 0
+    ie   = 0
+
+    il = index(buffer,'<Attributes>')
+    iu = index(buffer(il:),'</Attributes>')
+    if (il > 0 .and. iu > 0) then
+      iu = iu - len('</Attributes>') + il + len('</Attributes>') - 2
+      il = il + len('<Attributes>')
+
+      found = .false.
+      do while(.not. found .and. il < iu)
+        ib = index(buffer(il:iu), '<Attribute')
+        if (ib > 0) then
+          ib = il + ib - 1
+          ie = index(buffer(ib:iu), '</Attribute>')                            &
+                              + len('</Attribute>') + ib - 2
+          found = index(buffer(ib:ie), 'name="' // trim(aname) // '"') > 0
+          if (.not. found) il = ie
+        else
+          il = iu
+          write(error_unit,"('[',a,']: ',a)") trim(loc),                       &
+                           "Group <Attributes> has no element <Attribute>!"
+          stop
+        end if
+      end do
+      if (found) then
+        ibeg = index(buffer(ib:ie), '>') + ib
+        iend = index(buffer(ib:ie), '<', .true.) + ib - 2
+        return
+      else
+        write(error_unit,"('[',a,']: ',a)") trim(loc),                         &
+                         'Attribute "' // trim(aname) // '" could not be found.'
+        stop
+      end if
+    else
+      write(error_unit,"('[',a,']: ',a)") trim(loc),                           &
+                       "Missing or wrong group <Attributes>!"
+      stop
+    end if
+
+!-------------------------------------------------------------------------------
+!
+  end subroutine parse_attribute
+!
+!===============================================================================
+!
 ! subroutine GET_ATTRIBUTE_INTEGER:
 ! --------------------------------
 !
@@ -333,24 +405,15 @@ module dataxml
 
     implicit none
 
-! subroutine arguments
-!
     character(len=*), intent(in)  :: buffer, aname
     integer         , intent(out) :: avalue
 
-! local variables
-!
-    integer :: ib, ie, lb, le
+    integer :: ibeg, iend
 
 !-------------------------------------------------------------------------------
 !
-    ib = index(buffer, '<Attribute name="' // trim(aname) // '"')
-    if (ib > 0) then
-      ie = index(buffer(ib:),'</Attribute>') + ib + len('</Attribute>') - 2
-      lb = index(buffer(ib:ie), '>') + ib
-      le = index(buffer(ib:ie), '<', .true.) + ib - 2
-      read(buffer(lb:le), fmt=*) avalue
-    end if
+    call parse_attribute(buffer, aname, ibeg, iend)
+    if (ibeg > 0 .and. iend > 0) read(buffer(ibeg:iend), fmt=*) avalue
 
 !-------------------------------------------------------------------------------
 !
@@ -370,24 +433,15 @@ module dataxml
 
     implicit none
 
-! subroutine arguments
-!
     character(len=*), intent(in)  :: buffer, aname
     real(kind=8)    , intent(out) :: avalue
 
-! local variables
-!
-    integer :: ib, ie, lb, le
+    integer :: ibeg, iend
 
 !-------------------------------------------------------------------------------
 !
-    ib = index(buffer, '<Attribute name="' // trim(aname) // '"')
-    if (ib > 0) then
-      ie = index(buffer(ib:),'</Attribute>') + ib + len('</Attribute>') - 2
-      lb = index(buffer(ib:ie), '>') + ib
-      le = index(buffer(ib:ie), '<', .true.) + ib - 2
-      read(buffer(lb:le), fmt=*) avalue
-    end if
+    call parse_attribute(buffer, aname, ibeg, iend)
+    if (ibeg > 0 .and. iend > 0) read(buffer(ibeg:iend), fmt=*) avalue
 
 !-------------------------------------------------------------------------------
 !
@@ -406,67 +460,141 @@ module dataxml
   subroutine get_filename(buffer, aname, avalue, atype, acomp,                 &
                                                  usize, csize, uhash, chash)
 
+    use iso_fortran_env, only : error_unit
+
     implicit none
 
-! subroutine arguments
-!
     character(len=*), intent(in)    :: buffer, aname
     character(len=*), intent(inout) :: avalue
     integer         , intent(out)   :: atype, acomp
     integer(kind=8) , intent(out)   :: usize, csize, uhash, chash
 
-! local variables
-!
-    integer :: ib, ie, lb, le
+    logical :: found
+    integer :: il, iu, ib, ie, lb, le
+
+    character(len=*), parameter :: loc = 'DATAXML::get_filename()'
 
 !-------------------------------------------------------------------------------
 !
-    ib = index(buffer, '<FileName name="' // trim(aname) // '"')
-    if (ib > 0) then
-      ie = index(buffer(ib:),'</FileName>') + ib + len('</FileName>') - 2
-      lb = index(buffer(ib:ie), '>') + ib
-      le = index(buffer(ib:ie), '<', .true.) + ib - 2
-      read(buffer(lb:le), fmt=*) avalue
-      lb = index(buffer(ib:ie), 'dtype="') + len('dtype="') + ib - 1
-      le = index(buffer(lb:ie), '"') + lb - 2
-      select case(buffer(lb:le))
-      case('float64', 'int64')
-        atype = 8
-      case('float32', 'int32')
-        atype = 4
-      case default
-        atype = 0
-      end select
-      lb = index(buffer(ib:ie), 'compression="') + len('compression="') + ib - 1
-      le = index(buffer(lb:ie), '"') + lb - 2
-      select case(buffer(lb:le))
-      case('zstd')
-        acomp = 1
-      case('lz4')
-        acomp = 2
-      case default
-        acomp = 0
-      end select
-      lb = index(buffer(ib:ie), 'size="') + len('size="') + ib - 1
-      le = index(buffer(lb:ie), '"') + lb - 2
-      read(buffer(lb:le), fmt=*) usize
-      if (index(buffer(ib:ie), 'compressed_size="') > 0) then
-        lb = index(buffer(ib:ie), 'compressed_size="') +                       &
-                            len('compressed_size="') + ib - 1
-        le = index(buffer(lb:ie), '"') + lb - 2
-        read(buffer(lb:le), fmt=*) csize
+    il = index(buffer,'<DataSets')
+    iu = index(buffer(il:),'</DataSets>')
+    if (il > 0 .and. iu > 0) then
+      iu = iu + il + len('<DataSets') - len('</DataSets>')
+      il = il + index(buffer(il:),'>')
+
+      found = .false.
+      do while(.not. found .and. il < iu)
+        ib = index(buffer(il:iu), '<FileName')
+        if (ib > 0) then
+          ib = il + ib - 1
+          ie = index(buffer(ib:iu), '</FileName>')                             &
+                              + len('</FileName>') + ib - 2
+          found = index(buffer(ib:ie), 'name="' // trim(aname) // '"') > 0
+          if (.not. found) il = ie
+        else
+          il = iu
+          write(error_unit,"('[',a,']: ',a)") trim(loc),                       &
+                           "Group <DataSets> has no element <FileName>!"
+          stop
+        end if
+      end do
+      if (found) then
+
+! parse the value
+!
+        lb = index(buffer(ib:ie), '>') + ib
+        le = index(buffer(ib:ie), '<', .true.) + ib - 2
+        write(avalue,*) trim(adjustl(buffer(lb:le)))
+
+! parse the datatype
+!
+        lb = index(buffer(ib:ie), 'dtype="')
+        if (lb > 0) then
+          lb = lb + len('dtype="') + ib - 1
+          le = index(buffer(lb:ie), '"') + lb - 2
+          select case(buffer(lb:le))
+          case('float64', 'int64')
+            atype = 8
+          case('float32', 'int32')
+            atype = 4
+          case default
+            atype = 0
+          end select
+        else
+          write(error_unit,"('[',a,']: ',a)") trim(loc),                       &
+                           "Element does not have 'dtype' attribute!"
+          stop
+        end if
+
+! parse the uncompressed size
+!
+        lb = index(buffer(ib:ie), ' size="')
+        if (lb > 0) then
+          lb = lb + len(' size="') + ib - 1
+          le = index(buffer(lb:ie), '"') + lb - 2
+          read(buffer(lb:le), fmt=*) usize
+        else
+          write(error_unit,"('[',a,']: ',a)") trim(loc),                       &
+                           "Element does not have 'size' attribute!"
+          stop
+        end if
+
+! parse the uncompressed data digest
+!
+        if (index(buffer(ib:ie), ' digest="') > 0) then
+          lb = index(buffer(ib:ie), ' digest="') + len(' digest="') + ib - 1
+          le = index(buffer(lb:ie), '"') + lb - 2
+          read(buffer(lb:le), fmt='(1z16)') uhash
+        end if
+
+! parse the compression
+!
+        if (index(buffer(ib:ie), 'compression=') > 0) then
+          lb = index(buffer(ib:ie), 'compression="')                           &
+                              + len('compression="') + ib - 1
+          le = index(buffer(lb:ie), '"') + lb - 2
+          select case(buffer(lb:le))
+          case('zstd')
+            acomp = 1
+          case('lz4')
+            acomp = 2
+          case default
+            acomp = 0
+          end select
+
+! parse the compressed size
+!
+          if (index(buffer(ib:ie), 'compressed_size="') > 0) then
+            lb = index(buffer(ib:ie), 'compressed_size="') +                   &
+                                  len('compressed_size="') + ib - 1
+            le = index(buffer(lb:ie), '"') + lb - 2
+            read(buffer(lb:le), fmt=*) csize
+          else
+            write(error_unit,"('[',a,']: ',a)") trim(loc),                     &
+                  "Compression used but no 'compressed_size' attribute present!"
+            stop
+          end if
+
+! parse the compressed data digest
+!
+          if (index(buffer(ib:ie), 'compressed_digest="') > 0) then
+            lb = index(buffer(ib:ie), 'compressed_digest="') +                 &
+                                  len('compressed_digest="') + ib - 1
+            le = index(buffer(lb:ie), '"') + lb - 2
+            read(buffer(lb:le), fmt='(1z16)') chash
+          end if
+        else
+          acomp = 0
+        end if
+      else
+        write(error_unit,"('[',a,']: ',a)") trim(loc),                         &
+            'Element <FileName name="' // trim(aname) // '" could not be found.'
+        stop
       end if
-      if (index(buffer(ib:ie), 'digest="') > 0) then
-        lb = index(buffer(ib:ie), 'digest="') + len('digest="') + ib - 1
-        le = index(buffer(lb:ie), '"') + lb - 2
-        read(buffer(lb:le), fmt='(1z16)') uhash
-      end if
-      if (index(buffer(ib:ie), 'compressed_digest="') > 0) then
-        lb = index(buffer(ib:ie), 'compressed_digest="') +                     &
-                              len('compressed_digest="') + ib - 1
-        le = index(buffer(lb:ie), '"') + lb - 2
-        read(buffer(lb:le), fmt='(1z16)') chash
-      end if
+    else
+      write(error_unit,"('[',a,']: ',a)") trim(loc),                           &
+                       "Missing or wrong group <DataSets>!"
+      stop
     end if
 
 !-------------------------------------------------------------------------------
