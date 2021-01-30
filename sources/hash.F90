@@ -99,7 +99,7 @@ module hash
 
 !-------------------------------------------------------------------------------
 !
-    length    = size(input)
+    length    = size(input, kind=8)
     hash      = 0_8
     offset    = 1_8
     remaining = length
