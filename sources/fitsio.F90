@@ -34,7 +34,8 @@ module fitsio
 ! module parameters
 !
   character(len=128)              , save :: idir  = './'
-  integer                         , save :: ndims = 0, ncells = 0
+  integer                         , save :: ndims = 0
+  integer(kind=8)                 , save :: ncells = 0_8
   integer, dimension(3)           , save :: dims  = 1
   real(kind=8), dimension(2,3)    , save :: bnds  = 0.0d+00
   character(len=4)  , dimension(9), save :: vars  = ''
