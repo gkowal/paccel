@@ -125,9 +125,8 @@ module dataxml
 ! allocate a bufer and store the content of the metadata file in it
 !
     allocate(character(len=p) :: buffer)
-    open(newunit = io, file = fname, form = 'unformatted', access = 'direct',  &
-                       recl = p)
-    read(io, rec = 1) buffer(:)
+    open(newunit = io, file = fname, form = 'unformatted', access = 'stream')
+    read(io) buffer(:)
     close(io)
 
 ! parse the buffer to get the required information
@@ -267,8 +266,8 @@ module dataxml
       allocate(input(csize(p)), buffer(usize(p)))
 
       open(newunit = io, file = trim(vpath(p)), form = 'unformatted',          &
-           access = 'direct', recl = csize(p))
-      read(io, rec = 1) input(1:csize(p))
+           access = 'stream')
+      read(io) input(1:csize(p))
       close(io)
 
       rsize = zstd_decompress(c_loc(buffer), size(buffer, kind=8),             &
@@ -298,8 +297,8 @@ module dataxml
       allocate(buffer(usize(p)))
 
       open(newunit = io, file = trim(vpath(p)), form = 'unformatted',          &
-           access = 'direct', recl = usize(p))
-      read(io, rec = 1) buffer(1:usize(p))
+           access = 'stream')
+      read(io) buffer(1:usize(p))
       close(io)
 
       if (uhash(p) /= xxh64(transfer(buffer, 1_1, usize(p)))) then
