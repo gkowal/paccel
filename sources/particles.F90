@@ -520,6 +520,7 @@ module particles
 !
     logical                        :: keepon = .true.
     integer                        :: n, m
+    integer(kind=8)                :: tcks, tcur, tpre
     real(kind=8)                   :: t, dt, dtn, tt, err
     real(kind=8)                   :: gm, ba, va, vp, vr, om, tg, rg, en, ek
     real(kind=8), dimension(3)     :: v, u, b
@@ -538,6 +539,10 @@ module particles
     m  = 0
     t  = 0.0d+00
     dt = dtini
+
+! initialize time measure
+!
+    call system_clock(count=tpre, count_rate=tcks)
 
 ! set the initial position and momentum
 !
@@ -645,8 +650,12 @@ module particles
 
 ! print the progress
 !
-          write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')      &
+          call system_clock(count=tcur)
+          if ((tcur - tpre) > tcks) then
+            write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')    &
                                                     n, t, dt, tg, va, ek, term
+            tpre = tcur
+          end if
 
 ! store the particle parameters
 !
@@ -745,6 +754,7 @@ module particles
 !
     logical                         :: keepon = .true., rejected = .false.
     integer                         :: n, m
+    integer(kind=8)                 :: tcks, tcur, tpre
     real(kind=8)                    :: t, dt, dtn, tt
     real(kind=8)                    :: gm, en, ek, ba, va, vp, vr, om, tg, rg
     real(kind=8)                    :: err, err3, err5, errold, deno, expo
@@ -853,6 +863,10 @@ module particles
 
     keepon   = .true.
     rejected = .false.
+
+! initialize time measure
+!
+    call system_clock(count=tpre, count_rate=tcks)
 
 ! set the initial position, velocity, and momentum
 !
@@ -1007,8 +1021,12 @@ module particles
 
 ! print the progress
 !
-          write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')      &
+          call system_clock(count=tcur)
+          if ((tcur - tpre) > tcks) then
+            write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')    &
                                                     n, t, dt, tg, va, ek, term
+            tpre = tcur
+          end if
 
 ! store the particle parameters
 !
@@ -1128,6 +1146,7 @@ module particles
 !
     character(len=32)                :: str
     integer                          :: n, m, i = 0, mi, ti, k
+    integer(kind=8)                  :: tcks, tcur, tpre
     real(kind=8)                     :: gm, t, dt, tc, te, ts
     real(kind=8)                     :: ba, va, vp, vr, om, tg, rg, en, ek
     real(kind=8)                     :: err
@@ -1171,6 +1190,10 @@ module particles
 ! reset the vector of the position and momentum errors
 !
     se(:,:) = 0.0d+00
+
+! initialize time measure
+!
+    call system_clock(count=tpre, count_rate=tcks)
 
 ! set the initial position, velocity, and momentum
 !
@@ -1295,8 +1318,12 @@ module particles
 
 ! print the progress
 !
-        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')        &
+        call system_clock(count=tcur)
+        if ((tcur - tpre) > tcks) then
+          write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')      &
                                                     n, t, dt, tg, va, ek, term
+          tpre = tcur
+        end if
 
 ! write results to the output file
 !
@@ -1500,6 +1527,7 @@ module particles
 !
     character(len=32)                :: str
     integer                          :: n, m, i = 0, mi, ti, k
+    integer(kind=8)                  :: tcks, tcur, tpre
     real(kind=8)                     :: gm, t, dt, tc, te, ts
     real(kind=8)                     :: ba, va, vp, vr, om, tg, rg, en, ek
     real(kind=8)                     :: err
@@ -1543,6 +1571,10 @@ module particles
 ! reset the vector of the position and momentum errors
 !
     se(:,:) = 0.0d+00
+
+! initialize time measure
+!
+    call system_clock(count=tpre, count_rate=tcks)
 
 ! set the initial position, velocity, and momentum
 !
@@ -1668,8 +1700,12 @@ module particles
 
 ! print the progress
 !
-        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')        &
+        call system_clock(count=tcur)
+        if ((tcur - tpre) > tcks) then
+          write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')      &
                                                     n, t, dt, tg, va, ek, term
+          tpre = tcur
+        end if
 
 ! write results to the output file
 !
@@ -1878,6 +1914,7 @@ module particles
 !
     character(len=32)                :: str
     integer                          :: n, m, i = 0, mi, ti, k
+    integer(kind=8)                  :: tcks, tcur, tpre
     real(kind=8)                     :: gm, t, dt, tc, te, ts
     real(kind=8)                     :: ba, va, vp, vr, om, tg, rg, en, ek
     real(kind=8)                     :: err
@@ -1923,6 +1960,10 @@ module particles
 ! reset the vector of the position and momentum errors
 !
     se(:,:) = 0.0d+00
+
+! initialize time measure
+!
+    call system_clock(count=tpre, count_rate=tcks)
 
 ! set the initial position, velocity, and momentum
 !
@@ -2050,8 +2091,12 @@ module particles
 
 ! print the progress
 !
-        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')        &
+        call system_clock(count=tcur)
+        if ((tcur - tpre) > tcks) then
+          write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')      &
                                                     n, t, dt, tg, va, ek, term
+          tpre = tcur
+        end if
 
 ! write results to the output file
 !
@@ -2273,6 +2318,7 @@ module particles
 !
     character(len=32)                :: str
     integer                          :: n, m, i = 0, mi, ti, k
+    integer(kind=8)                  :: tcks, tcur, tpre
     real(kind=8)                     :: gm, t, dt, tc, te, ts
     real(kind=8)                     :: ba, va, vp, vr, om, tg, rg, en, ek
     real(kind=8)                     :: err
@@ -2320,6 +2366,10 @@ module particles
 ! reset the vector of the position and momentum errors
 !
     se(:,:) = 0.0d+00
+
+! initialize time measure
+!
+    call system_clock(count=tpre, count_rate=tcks)
 
 ! set the initial position, velocity, and momentum
 !
@@ -2448,8 +2498,12 @@ module particles
 
 ! print the progress
 !
-        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')        &
+        call system_clock(count=tcur)
+        if ((tcur - tpre) > tcks) then
+          write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')      &
                                                     n, t, dt, tg, va, ek, term
+          tpre = tcur
+        end if
 
 ! write results to the output file
 !
@@ -2684,6 +2738,7 @@ module particles
 !
     character(len=32)                :: str
     integer                          :: n, m, i = 0, mi, ti, k
+    integer(kind=8)                  :: tcks, tcur, tpre
     real(kind=8)                     :: gm, t, dt, tc, te, ts
     real(kind=8)                     :: ba, va, vp, vr, om, tg, rg, en, ek
     real(kind=8)                     :: err
@@ -2733,6 +2788,10 @@ module particles
 ! reset the vector of the position and momentum errors
 !
     se(:,:) = 0.0d+00
+
+! initialize time measure
+!
+    call system_clock(count=tpre, count_rate=tcks)
 
 ! set the initial position, velocity, and momentum
 !
@@ -2862,8 +2921,12 @@ module particles
 
 ! print the progress
 !
-        write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')        &
+        call system_clock(count=tcur)
+        if ((tcur - tpre) > tcks) then
+          write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')      &
                                                     n, t, dt, tg, va, ek, term
+          tpre = tcur
+        end if
 
 ! write results to the output file
 !
