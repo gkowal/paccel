@@ -753,8 +753,7 @@ module particles
 ! local variables
 !
     logical                         :: keepon = .true., rejected = .false.
-    integer                         :: n, m
-    integer(kind=8)                 :: tcks, tcur, tpre
+    integer(kind=8)                 :: tcks, tcur, tpre, n
     real(kind=8)                    :: t, dt, dtn, tt
     real(kind=8)                    :: gm, en, ek, ba, va, vp, vr, om, tg, rg
     real(kind=8)                    :: err, err3, err5, errold, deno, expo
@@ -853,7 +852,6 @@ module particles
 ! initialize counters, time and timesteps
 !
     n  = 0
-    m  = 0
     t  = 0.0d+00
     dt = dtini
     err = 0.0d+00
@@ -885,12 +883,19 @@ module particles
 
 ! print the progress
 !
-    write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
+    write(*,"('PROGRESS  : ',a12,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',      &
                                              'GPERIOD', 'SPEED (c)',           &
                                              'ENERGY (MeV)'
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')            &
+    write(*,"('PROGRESS  : ',i12,2x,5(1es14.6),a1)", advance = 'no')           &
                                                     n, t, dt, tg, va, ek, term
 
+#ifdef OUTBIN
+! initiate the binary file
+!
+    open (11, file = 'states.bin', form = 'unformatted', status = 'replace',   &
+                                                         access = 'stream')
+    write(11) t, si, b
+#else /* OUTBIN */
 ! open the output file, print headers and the initial values
 !
     open (10, file = 'output.dat', form = 'formatted', status = 'replace')
@@ -904,6 +909,7 @@ module particles
                                va, vp, vr, gm, en, ek,                         &
                                bunit * ba, om / tunit, tg * tunit, rg * lunit, &
                                tg, rg, err
+#endif /* OUTBIN */
 
 !== INTEGRATION LOOP ==
 !
@@ -1007,9 +1013,33 @@ module particles
         t       = tt
         si(:,:) = ss(:,:)
 
+! print the progress
+!
+        call system_clock(count=tcur)
+        if ((tcur - tpre) > tcks) then
+
+          gm   = lorentz_factor(si(:,2))
+          v(:) = si(:,2) / gm
+          call acceleration(t, si(:,:), ff(:,:,1), u(:), b(:))
+          call separate_velocity(v(:), b(:), ba, va, vp, vr)
+          call gyro_parameters(gm, ba, vr, om, tg, rg)
+          ek = (gm - 1.0d+00) * mrest
+
+          write(*,"('PROGRESS  : ',i12,2x,5(1es14.6),a1)", advance = 'no')     &
+                                                    n, t, dt, tg, va, ek, term
+          tpre = tcur
+
+        end if
+
+! store the current state
+!
+#ifdef OUTBIN
+        call acceleration(t, si(:,:), ff(:,:,1), u(:), b(:))
+        write(11) t, si, b
+#else /* OUTBIN */
 ! store the particle state, if desired
 !
-        if (m >= ndumps) then
+        if (mod(n, ndumps * 1_8) + 1 == ndumps) then
 
           gm   = lorentz_factor(si(:,2))
           v(:) = si(:,2) / gm
@@ -1019,15 +1049,6 @@ module particles
           en = gm * mrest
           ek = en - mrest
 
-! print the progress
-!
-          call system_clock(count=tcur)
-          if ((tcur - tpre) > tcks) then
-            write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')    &
-                                                    n, t, dt, tg, va, ek, term
-            tpre = tcur
-          end if
-
 ! store the particle parameters
 !
           write(10,"(20(1es22.14))") t, si(:,:),                               &
@@ -1035,16 +1056,12 @@ module particles
                                      bunit * ba, om / tunit, tg * tunit,       &
                                      rg * lunit, tg, rg, err
 
+        end if
+#endif /* OUTBIN */
+
 ! update the counters
 !
-          n = n + 1
-          m = 0
-
-        end if
-
-! increase the data write counter
-!
-        m = m + 1
+        n = n + 1
 
 ! check if the particle time did not exceed the maximum time and
 ! if the particle is still inside the domain
@@ -1083,7 +1100,12 @@ module particles
 
     end do
 
-    if (m > 1) then
+#ifdef OUTBIN
+! close the binary file
+!
+    close(11)
+#else /* OUTBIN */
+    if (mod(n, ndumps * 1_8) + 1 < ndumps) then
 
 ! calculate the particle parameters at the final state
 !
@@ -1104,10 +1126,11 @@ module particles
     end if
 
     close(10)
+#endif /* OUTBIN */
 
 ! print the progress
 !
-    write(*,"('PROGRESS  : ',i8,2x,5(1es14.6))") n, t, dt, tg, va, ek
+    write(*,"('PROGRESS  : ',i12,2x,5(1es14.6))") n, t, dt, tg, va, ek
 
 !-------------------------------------------------------------------------------
 !

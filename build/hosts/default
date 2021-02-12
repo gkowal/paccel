@@ -111,6 +111,10 @@ ifeq ($(TEST),ISLAND)
 FFLAGS += -DTEST -DITEST
 endif
 
+ifeq ($(OUTPUT),BIN)
+FFLAGS += -DOUTBIN
+endif
+
 #-------------------------------------------------------------------------------
 #
 # libraries and their dependencies
