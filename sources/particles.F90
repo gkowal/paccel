@@ -197,10 +197,10 @@ module particles
 !
     select case(ptype)
     case ('e')
-      mrest =  5.10998949998580864751d-01  ! rest energy of electron [MeV]
+      mrest =  5.10998949998580864751d+05  ! rest energy of electron [eV]
       qom   = -1.75882001076384559274d+07  ! e/m [1 / Gs s]
     case default
-      mrest =  9.38272088161040869636d+02  ! rest energy of proton   [MeV]
+      mrest =  9.38272088161040869636d+08  ! rest energy of proton   [eV]
       qom   =  9.57883315593801671639d+03  ! e/m [1 / Gs s]
     end select
 
@@ -491,8 +491,8 @@ module particles
                                                         gper * tunit, gper
     write(*,"('INFO',6x,': Rg    =',1pe15.8,' [m]   =',1pe15.8,' [L]  ')")     &
                                                         grad * lunit, grad
-    write(*,"('INFO',6x,': E     =',1pe15.8,' [MeV]')"  ) ener
-    write(*,"('INFO',6x,': Ekin  =',1pe15.8,' [MeV]')"  ) ekin
+    write(*,"('INFO',6x,': E     =',1pe15.8,' [eV]')") ener
+    write(*,"('INFO',6x,': Ekin  =',1pe15.8,' [eV]')") ekin
 !
 !-------------------------------------------------------------------------------
 !
@@ -563,7 +563,7 @@ module particles
 !
     write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
                                              'GPERIOD', 'SPEED (c)',           &
-                                             'ENERGY (MeV)'
+                                             'ENERGY (eV)'
     write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')            &
                                                     n, t, dt, tg, va, ek, term
 
@@ -572,7 +572,7 @@ module particles
     open (10, file = 'output.dat', form = 'formatted', status = 'replace')
     write(10,"('#',1a20,19a22)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz',      &
                                  '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
-                                 'gamma', 'En [MeV]', 'Ek [MeV]',              &
+                                 'gamma', 'En [eV]', 'Ek [eV]',                &
                                  '<B> [Gs]', 'Omega [1/s]',                    &
                                  'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]',       &
                                  'Tolerance'
@@ -885,7 +885,7 @@ module particles
 !
     write(*,"('PROGRESS  : ',a12,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',      &
                                              'GPERIOD', 'SPEED (c)',           &
-                                             'ENERGY (MeV)'
+                                             'ENERGY (eV)'
     write(*,"('PROGRESS  : ',i12,2x,5(1es14.6),a1)", advance = 'no')           &
                                                     n, t, dt, tg, va, ek, term
 
@@ -901,7 +901,7 @@ module particles
     open (10, file = 'output.dat', form = 'formatted', status = 'replace')
     write(10,"('#',1a20,19a22)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz',      &
                                  '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
-                                 'gamma', 'En [MeV]', 'Ek [MeV]',              &
+                                 'gamma', 'En [eV]', 'Ek [eV]',                &
                                  '<B> [Gs]', 'Omega [1/s]',                    &
                                  'Tg [s]', 'Rg [m]', 'Tg [T]', 'Rg [L]',       &
                                  'Error'
@@ -1237,7 +1237,7 @@ module particles
 !
     write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
                                              'GPERIOD', 'SPEED (c)',           &
-                                             'ENERGY (MeV)'
+                                             'ENERGY (eV)'
     write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')            &
                                                     n, t, dt, tg, va, ek, term
 
@@ -1246,7 +1246,7 @@ module particles
     open(10, file = 'output.dat', form = 'formatted', status = 'replace')
     write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz',      &
                                  '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
-                                 'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
+                                 'gamma', 'En [eV]', 'Ek [eV]', '<B> [Gs]',    &
                                  'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
                                  'Rg [L]', 'Tolerance', 'Iterations'
     write(10,"(20(1es22.14),i22)") t, si(:,:),                                 &
@@ -1618,7 +1618,7 @@ module particles
 !
     write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
                                              'GPERIOD', 'SPEED (c)',           &
-                                             'ENERGY (MeV)'
+                                             'ENERGY (eV)'
     write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')            &
                                                     n, t, dt, tg, va, ek, term
 
@@ -1627,7 +1627,7 @@ module particles
     open(10, file = 'output.dat', form = 'formatted', status = 'replace')
     write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz',      &
                                  '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
-                                 'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
+                                 'gamma', 'En [eV]', 'Ek [eV]', '<B> [Gs]',    &
                                  'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
                                  'Rg [L]', 'Tolerance', 'Iterations'
     write(10,"(20(1es22.14),i22)") t, si(:,:),                                 &
@@ -2007,7 +2007,7 @@ module particles
 !
     write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
                                              'GPERIOD', 'SPEED (c)',           &
-                                             'ENERGY (MeV)'
+                                             'ENERGY (eV)'
     write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')            &
                                                     n, t, dt, tg, va, ek, term
 
@@ -2016,7 +2016,7 @@ module particles
     open(10, file = 'output.dat', form = 'formatted', status = 'replace')
     write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz',      &
                                  '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
-                                 'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
+                                 'gamma', 'En [eV]', 'Ek [eV]', '<B> [Gs]',    &
                                  'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
                                  'Rg [L]', 'Tolerance', 'Iterations'
     write(10,"(20(1es22.14),i22)") t, si(:,:),                                 &
@@ -2413,7 +2413,7 @@ module particles
 !
     write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
                                              'GPERIOD', 'SPEED (c)',           &
-                                             'ENERGY (MeV)'
+                                             'ENERGY (eV)'
     write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')            &
                                                     n, t, dt, tg, va, ek, term
 
@@ -2422,7 +2422,7 @@ module particles
     open(10, file = 'output.dat', form = 'formatted', status = 'replace')
     write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz',      &
                                  '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
-                                 'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
+                                 'gamma', 'En [eV]', 'Ek [eV]', '<B> [Gs]',    &
                                  'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
                                  'Rg [L]', 'Tolerance', 'Iterations'
     write(10,"(20(1es22.14),i22)") t, si(:,:),                                 &
@@ -2835,7 +2835,7 @@ module particles
 !
     write(*,"('PROGRESS  : ',a8,2x,5(a14))") 'ITER', 'TIME', 'TIMESTEP',       &
                                              'GPERIOD', 'SPEED (c)',           &
-                                             'ENERGY (MeV)'
+                                             'ENERGY (eV)'
     write(*,"('PROGRESS  : ',i8,2x,5(1es14.6),a1)", advance = 'no')            &
                                                     n, t, dt, tg, va, ek, term
 
@@ -2844,7 +2844,7 @@ module particles
     open(10, file = 'output.dat', form = 'formatted', status = 'replace')
     write(10,"('#',1a20,20a22)") 'Time', 'X', 'Y', 'Z', 'Px', 'Py', 'Pz',      &
                                  '|V| [c]', '|Vpar| [c]', '|Vper| [c]',        &
-                                 'gamma', 'En [MeV]', 'Ek [MeV]', '<B> [Gs]',  &
+                                 'gamma', 'En [eV]', 'Ek [eV]', '<B> [Gs]',    &
                                  'Omega [1/s]', 'Tg [s]', 'Rg [m]', 'Tg [T]',  &
                                  'Rg [L]', 'Tolerance', 'Iterations'
     write(10,"(20(1es22.14),i22)") t, si(:,:),                                 &
