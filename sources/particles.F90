@@ -894,7 +894,7 @@ module particles
 !
     open (11, file = 'states.bin', form = 'unformatted', status = 'replace',   &
                                                          access = 'stream')
-    write(11) t, si, b
+    write(11) t, si, b, u
 #else /* OUTBIN */
 ! open the output file, print headers and the initial values
 !
@@ -1035,7 +1035,7 @@ module particles
 !
 #ifdef OUTBIN
         call acceleration(t, si(:,:), ff(:,:,1), u(:), b(:))
-        write(11) t, si, b
+        write(11) t, si, b, u
 #else /* OUTBIN */
 ! store the particle state, if desired
 !
